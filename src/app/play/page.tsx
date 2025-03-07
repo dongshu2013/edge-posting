@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { format } from 'date-fns';
 import { 
   ComputerDesktopIcon, 
   PlayIcon, 
@@ -25,16 +24,6 @@ interface PostRequest {
   engagementCount: number;
 }
 
-interface PostedTweet {
-  id: string;
-  requestId: string;
-  tweetLink: string;
-  replyLink: string;
-  content: string;
-  postedAt: Date;
-  credit: number;
-}
-
 interface ModelEngine {
   id: string;
   name: string;
@@ -43,25 +32,15 @@ interface ModelEngine {
 
 const MODEL_ENGINES: ModelEngine[] = [
   {
-    id: 'ollama',
-    name: 'Ollama',
-    defaultEndpoint: 'http://localhost:11434'
+    id: "gpt-4",
+    name: "GPT-4",
+    defaultEndpoint: "https://api.openai.com/v1/chat/completions",
   },
   {
-    id: 'msty',
-    name: 'Mistral',
-    defaultEndpoint: 'http://localhost:10000'
+    id: "gpt-3.5-turbo",
+    name: "GPT-3.5 Turbo",
+    defaultEndpoint: "https://api.openai.com/v1/chat/completions",
   },
-  {
-    id: 'jan',
-    name: 'Jan',
-    defaultEndpoint: 'http://localhost:1337'
-  },
-  {
-    id: 'custom',
-    name: 'Custom',
-    defaultEndpoint: ''
-  }
 ];
 
 // Mock data for demonstration
@@ -88,49 +67,27 @@ const MOCK_REQUESTS: PostRequest[] = [
   }
 ];
 
-const MOCK_POSTED_TWEETS: PostedTweet[] = [
-  {
-    id: '1',
-    requestId: '1',
-    tweetLink: 'https://twitter.com/user1/status/123456789',
-    replyLink: 'https://twitter.com/user1/status/123456789/reply_16777216',
-    content: 'This is a fascinating development! I particularly like how it addresses the scalability issues we\'ve been seeing in the field. What\'s your take on the privacy implications?',
-    postedAt: new Date('2024-03-05T10:30:00'),
-    credit: 0.05
-  },
-  {
-    id: '2',
-    requestId: '2',
-    tweetLink: 'https://twitter.com/user2/status/987654321',
-    replyLink: 'https://twitter.com/user2/status/987654321/reply_16777216',
-    content: 'Really excited about this announcement! The integration possibilities with existing systems seem promising. Have you considered how this might impact user adoption rates?',
-    postedAt: new Date('2024-03-06T14:20:00'),
-    credit: 0.1
-  }
-];
-
 export default function PlayPage() {
   const { isConnected } = useAccount();
   const [isModelConnected, setIsModelConnected] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<PostRequest | null>(null);
   const [availableRequests, setAvailableRequests] = useState<PostRequest[]>(MOCK_REQUESTS);
-  const [selectedEngine, setSelectedEngine] = useState<string>('ollama');
-  const [modelEndpoint, setModelEndpoint] = useState('http://localhost:11434');
+  const [selectedEngine, setSelectedEngine] = useState<string>("gpt-4");
+  const [endpoint, setEndpoint] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("");
   const [modelName, setModelName] = useState('llama3');
   const [credits, setCredits] = useState(0.15);
   const [generatedReply, setGeneratedReply] = useState('');
-  const [twitterApiKey, setTwitterApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isTwitterConfigured, setIsTwitterConfigured] = useState(false);
-  const [postedTweets, setPostedTweets] = useState<PostedTweet[]>(MOCK_POSTED_TWEETS);
 
   // Handle engine change
   const handleEngineChange = (engineId: string) => {
     setSelectedEngine(engineId);
     const engine = MODEL_ENGINES.find(e => e.id === engineId);
     if (engine && engine.defaultEndpoint) {
-      setModelEndpoint(engine.defaultEndpoint);
+      setEndpoint(engine.defaultEndpoint);
     }
   };
 
@@ -147,7 +104,7 @@ export default function PlayPage() {
   };
 
   const handleSaveTwitterKey = () => {
-    if (twitterApiKey.trim()) {
+    if (apiKey.trim()) {
       // In a real app, we would securely store this key
       // For now, we'll just set the configured flag
       setIsTwitterConfigured(true);
@@ -364,7 +321,7 @@ export default function PlayPage() {
                 isPosting ? (
                   <p className="text-lg">No more requests available at the moment.</p>
                 ) : (
-                  <p className="text-lg">Click "Start Posting" to begin helping with tweet replies.</p>
+                  <p className="text-lg">Click &quot;Start Posting&quot; to begin helping with tweet replies.</p>
                 )
               ) : (
                 <p className="text-lg">Connect your model to start posting.</p>
@@ -420,8 +377,8 @@ export default function PlayPage() {
                 id="modelEndpoint"
                 className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
                 placeholder="http://localhost:11434"
-                value={modelEndpoint}
-                onChange={(e) => setModelEndpoint(e.target.value)}
+                value={endpoint}
+                onChange={(e) => setEndpoint(e.target.value)}
                 disabled={isModelConnected || (selectedEngine !== 'custom')}
               />
             </div>
@@ -487,8 +444,8 @@ export default function PlayPage() {
                   id="twitterApiKey"
                   className="block w-full pr-12 py-3 sm:text-sm border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
                   placeholder="Enter your Twitter API key"
-                  value={twitterApiKey}
-                  onChange={(e) => setTwitterApiKey(e.target.value)}
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
                   disabled={isTwitterConfigured}
                 />
                 <button
@@ -504,7 +461,7 @@ export default function PlayPage() {
                 </button>
               </div>
               <p className="mt-3 text-sm text-gray-600">
-                &quot;Earn BUZZ by sharing your insights! Let&apos;s make the web3 space more engaging together.&quot;
+                Earn BUZZ by sharing your insights! Let&apos;s make the web3 space &ldquo;more accessible&rdquo; together.
               </p>
             </div>
 
@@ -513,12 +470,12 @@ export default function PlayPage() {
                 <button
                   type="button"
                   className={`inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-xl text-white ${
-                    twitterApiKey.trim()
+                    apiKey.trim()
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
                       : 'bg-gray-300 cursor-not-allowed'
                   } transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                   onClick={handleSaveTwitterKey}
-                  disabled={!twitterApiKey.trim()}
+                  disabled={!apiKey.trim()}
                 >
                   Save API Key
                 </button>
@@ -528,7 +485,7 @@ export default function PlayPage() {
                   className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-xl text-white bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                   onClick={() => {
                     setIsTwitterConfigured(false);
-                    setTwitterApiKey('');
+                    setApiKey('');
                   }}
                 >
                   Reset API Key

@@ -47,7 +47,7 @@ export default function NewBuzzPage() {
             Create Your Buzz 🐝
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Let's make some noise in the meme-verse! 🚀
+            Let&apos;s make some noise in the meme-verse! 🚀
           </p>
           <p className="mt-2 text-sm text-gray-600">
             Don&apos;t have a tweet to share? Browse our curated list of tweets and earn BUZZ by contributing thoughtful replies!

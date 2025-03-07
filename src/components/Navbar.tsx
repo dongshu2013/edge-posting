@@ -3,13 +3,11 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAccount } from 'wagmi';
 import { useState } from 'react';
 import Image from 'next/image';
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { isConnected } = useAccount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (

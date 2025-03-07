@@ -88,8 +88,29 @@ const MOCK_REQUESTS: PostRequest[] = [
   }
 ];
 
+const MOCK_POSTED_TWEETS: PostedTweet[] = [
+  {
+    id: '1',
+    requestId: '1',
+    tweetLink: 'https://twitter.com/user1/status/123456789',
+    replyLink: 'https://twitter.com/user1/status/123456789/reply_16777216',
+    content: 'This is a fascinating development! I particularly like how it addresses the scalability issues we\'ve been seeing in the field. What\'s your take on the privacy implications?',
+    postedAt: new Date('2024-03-05T10:30:00'),
+    credit: 0.05
+  },
+  {
+    id: '2',
+    requestId: '2',
+    tweetLink: 'https://twitter.com/user2/status/987654321',
+    replyLink: 'https://twitter.com/user2/status/987654321/reply_16777216',
+    content: 'Really excited about this announcement! The integration possibilities with existing systems seem promising. Have you considered how this might impact user adoption rates?',
+    postedAt: new Date('2024-03-06T14:20:00'),
+    credit: 0.1
+  }
+];
+
 export default function PlayPage() {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const [isModelConnected, setIsModelConnected] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<PostRequest | null>(null);
@@ -102,6 +123,7 @@ export default function PlayPage() {
   const [twitterApiKey, setTwitterApiKey] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isTwitterConfigured, setIsTwitterConfigured] = useState(false);
+  const [postedTweets, setPostedTweets] = useState<PostedTweet[]>(MOCK_POSTED_TWEETS);
 
   // Handle engine change
   const handleEngineChange = (engineId: string) => {
@@ -168,17 +190,6 @@ export default function PlayPage() {
 
   const postReply = () => {
     if (!currentRequest) return;
-    
-    // In a real app, this would actually post to Twitter
-    const newPostedTweet: PostedTweet = {
-      id: Date.now().toString(),
-      requestId: currentRequest.id,
-      tweetLink: currentRequest.tweetLink,
-      replyLink: `${currentRequest.tweetLink}/reply_${Date.now()}`,
-      content: generatedReply,
-      postedAt: new Date(),
-      credit: currentRequest.credit
-    };
     
     // Update credits
     setCredits(prev => prev + currentRequest.credit);
@@ -492,10 +503,8 @@ export default function PlayPage() {
                   )}
                 </button>
               </div>
-              <p className="mt-3 text-sm text-gray-600 flex items-center">
-                <span className="bg-white/50 px-3 py-1 rounded-full border border-gray-200">
-                  Your API key will be used to automate tweet replies. {isTwitterConfigured && 'The key is securely stored.'}
-                </span>
+              <p className="mt-3 text-sm text-gray-600">
+                &quot;Earn BUZZ by sharing your insights! Let&apos;s make the web3 space more engaging together.&quot;
               </p>
             </div>
 

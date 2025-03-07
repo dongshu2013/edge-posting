@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BoltIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 export default function NewBuzzPage() {
-  const { isConnected, address } = useAccount();
+  const { isConnected } = useAccount();
   const router = useRouter();
   const [formData, setFormData] = useState({
     tweetLink: '',
@@ -48,6 +48,9 @@ export default function NewBuzzPage() {
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             Let's make some noise in the meme-verse! 🚀
+          </p>
+          <p className="mt-2 text-sm text-gray-600">
+            Don&apos;t have a tweet to share? Browse our curated list of tweets and earn BUZZ by contributing thoughtful replies!
           </p>
         </div>
 

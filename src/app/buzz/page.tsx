@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { SparklesIcon, ChatBubbleLeftRightIcon, PhotoIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 interface Buzz {
   id: string;
@@ -65,23 +65,15 @@ const MOCK_BUZZES: Buzz[] = [
 ];
 
 export default function BuzzesPage() {
-  const { isConnected } = useAccount();
-  const [buzzes, setBuzzes] = useState<Buzz[]>(MOCK_BUZZES);
-  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
+  const [buzzes] = useState<Buzz[]>(MOCK_BUZZES);
   const [sortBy, setSortBy] = useState<'newest' | 'price' | 'engagement'>('newest');
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
 
   const truncateText = (text: string, minWords: number = 10) => {
     const words = text.split(' ');
     if (words.length <= minWords) return text;
     return words.slice(0, Math.max(minWords, Math.min(15, words.length))).join(' ') + '...';
   };
-
-  // Default avatar as an SVG component
-  const DefaultAvatar = () => (
-    <svg className="h-10 w-10 text-gray-300 bg-gray-100 rounded-full p-2" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-    </svg>
-  );
 
   const calculateTotalBuzz = (buzz: Buzz) => {
     return (buzz.credit * buzz.tweet.replyCount).toFixed(2);
@@ -137,10 +129,12 @@ export default function BuzzesPage() {
             <div className="flex flex-col sm:flex-row sm:items-start gap-3">
               <div className="flex-shrink-0">
                 {buzz.tweet.author.avatar && !failedAvatars.has(buzz.tweet.author.avatar) ? (
-                  <img
-                    className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
+                  <Image
+                    className="h-10 w-10 rounded-full"
                     src={buzz.tweet.author.avatar}
-                    alt=""
+                    alt={`${buzz.tweet.author.name}'s avatar`}
+                    width={40}
+                    height={40}
                     onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
                   />
                 ) : null}

@@ -1,9 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
 import { SparklesIcon, ArrowTopRightOnSquareIcon, ChatBubbleLeftRightIcon, PhotoIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface Reply {
   id: string;
@@ -82,16 +82,8 @@ const MOCK_BUZZ: BuzzDetail = {
 };
 
 export default function BuzzDetailPage() {
-  const params = useParams();
-  const [buzz, setBuzz] = useState<BuzzDetail>(MOCK_BUZZ);
+  const [buzz] = useState<BuzzDetail>(MOCK_BUZZ);
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
-
-  // Default avatar as an SVG component
-  const DefaultAvatar = () => (
-    <svg className="h-10 w-10 text-gray-300 bg-gray-100 rounded-full p-2" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-    </svg>
-  );
 
   return (
     <div>
@@ -119,10 +111,12 @@ export default function BuzzDetailPage() {
 
           <div className={`flex items-start ${buzz.tweet.author.avatar ? 'space-x-3' : ''}`}>
             {buzz.tweet.author.avatar && !failedAvatars.has(buzz.tweet.author.avatar) ? (
-              <img
+              <Image
                 className="h-12 w-12 rounded-full ring-2 ring-indigo-500/20"
                 src={buzz.tweet.author.avatar}
-                alt=""
+                alt={`${buzz.tweet.author.name}'s avatar`}
+                width={48}
+                height={48}
                 onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
               />
             ) : null}

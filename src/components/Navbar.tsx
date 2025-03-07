@@ -7,7 +7,7 @@ import { useAccount } from 'wagmi';
 import { useState } from 'react';
 import Image from 'next/image';
 
-export function Navbar() {
+export default function Navbar() {
   const pathname = usePathname();
   const { isConnected } = useAccount();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

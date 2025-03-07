@@ -37,7 +37,7 @@ const MOCK_HISTORY: PostedTweet[] = [
 ];
 
 export default function HistoryPage() {
-  const [history, setHistory] = useState<PostedTweet[]>(MOCK_HISTORY);
+  const [history] = useState<PostedTweet[]>(MOCK_HISTORY);
   const [sortBy, setSortBy] = useState<'newest' | 'highest-credit'>('newest');
 
   const sortedHistory = [...history].sort((a, b) => {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
 import { SparklesIcon, ChatBubbleLeftRightIcon, PhotoIcon, ArrowTopRightOnSquareIcon, PlusIcon } from '@heroicons/react/24/outline';
+import Image from 'next/image';
 
 interface Buzz {
   id: string;
@@ -47,8 +48,8 @@ const MOCK_MY_BUZZES: Buzz[] = [
 ];
 
 export default function MyBuzzesPage() {
-  const { isConnected, address } = useAccount();
-  const [buzzes, setBuzzes] = useState<Buzz[]>(MOCK_MY_BUZZES);
+  const { isConnected } = useAccount();
+  const [buzzes] = useState<Buzz[]>(MOCK_MY_BUZZES);
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<'newest' | 'engagement'>('newest');
 
@@ -144,10 +145,12 @@ export default function MyBuzzesPage() {
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="flex-shrink-0">
                     {!failedAvatars.has(buzz.tweet.author.avatar) ? (
-                      <img
+                      <Image
                         className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
                         src={buzz.tweet.author.avatar}
-                        alt=""
+                        alt={`${buzz.tweet.author.name}'s avatar`}
+                        width={40}
+                        height={40}
                         onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
                       />
                     ) : (
@@ -219,7 +222,7 @@ export default function MyBuzzesPage() {
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Create your first buzz to start getting AI-powered engagement! 🚀
+                Create your first buzz to start getting AI-powered engagement!
               </p>
               <div className="mt-6">
                 <Link

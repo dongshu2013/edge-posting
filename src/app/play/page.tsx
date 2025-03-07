@@ -10,7 +10,7 @@ import {
   CurrencyDollarIcon,
   KeyIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
 } from '@heroicons/react/24/outline';
 
 interface PostRequest {
@@ -205,7 +205,7 @@ export default function PlayPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex-1 space-y-6">
       {/* Posting Status Section */}
       <div className="bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
         <div className="px-4 py-5 sm:p-6">
@@ -252,8 +252,13 @@ export default function PlayPage() {
                   <h4 className="text-base font-medium text-gray-900 mb-2">Current Request</h4>
                   <div className="flex justify-between">
                     <div className="text-sm text-gray-500">
-                      <a href={currentRequest.tweetLink} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline">
-                        View Original Tweet
+                      <a
+                        href={currentRequest.tweetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-indigo-600 hover:underline"
+                      >
+                        Open in Twitter
                       </a>
                     </div>
                     <div className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">

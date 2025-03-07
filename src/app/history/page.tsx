@@ -1,93 +1,106 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import ReplyCard from '@/components/ReplyCard';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 
 interface Reply {
   id: string;
-  content: string;
   replyLink: string;
+  text: string;
   createdAt: Date;
   createdBy: string;
-  buzzId: string;
-  buzzCreator: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  buzz: {
+    id: string;
+    createdBy: string;
+  };
 }
 
-// Mock data for demonstration
-const MOCK_HISTORY: Reply[] = [
-  {
-    id: '1',
-    buzzId: '1',
-    replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
-    content: 'This paper presents a fascinating approach to multi-modal learning. The key takeaway for me is how they managed to reduce computational requirements while maintaining accuracy.',
-    createdAt: new Date('2024-03-06T11:45:00'),
-    createdBy: '0x1234...5678',
-    buzzCreator: '0x8765...4321'
-  },
-  {
-    id: '2',
-    buzzId: '2',
-    replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
-    content: 'The integration of blockchain technology in this gaming platform opens up exciting possibilities for true digital ownership. Looking forward to seeing how this impacts player engagement!',
-    createdAt: new Date('2024-03-07T15:30:00'),
-    createdBy: '0x1234...5678',
-    buzzCreator: '0x9876...5432'
-  }
-];
-
 export default function HistoryPage() {
-  const [history] = useState<Reply[]>(MOCK_HISTORY);
-  const [sortBy, setSortBy] = useState<'newest' | 'highest-credit'>('newest');
-  const { isConnected } = useAccount();
+  const [replies, setReplies] = useState<Reply[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { isConnected, address } = useAccount();
   const router = useRouter();
 
   useEffect(() => {
     if (!isConnected) {
       router.push('/');
+      return;
     }
-  }, [isConnected, router]);
+
+    const fetchReplies = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/reply/my?address=${address}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch replies');
+        }
+
+        const data = await response.json();
+        setReplies(data);
+      } catch (err) {
+        console.error('Error fetching replies:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch replies');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (address) {
+      fetchReplies();
+    }
+  }, [isConnected, address, router]);
 
   if (!isConnected) {
-    return null; // Return null to prevent flash of content before redirect
+    return null;
   }
 
-  const sortedHistory = [...history].sort((a, b) => {
-    if (sortBy === 'newest') {
-      return b.createdAt.getTime() - a.createdAt.getTime();
-    } else {
-      return 0; // No credit sorting needed for replies
-    }
-  });
+  if (isLoading) {
+    return (
+      <div className="py-8">
+        <div className="animate-pulse space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl h-40" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="py-8">
       <div className="flex-1">
-        <div className="flex mb-6">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as 'newest' | 'highest-credit')}
-            className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
-          >
-            <option value="newest">✨ Newest First</option>
-          </select>
-        </div>
-
         <div className="space-y-6">
-          {sortedHistory.length > 0 ? (
-            sortedHistory.map((reply) => (
+          {replies.length > 0 ? (
+            replies.map((reply) => (
               <ReplyCard
                 key={reply.id}
                 id={reply.id}
-                content={reply.content}
                 replyLink={reply.replyLink}
-                createdAt={reply.createdAt}
+                text={reply.text}
+                createdAt={new Date(reply.createdAt)}
                 createdBy={reply.createdBy}
-                buzzCreator={reply.buzzCreator}
+                buzzCreator={reply.buzz.createdBy}
+                buzzId={reply.buzz.id}
+                status={reply.status}
+                showOriginalBuzzButton={true}
+                showRejectButton={false}
               />
             ))
           ) : (

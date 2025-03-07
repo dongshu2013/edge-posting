@@ -25,7 +25,64 @@ model Buzz {
   replyCount   Int      @default(0)
   totalReplies Int      @default(0)
   isActive     Boolean  @default(true)
+  isSettled    Boolean  @default(false)
+  replies      Reply[]
+  transactions Transaction[]
 
   @@index([createdBy])
   @@index([createdAt])
+  @@index([isSettled])
+}
+
+model Reply {
+  id          String   @id @default(cuid())
+  replyLink   String
+  text        String   @db.Text  // Adding text field for reply content
+  createdAt   DateTime @default(now())
+  createdBy   String   // wallet address
+  status      ReplyStatus @default(PENDING)
+  buzz        Buzz     @relation(fields: [buzzId], references: [id])
+  buzzId      String
+  transaction Transaction?
+
+  @@index([buzzId])
+  @@index([createdBy])
+  @@index([status])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  amount      Float
+  type        TransactionType
+  status      TransactionStatus
+  createdAt   DateTime @default(now())
+  settledAt   DateTime?
+  fromAddress String
+  toAddress   String
+  buzz        Buzz     @relation(fields: [buzzId], references: [id])
+  buzzId      String
+  reply       Reply?   @relation(fields: [replyId], references: [id])
+  replyId     String?  @unique
+
+  @@index([status])
+  @@index([buzzId])
+  @@index([fromAddress])
+  @@index([toAddress])
+}
+
+enum ReplyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TransactionType {
+  REWARD
+  BURN
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }

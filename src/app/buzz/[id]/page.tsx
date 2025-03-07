@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import BuzzCard from '@/components/BuzzCard';
 import ReplyCard from '@/components/ReplyCard';
+import { useParams } from 'next/navigation';
 
 interface Reply {
   id: string;
-  content: string;
+  text: string;
   replyLink: string;
   createdAt: Date;
-  createdBy: string;  // wallet address instead of author object
+  createdBy: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
 interface Buzz {
@@ -23,64 +25,74 @@ interface Buzz {
   createdAt: Date;
   createdBy: string;
   deadline: string;
-  tweet: {
-    author: {
-      handle: string;
-      name: string;
-      avatar: string;
-    };
-    text: string;
-    hasImages: boolean;
-    replyCount: number;
-  };
+  replyCount: number;
+  totalReplies: number;
+  isActive: boolean;
   replies: Reply[];
 }
 
-// Mock data for demonstration
-const MOCK_BUZZ: Buzz = {
-  id: '1',
-  tweetLink: 'https://twitter.com/elonmusk/status/123456789',
-  instructions: 'Share your thoughts on the scalability solutions presented in the thread and suggest potential improvements.',
-  context: 'This tweet discusses our latest breakthrough in AI model efficiency.',
-  credit: 0.05,
-  createdAt: new Date('2024-03-05T10:30:00'),
-  createdBy: '0x1234...5678',
-  deadline: '2024-04-05',
-  tweet: {
-    author: {
-      handle: 'elonmusk',
-      name: 'Elon Musk',
-      avatar: 'https://pbs.twimg.com/profile_images/123456789/elon_400x400.jpg'
-    },
-    text: 'finally I\'m done with all my queries I just need to put everything together and we are up an running',
-    hasImages: false,
-    replyCount: 1542
-  },
-  replies: [
-    {
-      id: '1',
-      content: 'This is a fascinating development! The reduced computational requirements while maintaining accuracy is impressive. Have you considered applying this to other domains?',
-      replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
-      createdAt: new Date('2024-03-05T11:30:00'),
-      createdBy: '0x1234...5678'
-    },
-    {
-      id: '2',
-      content: 'The efficiency gains here are remarkable. Would love to hear more about the specific optimizations that made this possible.',
-      replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
-      createdAt: new Date('2024-03-05T12:15:00'),
-      createdBy: '0x8765...4321'
-    }
-  ]
-};
-
 export default function BuzzDetailPage() {
-  const [buzz] = useState<Buzz>(MOCK_BUZZ);
+  const params = useParams();
+  const [buzz, setBuzz] = useState<Buzz | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRejectReply = (replyId: string) => {
-    // In a real app, this would call an API to reject the reply
-    console.log('Rejecting reply:', replyId);
-  };
+  useEffect(() => {
+    const fetchBuzzDetails = async () => {
+      try {
+        const response = await fetch(`/api/buzz/${params.id}`);
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch buzz details');
+        }
+
+        setBuzz(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to fetch buzz details');
+        console.error('Error fetching buzz details:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchBuzzDetails();
+    }
+  }, [params.id]);
+
+  if (isLoading) {
+    return (
+      <div className="animate-pulse">
+        <div className="h-10 w-32 bg-gray-200 rounded mb-6" />
+        <div className="h-64 bg-gray-200 rounded-2xl mb-8" />
+        <div className="space-y-6">
+          <div className="h-40 bg-gray-200 rounded-2xl" />
+          <div className="h-40 bg-gray-200 rounded-2xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-8">
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+          <p className="text-red-600">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!buzz) {
+    return (
+      <div className="py-8">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+          <p className="text-yellow-600">Buzz not found</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1">
@@ -102,12 +114,13 @@ export default function BuzzDetailPage() {
           instructions={buzz.instructions}
           context={buzz.context}
           credit={buzz.credit}
-          replyCount={buzz.tweet.replyCount}
-          totalReplies={100}
+          replyCount={buzz.replyCount}
+          totalReplies={buzz.totalReplies}
           showViewReplies={false}
           createdBy={buzz.createdBy}
           deadline={buzz.deadline}
-          createdAt={buzz.createdAt}
+          createdAt={new Date(buzz.createdAt)}
+          isActive={buzz.isActive}
         />
       </div>
 
@@ -126,14 +139,25 @@ export default function BuzzDetailPage() {
             <ReplyCard
               key={reply.id}
               id={reply.id}
-              content={reply.content}
+              text={reply.text}
               replyLink={reply.replyLink}
-              createdAt={reply.createdAt}
+              createdAt={new Date(reply.createdAt)}
               createdBy={reply.createdBy}
               buzzCreator={buzz.createdBy}
-              onReject={handleRejectReply}
+              buzzId={buzz.id}
+              status={reply.status}
             />
           ))}
+          
+          {buzz.replies.length === 0 && (
+            <div className="bg-gray-50 rounded-2xl p-8 text-center">
+              <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-lg font-medium text-gray-900">No replies yet</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Be the first to reply and earn BUZZ! 🚀
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

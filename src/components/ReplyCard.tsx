@@ -1,6 +1,6 @@
 import { useAccount } from 'wagmi';
 import { useState } from 'react';
-import { XMarkIcon, CheckIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, ArrowTopRightOnSquareIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 
 interface ReplyCardProps {
@@ -28,6 +28,12 @@ const getEmbedUrl = (tweetUrl: string) => {
   }
 };
 
+// Utility function to format wallet address
+const formatAddress = (address: string) => {
+  if (!address) return '';
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+};
+
 export default function ReplyCard({ 
   id, 
   replyLink,
@@ -45,6 +51,17 @@ export default function ReplyCard({
   const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(status);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyAddress = async () => {
+    try {
+      await navigator.clipboard.writeText(createdBy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
 
   const handleReject = async () => {
     if (!isOwner || currentStatus !== 'PENDING') return;
@@ -114,9 +131,22 @@ export default function ReplyCard({
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-gray-500 break-all">
-                {createdBy}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-900">
+                  {formatAddress(createdBy)}
+                </span>
+                <button
+                  onClick={handleCopyAddress}
+                  className="inline-flex items-center justify-center p-1 rounded-md hover:bg-gray-200 transition-colors"
+                  title={`Copy address: ${createdBy}`}
+                >
+                  {copied ? (
+                    <CheckIcon className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                  )}
+                </button>
+              </div>
               <span className="text-gray-400 hidden sm:inline">·</span>
               <span className="text-sm text-gray-500">
                 {new Date(createdAt).toLocaleDateString(undefined, { 

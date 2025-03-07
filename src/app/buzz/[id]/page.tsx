@@ -103,6 +103,7 @@ export default function BuzzDetailPage() {
           context={buzz.context}
           credit={buzz.credit}
           replyCount={buzz.tweet.replyCount}
+          totalReplies={100}
           showViewReplies={false}
           createdBy={buzz.createdBy}
           deadline={buzz.deadline}

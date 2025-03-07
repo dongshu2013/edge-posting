@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BoltIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 export default function NewBuzzPage() {
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const router = useRouter();
   const [formData, setFormData] = useState({
     tweetLink: '',
@@ -29,15 +29,48 @@ export default function NewBuzzPage() {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isConnected) {
       alert('Please connect your wallet first');
       return;
     }
-    
-    router.push('/buzz');
+
+    try {
+      const response = await fetch('/api/buzz', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tweetLink: formData.tweetLink,
+          instructions: formData.instructions,
+          context: formData.context,
+          credit: formData.pricePerReply,
+          createdBy: address, // from useAccount
+          deadline: new Date(formData.deadline + 'T23:59:59Z').toISOString(),
+          numberOfReplies: formData.numberOfReplies,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create buzz');
+      }
+
+      const buzz = await response.json();
+      console.log('Created buzz:', buzz);
+      
+      // Show success message
+      alert('Buzz created successfully!');
+      
+      // Redirect to the buzz details page
+      router.push(`/buzz/${buzz.id}`);
+    } catch (error) {
+      console.error('Error creating buzz:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create buzz');
+    }
   };
 
   return (

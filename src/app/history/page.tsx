@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { format } from 'date-fns';
 import { SparklesIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import ReplyCard from '@/components/ReplyCard';
+import { useAccount } from 'wagmi';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 interface Reply {
   id: string;
@@ -40,6 +43,18 @@ const MOCK_HISTORY: Reply[] = [
 export default function HistoryPage() {
   const [history] = useState<Reply[]>(MOCK_HISTORY);
   const [sortBy, setSortBy] = useState<'newest' | 'highest-credit'>('newest');
+  const { isConnected } = useAccount();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isConnected) {
+      router.push('/');
+    }
+  }, [isConnected, router]);
+
+  if (!isConnected) {
+    return null; // Return null to prevent flash of content before redirect
+  }
 
   const sortedHistory = [...history].sort((a, b) => {
     if (sortBy === 'newest') {

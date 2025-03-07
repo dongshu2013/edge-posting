@@ -100,113 +100,111 @@ export default function BuzzesPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
-              <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
-              Active Buzzes 🐝
-            </h3>
-            <div className="flex items-center space-x-4">
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
-                className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
-              >
-                <option value="newest">✨ Newest First</option>
-                <option value="price">💰 Highest Price</option>
-                <option value="engagement">🔥 Highest Engagement</option>
-              </select>
-            </div>
+    <div className="py-8">
+      <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
+        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
+            <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
+            Active Buzzes 🐝
+          </h3>
+          <div className="flex items-center space-x-4">
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
+              className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+            >
+              <option value="newest">✨ Newest First</option>
+              <option value="price">💰 Highest Price</option>
+              <option value="engagement">🔥 Highest Engagement</option>
+            </select>
           </div>
         </div>
+      </div>
 
-        <div className="space-y-6">
-          {sortedBuzzes.map((buzz) => (
-            <div key={buzz.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-4 sm:p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
-              <div className="flex flex-wrap gap-2 mb-4">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
-                  {buzz.credit} BUZZ per reply
-                </span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium shadow-sm">
-                  Total: {calculateTotalBuzz(buzz)} BUZZ
-                </span>
-              </div>
+      <div className="space-y-6">
+        {sortedBuzzes.map((buzz) => (
+          <div key={buzz.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 sm:p-6">
+            <div className="flex flex-wrap gap-2 mb-4">
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
+                {buzz.credit} BUZZ per reply
+              </span>
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium shadow-sm">
+                Total: {calculateTotalBuzz(buzz)} BUZZ
+              </span>
+            </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-start gap-3">
-                <div className="flex-shrink-0">
-                  {buzz.tweet.author.avatar && !failedAvatars.has(buzz.tweet.author.avatar) ? (
-                    <img
-                      className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
-                      src={buzz.tweet.author.avatar}
-                      alt=""
-                      onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
-                    />
-                  ) : null}
-                </div>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-1 text-sm">
-                    <span className="font-semibold text-gray-900">{buzz.tweet.author.name}</span>
-                    <span className="text-gray-500">@{buzz.tweet.author.handle}</span>
-                    <span className="text-gray-500">·</span>
-                    <span className="text-gray-500">
-                      {new Date(buzz.createdAt).toLocaleDateString(undefined, { 
-                        month: 'short', 
-                        day: 'numeric' 
-                      })}
-                    </span>
-                  </div>
-                  
-                  <p className="mt-1 text-gray-900 break-words">{truncateText(buzz.tweet.text)}</p>
-                  
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-gray-500 text-sm">
-                    <span className="flex items-center">
-                      <ChatBubbleLeftRightIcon className="h-5 w-5 mr-1 text-indigo-500" />
-                      {buzz.tweet.replyCount.toLocaleString()} replies
-                    </span>
-                    {buzz.tweet.hasImages && (
-                      <span className="flex items-center">
-                        <PhotoIcon className="h-5 w-5 mr-1 text-indigo-500" />
-                        Image
-                      </span>
-                    )}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <a
-                        href={buzz.tweetLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
-                      >
-                        View on Twitter
-                        <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
-                      </a>
-                      <Link
-                        href={`/buzz/${buzz.id}`}
-                        className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
-                      >
-                        View Replies
-                        <ChatBubbleLeftRightIcon className="ml-1 h-4 w-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+              <div className="flex-shrink-0">
+                {buzz.tweet.author.avatar && !failedAvatars.has(buzz.tweet.author.avatar) ? (
+                  <img
+                    className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
+                    src={buzz.tweet.author.avatar}
+                    alt=""
+                    onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
+                  />
+                ) : null}
               </div>
               
-              <div className="mt-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01]">
-                <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                  <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
-                  How to Play
-                </h4>
-                <p className="text-sm text-gray-600 break-words">
-                  {buzz.instructions}
-                </p>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1 text-sm">
+                  <span className="font-semibold text-gray-900">{buzz.tweet.author.name}</span>
+                  <span className="text-gray-500">@{buzz.tweet.author.handle}</span>
+                  <span className="text-gray-500">·</span>
+                  <span className="text-gray-500">
+                    {new Date(buzz.createdAt).toLocaleDateString(undefined, { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}
+                  </span>
+                </div>
+                
+                <p className="mt-1 text-gray-900 break-words">{truncateText(buzz.tweet.text)}</p>
+                
+                <div className="mt-2 flex flex-wrap items-center gap-3 text-gray-500 text-sm">
+                  <span className="flex items-center">
+                    <ChatBubbleLeftRightIcon className="h-5 w-5 mr-1 text-indigo-500" />
+                    {buzz.tweet.replyCount.toLocaleString()} replies
+                  </span>
+                  {buzz.tweet.hasImages && (
+                    <span className="flex items-center">
+                      <PhotoIcon className="h-5 w-5 mr-1 text-indigo-500" />
+                      Image
+                    </span>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <a
+                      href={buzz.tweetLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+                    >
+                      View on Twitter
+                      <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
+                    </a>
+                    <Link
+                      href={`/buzz/${buzz.id}`}
+                      className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                    >
+                      View Replies
+                      <ChatBubbleLeftRightIcon className="ml-1 h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
               </div>
             </div>
-          ))}
-        </div>
+            
+            <div className="mt-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01]">
+              <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
+                <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
+                How to Play
+              </h4>
+              <p className="text-sm text-gray-600 break-words">
+                {buzz.instructions}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

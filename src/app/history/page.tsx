@@ -54,7 +54,7 @@ export default function HistoryPage() {
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header Card */}
-        <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
+        <div className="mb-6 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-200/80">
           <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2">
@@ -88,7 +88,7 @@ export default function HistoryPage() {
         <div className="space-y-4">
           {sortedHistory.length > 0 ? (
             sortedHistory.map((tweet) => (
-              <div key={tweet.id} className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow p-4 sm:p-6">
+              <div key={tweet.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 sm:p-6">
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <a
                     href={tweet.tweetLink}

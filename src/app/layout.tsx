@@ -25,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geist.className} antialiased bg-white`}>
+    <html lang="en" className="h-full">
+      <body className={`${geist.className} antialiased min-h-screen bg-gradient-to-b from-indigo-50 to-white`}>
         <WalletProvider>
           <Navbar />
           <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
+import { SparklesIcon, ChatBubbleLeftRightIcon, PhotoIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 
 interface Buzz {
   id: string;
@@ -99,42 +100,45 @@ export default function BuzzesPage() {
   });
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="bg-white shadow sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center border-b border-gray-200">
-          <h3 className="text-xl font-medium text-gray-900">Active Buzzes</h3>
-          <div className="flex items-center space-x-4">
-            <label htmlFor="sortBy" className="text-sm text-gray-500">
-              Sort by:
-            </label>
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
-              className="text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="newest">Newest First</option>
-              <option value="price">Highest Price</option>
-              <option value="engagement">Highest Engagement</option>
-            </select>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
+          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+            <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
+              <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
+              Active Buzzes 🐝
+            </h3>
+            <div className="flex items-center space-x-4">
+              <select
+                id="sortBy"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
+                className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+              >
+                <option value="newest">✨ Newest First</option>
+                <option value="price">💰 Highest Price</option>
+                <option value="engagement">🔥 Highest Engagement</option>
+              </select>
+            </div>
           </div>
         </div>
-        <ul className="divide-y divide-gray-200">
+
+        <div className="space-y-6">
           {sortedBuzzes.map((buzz) => (
-            <li key={buzz.id} className="px-6 py-5">
+            <div key={buzz.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
               <div className="flex justify-end space-x-2 mb-4">
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 text-xs font-medium">
-                  Price: {buzz.credit} BUZZ
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
+                  {buzz.credit} BUZZ per reply
                 </span>
-                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-100 text-xs font-medium">
-                  Balance: {calculateTotalBuzz(buzz)} BUZZ
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium shadow-sm">
+                  Total: {calculateTotalBuzz(buzz)} BUZZ
                 </span>
               </div>
 
               <div className="flex items-start space-x-3">
                 {!failedAvatars.has(buzz.tweet.author.avatar) ? (
                   <img
-                    className="h-10 w-10 rounded-full"
+                    className="h-12 w-12 rounded-full ring-2 ring-indigo-500/20"
                     src={buzz.tweet.author.avatar}
                     alt=""
                     onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
@@ -145,7 +149,7 @@ export default function BuzzesPage() {
                 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center space-x-1 text-sm">
-                    <span className="font-medium text-gray-900">{buzz.tweet.author.name}</span>
+                    <span className="font-semibold text-gray-900">{buzz.tweet.author.name}</span>
                     <span className="text-gray-500">@{buzz.tweet.author.handle}</span>
                     <span className="text-gray-500">·</span>
                     <span className="text-gray-500">
@@ -160,43 +164,49 @@ export default function BuzzesPage() {
                   
                   <div className="mt-2 flex items-center space-x-4 text-gray-500 text-sm">
                     <span className="flex items-center">
-                      <svg className="h-5 w-5 mr-1" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 21.638h-.014C9.403 21.59 1.95 14.856 1.95 8.478c0-3.064 2.525-5.754 5.403-5.754 2.29 0 3.83 1.58 4.646 2.73.814-1.148 2.354-2.73 4.645-2.73 2.88 0 5.404 2.69 5.404 5.755 0 6.376-7.454 13.11-10.037 13.157H12zM7.354 4.225c-2.08 0-3.903 1.988-3.903 4.255 0 5.74 7.034 11.596 8.55 11.658 1.518-.062 8.55-5.917 8.55-11.658 0-2.267-1.823-4.255-3.903-4.255-2.528 0-3.94 2.936-3.952 2.965-.23.562-1.156.562-1.387 0-.014-.03-1.425-2.965-3.954-2.965z"></path>
-                      </svg>
+                      <ChatBubbleLeftRightIcon className="h-5 w-5 mr-1 text-indigo-500" />
                       {buzz.tweet.replyCount.toLocaleString()} replies
                     </span>
                     {buzz.tweet.hasImages && (
                       <span className="flex items-center">
-                        <svg className="h-5 w-5 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M19.75 2H4.25C3.01 2 2 3.01 2 4.25v15.5C2 20.99 3.01 22 4.25 22h15.5c1.24 0 2.25-1.01 2.25-2.25V4.25C22 3.01 20.99 2 19.75 2zM4.25 3.5h15.5c.413 0 .75.337.75.75v9.676l-3.858-3.858c-.14-.14-.33-.22-.53-.22h-.003c-.2 0-.393.08-.532.224l-4.317 4.384-1.813-1.806c-.14-.14-.33-.22-.53-.22-.193-.03-.395.08-.535.227L3.5 17.642V4.25c0-.413.337-.75.75-.75zm-.744 16.28l5.418-5.534 6.282 6.254H4.25c-.402 0-.727-.322-.744-.72zm16.244.72h-2.42l-5.007-4.987 3.792-3.85 4.385 4.384v3.703c0 .413-.337.75-.75.75z"></path>
-                        </svg>
+                        <PhotoIcon className="h-5 w-5 mr-1 text-indigo-500" />
                         Image
                       </span>
                     )}
-                    <a
-                      href={buzz.tweetLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1 rounded-md bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors duration-150"
-                    >
-                      View on Twitter
-                      <svg className="ml-1 h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M17.92 11.62a1 1 0 00-.21-.33l-5-5a1 1 0 00-1.42 1.42l3.3 3.29H7a1 1 0 000 2h7.59l-3.3 3.29a1 1 0 000 1.42 1 1 0 001.42 0l5-5a1 1 0 00.21-.33 1 1 0 000-.76z"/>
-                      </svg>
-                    </a>
+                    <div className="flex items-center space-x-2">
+                      <a
+                        href={buzz.tweetLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
+                      >
+                        View on Twitter
+                        <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
+                      </a>
+                      <Link
+                        href={`/buzz/${buzz.id}`}
+                        className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
+                      >
+                        View Replies
+                        <ChatBubbleLeftRightIcon className="ml-1 h-4 w-4" />
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="mt-4 bg-gray-50 rounded-lg p-4">
-                <h4 className="text-sm font-medium text-gray-900 mb-2">How to Play</h4>
+              <div className="mt-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01]">
+                <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
+                  <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
+                  How to Play
+                </h4>
                 <p className="text-sm text-gray-600">
                   {buzz.instructions}
                 </p>
               </div>
-            </li>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );

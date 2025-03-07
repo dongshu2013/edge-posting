@@ -238,100 +238,19 @@ export default function PlayPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-              <ComputerDesktopIcon className="h-5 w-5 mr-2 text-indigo-500" />
-              Connect Your Local Model
-            </h3>
-            <div className="flex items-center space-x-2">
-              <div className={`h-3 w-3 rounded-full ${isModelConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
-              <span className="text-sm text-gray-500">
-                {isModelConnected ? 'Model Connected' : 'Model Disconnected'}
-              </span>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
-            <div>
-              <label htmlFor="modelEngine" className="block text-sm font-medium text-gray-700">
-                Model Engine
-              </label>
-              <select
-                id="modelEngine"
-                name="modelEngine"
-                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
-                value={selectedEngine}
-                onChange={(e) => handleEngineChange(e.target.value)}
-                disabled={isModelConnected}
-              >
-                {MODEL_ENGINES.map((engine) => (
-                  <option key={engine.id} value={engine.id}>
-                    {engine.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="modelEndpoint" className="block text-sm font-medium text-gray-700">
-                Model Endpoint
-              </label>
-              <input
-                type="text"
-                name="modelEndpoint"
-                id="modelEndpoint"
-                className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
-                placeholder="http://localhost:11434"
-                value={modelEndpoint}
-                onChange={(e) => setModelEndpoint(e.target.value)}
-                disabled={isModelConnected || (selectedEngine !== 'custom')}
-              />
-            </div>
-            <div>
-              <label htmlFor="modelName" className="block text-sm font-medium text-gray-700">
-                Model Name
-              </label>
-              <input
-                type="text"
-                name="modelName"
-                id="modelName"
-                className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
-                placeholder="llama3"
-                value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
-                disabled={isModelConnected}
-              />
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                isModelConnected
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-green-600 hover:bg-green-700'
-              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
-              onClick={isModelConnected ? disconnectModel : connectModel}
-              disabled={!isConnected}
-            >
-              {isModelConnected ? 'Disconnect Model' : 'Connect Model'}
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+      {/* Posting Status Section */}
+      <div className="bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
         <div className="px-4 py-5 sm:p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900">Posting Status</h3>
             <div className="flex items-center space-x-4">
-              <div className="px-3 py-1 bg-gray-100 rounded-md text-gray-800 flex items-center">
-                <CurrencyDollarIcon className="h-5 w-5 mr-2 text-yellow-500" />
-                <span className="font-medium">{credits.toFixed(2)}</span>
-                <span className="ml-1">BUZZ</span>
-              </div>
+              {isPosting && (
+                <div className="px-3 py-1 bg-gray-100 rounded-md text-gray-800 flex items-center">
+                  <CurrencyDollarIcon className="h-5 w-5 mr-2 text-yellow-500" />
+                  <span className="font-medium">{credits.toFixed(2)}</span>
+                  <span className="ml-1">BUZZ</span>
+                </div>
+              )}
               {isModelConnected && (
                 <button
                   type="button"
@@ -443,33 +362,119 @@ export default function PlayPage() {
           )}
         </div>
       </div>
-      
-      <div className="bg-white shadow overflow-hidden sm:rounded-lg">
+
+      {/* Connect Model Section */}
+      <div className="bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
         <div className="px-4 py-5 sm:p-6">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
-              <KeyIcon className="h-5 w-5 mr-2 text-indigo-500" />
-              Twitter API Configuration
+              <ComputerDesktopIcon className="h-5 w-5 mr-2 text-indigo-500" />
+              Connect Your Local Model
             </h3>
             <div className="flex items-center space-x-2">
-              <div className={`h-3 w-3 rounded-full ${isTwitterConfigured ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <div className={`h-3 w-3 rounded-full ${isModelConnected ? 'bg-green-500' : 'bg-red-500'}`}></div>
               <span className="text-sm text-gray-500">
+                {isModelConnected ? 'Model Connected' : 'Model Disconnected'}
+              </span>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
+            <div>
+              <label htmlFor="modelEngine" className="block text-sm font-medium text-gray-700">
+                Model Engine
+              </label>
+              <select
+                id="modelEngine"
+                name="modelEngine"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                value={selectedEngine}
+                onChange={(e) => handleEngineChange(e.target.value)}
+                disabled={isModelConnected}
+              >
+                {MODEL_ENGINES.map((engine) => (
+                  <option key={engine.id} value={engine.id}>
+                    {engine.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="modelEndpoint" className="block text-sm font-medium text-gray-700">
+                Model Endpoint
+              </label>
+              <input
+                type="text"
+                name="modelEndpoint"
+                id="modelEndpoint"
+                className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
+                placeholder="http://localhost:11434"
+                value={modelEndpoint}
+                onChange={(e) => setModelEndpoint(e.target.value)}
+                disabled={isModelConnected || (selectedEngine !== 'custom')}
+              />
+            </div>
+            <div>
+              <label htmlFor="modelName" className="block text-sm font-medium text-gray-700">
+                Model Name
+              </label>
+              <input
+                type="text"
+                name="modelName"
+                id="modelName"
+                className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
+                placeholder="llama3"
+                value={modelName}
+                onChange={(e) => setModelName(e.target.value)}
+                disabled={isModelConnected}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                isModelConnected
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-green-600 hover:bg-green-700'
+              } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+              onClick={isModelConnected ? disconnectModel : connectModel}
+              disabled={!isConnected}
+            >
+              {isModelConnected ? 'Disconnect Model' : 'Connect Model'}
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Twitter API Configuration */}
+      <div className="bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
+              <KeyIcon className="h-7 w-7 mr-2 text-indigo-500" />
+              Twitter API Configuration
+            </h3>
+            <div className="px-3 py-1 rounded-full flex items-center space-x-2 bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200">
+              <div className={`h-2.5 w-2.5 rounded-full ${isTwitterConfigured ? 'bg-green-500' : 'bg-red-500'} shadow-sm`}></div>
+              <span className="text-sm font-medium text-gray-600">
                 {isTwitterConfigured ? 'Configured' : 'Not Configured'}
               </span>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="twitterApiKey" className="block text-sm font-medium text-gray-700">
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6">
+              <label htmlFor="twitterApiKey" className="block text-sm font-medium text-gray-700 mb-2">
                 Twitter API Key
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
+              <div className="relative rounded-xl shadow-sm">
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   name="twitterApiKey"
                   id="twitterApiKey"
-                  className="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  className="block w-full pr-12 py-3 sm:text-sm border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
                   placeholder="Enter your Twitter API key"
                   value={twitterApiKey}
                   onChange={(e) => setTwitterApiKey(e.target.value)}
@@ -477,39 +482,41 @@ export default function PlayPage() {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 px-3 flex items-center"
+                  className="absolute inset-y-0 right-0 px-4 flex items-center"
                   onClick={() => setShowApiKey(!showApiKey)}
                 >
                   {showApiKey ? (
-                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400 hover:text-indigo-500 transition-colors duration-200" />
                   ) : (
-                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                    <EyeIcon className="h-5 w-5 text-gray-400 hover:text-indigo-500 transition-colors duration-200" />
                   )}
                 </button>
               </div>
-              <p className="mt-2 text-sm text-gray-500">
-                Your API key will be used to automate tweet replies. {isTwitterConfigured && 'The key is securely stored.'}
+              <p className="mt-3 text-sm text-gray-600 flex items-center">
+                <span className="bg-white/50 px-3 py-1 rounded-full border border-gray-200">
+                  Your API key will be used to automate tweet replies. {isTwitterConfigured && 'The key is securely stored.'}
+                </span>
               </p>
             </div>
 
-            {!isTwitterConfigured && (
-              <div className="flex justify-end">
+            <div className="flex justify-end">
+              {!isTwitterConfigured ? (
                 <button
                   type="button"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className={`inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-xl text-white ${
+                    twitterApiKey.trim()
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
+                      : 'bg-gray-300 cursor-not-allowed'
+                  } transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                   onClick={handleSaveTwitterKey}
                   disabled={!twitterApiKey.trim()}
                 >
                   Save API Key
                 </button>
-              </div>
-            )}
-
-            {isTwitterConfigured && (
-              <div className="flex justify-end">
+              ) : (
                 <button
                   type="button"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-xl text-white bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-500 hover:to-pink-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                   onClick={() => {
                     setIsTwitterConfigured(false);
                     setTwitterApiKey('');
@@ -517,8 +524,8 @@ export default function PlayPage() {
                 >
                   Reset API Key
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>

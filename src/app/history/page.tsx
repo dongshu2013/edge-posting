@@ -53,34 +53,21 @@ export default function HistoryPage() {
   return (
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header Card */}
-        <div className="mb-6 bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-200/80">
-          <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <SparklesIcon className="h-7 w-7 text-purple-500" />
-                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-700">
-                  Posting History
-                </h1>
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-gray-600">Total earnings:</span>
-                <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                  {totalEarnings.toFixed(2)} BUZZ
-                </span>
-              </div>
-            </div>
-            <div className="flex-shrink-0">
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'highest-credit')}
-                className="w-full sm:w-auto text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 hover:border-purple-300"
-              >
-                <option value="newest">✨ Newest First</option>
-                <option value="highest-credit">💰 Highest Earnings</option>
-              </select>
-            </div>
+        <div className="flex items-center justify-between mb-6">
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'highest-credit')}
+            className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+          >
+            <option value="newest">✨ Newest First</option>
+            <option value="highest-credit">💰 Highest Earnings</option>
+          </select>
+          <div className="flex items-center gap-4 bg-white rounded-2xl px-6 py-2.5 shadow-sm">
+            <span className="text-gray-600">Total earnings:</span>
+            <span className="text-xl font-semibold text-amber-500">
+              {totalEarnings.toFixed(2)} BUZZ
+            </span>
           </div>
         </div>
 

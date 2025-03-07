@@ -59,13 +59,6 @@ export default function MyBuzzesPage() {
     return words.slice(0, Math.max(minWords, Math.min(15, words.length))).join(' ') + '...';
   };
 
-  // Default avatar as an SVG component
-  const DefaultAvatar = () => (
-    <svg className="h-10 w-10 text-gray-300 bg-gray-100 rounded-full p-2" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-    </svg>
-  );
-
   const calculateTotalBuzz = (buzz: Buzz) => {
     return (buzz.credit * buzz.tweet.replyCount).toFixed(2);
   };
@@ -97,54 +90,44 @@ export default function MyBuzzesPage() {
   return (
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
-            <div>
-              <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
-                <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
-                My Buzzes 🐝
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Manage your active buzz requests
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-4 sm:ml-auto">
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'newest' | 'engagement')}
-                className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
-              >
-                <option value="newest">✨ Newest First</option>
-                <option value="engagement">🔥 Highest Engagement</option>
-              </select>
-              <Link
-                href="/buzz/new"
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-              >
-                <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-                New Buzz
-              </Link>
-            </div>
-          </div>
+        <div className="flex items-center justify-between mb-6">
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as 'newest' | 'engagement')}
+            className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+          >
+            <option value="newest">✨ Newest First</option>
+            <option value="engagement">🔥 Highest Engagement</option>
+          </select>
+          <Link
+            href="/buzz/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+          >
+            <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
+            New Buzz
+          </Link>
         </div>
 
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
             sortedBuzzes.map((buzz) => (
-              <div key={buzz.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-4 sm:p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
+              <div key={buzz.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 sm:p-6">
                 <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
+                  <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-amber-500 text-white text-sm font-medium">
                     {buzz.credit} BUZZ per reply
                   </span>
-                  <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium shadow-sm">
+                  <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-emerald-500 text-white text-sm font-medium">
                     Total: {calculateTotalBuzz(buzz)} BUZZ
+                  </span>
+                  <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-blue-500 text-white text-sm font-medium">
+                    Left: {(buzz.credit * Math.max(0, buzz.tweet.replyCount - 10)).toFixed(2)} BUZZ
                   </span>
                 </div>
 
                 <div className="flex flex-col sm:flex-row sm:items-start gap-3">
                   <div className="flex-shrink-0">
-                    {!failedAvatars.has(buzz.tweet.author.avatar) ? (
+                    {buzz.tweet.author.avatar && !failedAvatars.has(buzz.tweet.author.avatar) && (
                       <Image
                         className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
                         src={buzz.tweet.author.avatar}
@@ -153,8 +136,6 @@ export default function MyBuzzesPage() {
                         height={40}
                         onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
                       />
-                    ) : (
-                      <DefaultAvatar />
                     )}
                   </div>
                   
@@ -218,7 +199,7 @@ export default function MyBuzzesPage() {
               </div>
             ))
           ) : (
-            <div className="bg-white rounded-2xl shadow-xl p-12 text-center backdrop-blur-xl bg-white/90 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-12 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
               <p className="mt-1 text-sm text-gray-500">

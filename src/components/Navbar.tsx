@@ -36,7 +36,7 @@ export default function Navbar() {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Buzzes
+                All Buzzes
               </Link>
               <Link
                 href="/play"
@@ -127,7 +127,7 @@ export default function Navbar() {
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Buzzes
+            All Buzzes
           </Link>
           <Link
             href="/play"

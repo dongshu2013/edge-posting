@@ -100,12 +100,15 @@ export default function BuzzDetailPage() {
       {/* Original Tweet Card */}
       <div className="mb-6 bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300">
         <div className="px-6 py-6">
-          <div className="flex justify-end space-x-2 mb-4">
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-sm font-medium shadow-sm">
+          <div className="flex flex-wrap gap-2 mb-4">
+            <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-amber-500 text-white text-sm font-medium">
               {buzz.credit} BUZZ per reply
             </span>
-            <span className="inline-flex items-center px-3 py-1.5 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium shadow-sm">
+            <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-emerald-500 text-white text-sm font-medium">
               Total: {(buzz.credit * buzz.tweet.replyCount).toFixed(2)} BUZZ
+            </span>
+            <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-blue-500 text-white text-sm font-medium">
+              Left: {(buzz.credit * Math.max(0, buzz.tweet.replyCount - 10)).toFixed(2)} BUZZ
             </span>
           </div>
 

@@ -75,10 +75,6 @@ export default function BuzzesPage() {
     return words.slice(0, Math.max(minWords, Math.min(15, words.length))).join(' ') + '...';
   };
 
-  const calculateTotalBuzz = (buzz: Buzz) => {
-    return (buzz.credit * buzz.tweet.replyCount).toFixed(2);
-  };
-
   const sortedBuzzes = [...buzzes].sort((a, b) => {
     switch (sortBy) {
       case 'price':
@@ -93,36 +89,31 @@ export default function BuzzesPage() {
 
   return (
     <div className="py-8">
-      <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-        <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-          <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
-            <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
-            Active Buzzes 🐝
-          </h3>
-          <div className="flex items-center space-x-4">
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
-              className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
-            >
-              <option value="newest">✨ Newest First</option>
-              <option value="price">💰 Highest Price</option>
-              <option value="engagement">🔥 Highest Engagement</option>
-            </select>
-          </div>
-        </div>
+      <div className="flex mb-6">
+        <select
+          id="sortBy"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as 'newest' | 'price' | 'engagement')}
+          className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+        >
+          <option value="newest">✨ Newest First</option>
+          <option value="price">💰 Highest Price</option>
+          <option value="engagement">🔥 Highest Engagement</option>
+        </select>
       </div>
 
       <div className="space-y-6">
         {sortedBuzzes.map((buzz) => (
           <div key={buzz.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 sm:p-6">
             <div className="flex flex-wrap gap-2 mb-4">
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
+              <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-amber-500 text-white text-sm font-medium">
                 {buzz.credit} BUZZ per reply
               </span>
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium shadow-sm">
-                Total: {calculateTotalBuzz(buzz)} BUZZ
+              <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-emerald-500 text-white text-sm font-medium">
+                Total: {(buzz.credit * buzz.tweet.replyCount).toFixed(2)} BUZZ
+              </span>
+              <span className="inline-flex items-center px-4 py-2 rounded-2xl bg-blue-500 text-white text-sm font-medium">
+                Left: {(buzz.credit * Math.max(0, buzz.tweet.replyCount - 10)).toFixed(2)} BUZZ
               </span>
             </div>
 

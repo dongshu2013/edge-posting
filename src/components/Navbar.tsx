@@ -19,19 +19,19 @@ export function Navbar() {
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-bold text-gray-900">
-                Edge Posting
+                BUZZ
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
               <Link
                 href="/"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  pathname === '/' || pathname === '/post' || pathname.startsWith('/post/')
+                  pathname === '/' || pathname === '/buzz' || pathname.startsWith('/buzz/')
                     ? 'border-indigo-500 text-gray-900'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                Requests
+                Buzzes
               </Link>
               <Link
                 href="/play"
@@ -43,15 +43,25 @@ export function Navbar() {
               >
                 Play
               </Link>
+              <Link
+                href="/history"
+                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+                  pathname === '/history'
+                    ? 'border-indigo-500 text-gray-900'
+                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                }`}
+              >
+                History
+              </Link>
             </div>
           </div>
           <div className="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
             <Link
-              href="/post/new"
+              href="/buzz/new"
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
             >
               <PlusIcon className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
-              New Request
+              New Buzz
             </Link>
             <ConnectButton />
           </div>
@@ -103,13 +113,13 @@ export function Navbar() {
           <Link
             href="/"
             className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-              pathname === '/' || pathname === '/post' || pathname.startsWith('/post/')
+              pathname === '/' || pathname === '/buzz' || pathname.startsWith('/buzz/')
                 ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                 : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            Requests
+            Buzzes
           </Link>
           <Link
             href="/play"
@@ -123,15 +133,26 @@ export function Navbar() {
             Play
           </Link>
           <Link
-            href="/post/new"
+            href="/history"
             className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-              pathname === '/post/new'
+              pathname === '/history'
                 ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
                 : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            New Request
+            History
+          </Link>
+          <Link
+            href="/buzz/new"
+            className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+              pathname === '/buzz/new'
+                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
+                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+            }`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            New Buzz
           </Link>
         </div>
         <div className="pt-4 pb-3 border-t border-gray-200">

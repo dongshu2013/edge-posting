@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
 
-export default function NewRequestPage() {
+export default function NewBuzzPage() {
   const { isConnected, address } = useAccount();
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -41,10 +41,10 @@ export default function NewRequestPage() {
     <div className="max-w-2xl mx-auto py-8">
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Create a Tweet Reply Request</h3>
+          <h3 className="text-lg leading-6 font-medium text-gray-900">Create a New Buzz</h3>
           <div className="mt-2 max-w-xl text-sm text-gray-500">
             <p>
-              Request others to reply to your tweet. You can deposit credit to incentivize participation.
+              Create a buzz for others to engage with your tweet. Add credits to incentivize participation.
             </p>
           </div>
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
@@ -73,7 +73,7 @@ export default function NewRequestPage() {
                 name="description"
                 id="description"
                 className="mt-1 block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
-                placeholder="Brief description of the tweet"
+                placeholder="Brief description of your buzz"
                 value={formData.description}
                 onChange={handleInputChange}
               />
@@ -134,7 +134,7 @@ export default function NewRequestPage() {
                     : 'bg-gray-300 cursor-not-allowed'
                 }`}
               >
-                Create Request
+                Create Buzz
               </button>
             </div>
           </form>

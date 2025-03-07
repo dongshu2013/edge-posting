@@ -8,7 +8,10 @@ import {
   PlayIcon, 
   StopIcon, 
   CheckCircleIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  KeyIcon,
+  EyeIcon,
+  EyeSlashIcon
 } from '@heroicons/react/24/outline';
 
 interface PostRequest {
@@ -31,6 +34,35 @@ interface PostedTweet {
   postedAt: Date;
   credit: number;
 }
+
+interface ModelEngine {
+  id: string;
+  name: string;
+  defaultEndpoint: string;
+}
+
+const MODEL_ENGINES: ModelEngine[] = [
+  {
+    id: 'ollama',
+    name: 'Ollama',
+    defaultEndpoint: 'http://localhost:11434'
+  },
+  {
+    id: 'msty',
+    name: 'Mistral',
+    defaultEndpoint: 'http://localhost:10000'
+  },
+  {
+    id: 'jan',
+    name: 'Jan',
+    defaultEndpoint: 'http://localhost:1337'
+  },
+  {
+    id: 'custom',
+    name: 'Custom',
+    defaultEndpoint: ''
+  }
+];
 
 // Mock data for demonstration
 const MOCK_REQUESTS: PostRequest[] = [
@@ -56,29 +88,29 @@ const MOCK_REQUESTS: PostRequest[] = [
   }
 ];
 
-const MOCK_HISTORY: PostedTweet[] = [
-  {
-    id: '1',
-    requestId: '1',
-    tweetLink: 'https://twitter.com/user1/status/123456789',
-    replyLink: 'https://twitter.com/ai_helper/status/123456790',
-    content: 'This paper presents a fascinating approach to multi-modal learning. The key takeaway for me is how they managed to reduce computational requirements while maintaining accuracy.',
-    postedAt: new Date('2024-03-06T11:45:00'),
-    credit: 0.05
-  }
-];
-
 export default function PlayPage() {
   const { isConnected, address } = useAccount();
   const [isModelConnected, setIsModelConnected] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [currentRequest, setCurrentRequest] = useState<PostRequest | null>(null);
   const [availableRequests, setAvailableRequests] = useState<PostRequest[]>(MOCK_REQUESTS);
-  const [history, setHistory] = useState<PostedTweet[]>(MOCK_HISTORY);
+  const [selectedEngine, setSelectedEngine] = useState<string>('ollama');
   const [modelEndpoint, setModelEndpoint] = useState('http://localhost:11434');
   const [modelName, setModelName] = useState('llama3');
   const [credits, setCredits] = useState(0.15);
   const [generatedReply, setGeneratedReply] = useState('');
+  const [twitterApiKey, setTwitterApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [isTwitterConfigured, setIsTwitterConfigured] = useState(false);
+
+  // Handle engine change
+  const handleEngineChange = (engineId: string) => {
+    setSelectedEngine(engineId);
+    const engine = MODEL_ENGINES.find(e => e.id === engineId);
+    if (engine && engine.defaultEndpoint) {
+      setModelEndpoint(engine.defaultEndpoint);
+    }
+  };
 
   const connectModel = () => {
     // In a real app, we would test the connection to the local model here
@@ -92,9 +124,23 @@ export default function PlayPage() {
     setGeneratedReply('');
   };
 
+  const handleSaveTwitterKey = () => {
+    if (twitterApiKey.trim()) {
+      // In a real app, we would securely store this key
+      // For now, we'll just set the configured flag
+      setIsTwitterConfigured(true);
+      setShowApiKey(false);
+    }
+  };
+
   const startPosting = () => {
     if (!isModelConnected) {
       alert('Please connect your model first');
+      return;
+    }
+
+    if (!isTwitterConfigured) {
+      alert('Please configure your Twitter API key first');
       return;
     }
     
@@ -133,9 +179,6 @@ export default function PlayPage() {
       postedAt: new Date(),
       credit: currentRequest.credit
     };
-    
-    // Add to history
-    setHistory([newPostedTweet, ...history]);
     
     // Update credits
     setCredits(prev => prev + currentRequest.credit);
@@ -212,6 +255,25 @@ export default function PlayPage() {
           
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
             <div>
+              <label htmlFor="modelEngine" className="block text-sm font-medium text-gray-700">
+                Model Engine
+              </label>
+              <select
+                id="modelEngine"
+                name="modelEngine"
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+                value={selectedEngine}
+                onChange={(e) => handleEngineChange(e.target.value)}
+                disabled={isModelConnected}
+              >
+                {MODEL_ENGINES.map((engine) => (
+                  <option key={engine.id} value={engine.id}>
+                    {engine.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label htmlFor="modelEndpoint" className="block text-sm font-medium text-gray-700">
                 Model Endpoint
               </label>
@@ -223,7 +285,7 @@ export default function PlayPage() {
                 placeholder="http://localhost:11434"
                 value={modelEndpoint}
                 onChange={(e) => setModelEndpoint(e.target.value)}
-                disabled={isModelConnected}
+                disabled={isModelConnected || (selectedEngine !== 'custom')}
               />
             </div>
             <div>
@@ -383,46 +445,81 @@ export default function PlayPage() {
       </div>
       
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900">Posting History</h3>
-        </div>
-        <div className="border-t border-gray-200">
-          {history.length > 0 ? (
-            <ul className="divide-y divide-gray-200">
-              {history.map((tweet) => (
-                <li key={tweet.id} className="px-4 py-4 sm:px-6">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-indigo-600 truncate">
-                      <a href={tweet.replyLink} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                        View Reply
-                      </a>
-                    </p>
-                    <div className="ml-2 flex-shrink-0 flex">
-                      <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        +{tweet.credit} CREDITS
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-2 sm:flex sm:justify-between">
-                    <div className="sm:flex">
-                      <p className="flex items-center text-sm text-gray-500">
-                        {tweet.content.length > 100 ? `${tweet.content.substring(0, 100)}...` : tweet.content}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                      <p>
-                        Posted on {format(tweet.postedAt, 'MMM d, yyyy')}
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <div className="px-4 py-5 sm:px-6 text-center text-gray-500">
-              <p className="text-lg">No posting history yet. Start posting to see your history here.</p>
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 flex items-center">
+              <KeyIcon className="h-5 w-5 mr-2 text-indigo-500" />
+              Twitter API Configuration
+            </h3>
+            <div className="flex items-center space-x-2">
+              <div className={`h-3 w-3 rounded-full ${isTwitterConfigured ? 'bg-green-500' : 'bg-red-500'}`}></div>
+              <span className="text-sm text-gray-500">
+                {isTwitterConfigured ? 'Configured' : 'Not Configured'}
+              </span>
             </div>
-          )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="twitterApiKey" className="block text-sm font-medium text-gray-700">
+                Twitter API Key
+              </label>
+              <div className="mt-1 relative rounded-md shadow-sm">
+                <input
+                  type={showApiKey ? 'text' : 'password'}
+                  name="twitterApiKey"
+                  id="twitterApiKey"
+                  className="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter your Twitter API key"
+                  value={twitterApiKey}
+                  onChange={(e) => setTwitterApiKey(e.target.value)}
+                  disabled={isTwitterConfigured}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 px-3 flex items-center"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                >
+                  {showApiKey ? (
+                    <EyeSlashIcon className="h-5 w-5 text-gray-400" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+              <p className="mt-2 text-sm text-gray-500">
+                Your API key will be used to automate tweet replies. {isTwitterConfigured && 'The key is securely stored.'}
+              </p>
+            </div>
+
+            {!isTwitterConfigured && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  onClick={handleSaveTwitterKey}
+                  disabled={!twitterApiKey.trim()}
+                >
+                  Save API Key
+                </button>
+              </div>
+            )}
+
+            {isTwitterConfigured && (
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                  onClick={() => {
+                    setIsTwitterConfigured(false);
+                    setTwitterApiKey('');
+                  }}
+                >
+                  Reset API Key
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

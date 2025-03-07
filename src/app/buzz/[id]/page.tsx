@@ -22,6 +22,7 @@ interface Buzz {
   credit: number;
   createdAt: Date;
   createdBy: string;
+  deadline: string;
   tweet: {
     author: {
       handle: string;
@@ -44,6 +45,7 @@ const MOCK_BUZZ: Buzz = {
   credit: 0.05,
   createdAt: new Date('2024-03-05T10:30:00'),
   createdBy: '0x1234...5678',
+  deadline: '2024-04-05',
   tweet: {
     author: {
       handle: 'elonmusk',
@@ -93,7 +95,7 @@ export default function BuzzDetailPage() {
       </div>
 
       {/* Original Tweet Card */}
-      <div className="mb-6">
+      <div className="mb-8">
         <BuzzCard
           id={buzz.id}
           tweetLink={buzz.tweetLink}
@@ -103,29 +105,35 @@ export default function BuzzDetailPage() {
           replyCount={buzz.tweet.replyCount}
           showViewReplies={false}
           createdBy={buzz.createdBy}
+          deadline={buzz.deadline}
+          createdAt={buzz.createdAt}
         />
       </div>
 
       {/* Replies Section */}
       <div className="space-y-6">
-        <h2 className="flex items-center gap-2 text-2xl">
-          <ChatBubbleLeftRightIcon className="h-7 w-7 text-blue-500" />
-          <span className="text-blue-500">Replies</span>
-          <span className="text-gray-900">({buzz.replies.length})</span>
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+          <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
+            <ChatBubbleLeftRightIcon className="h-6 w-6 sm:h-7 sm:w-7 text-blue-500" />
+            <span className="text-blue-500">Replies</span>
+            <span className="text-gray-900">({buzz.replies.length})</span>
+          </h2>
+        </div>
 
-        {buzz.replies.map((reply) => (
-          <ReplyCard
-            key={reply.id}
-            id={reply.id}
-            content={reply.content}
-            replyLink={reply.replyLink}
-            createdAt={reply.createdAt}
-            createdBy={reply.createdBy}
-            buzzCreator={buzz.createdBy}
-            onReject={handleRejectReply}
-          />
-        ))}
+        <div className="space-y-6">
+          {buzz.replies.map((reply) => (
+            <ReplyCard
+              key={reply.id}
+              id={reply.id}
+              content={reply.content}
+              replyLink={reply.replyLink}
+              createdAt={reply.createdAt}
+              createdBy={reply.createdBy}
+              buzzCreator={buzz.createdBy}
+              onReject={handleRejectReply}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

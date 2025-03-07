@@ -13,7 +13,8 @@ export default function NewBuzzPage() {
     context: '',
     instructions: '',
     pricePerReply: 0.01,
-    numberOfReplies: 100
+    numberOfReplies: 100,
+    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default to 7 days from now
   });
 
   const totalDeposit = useMemo(() => {
@@ -163,6 +164,33 @@ export default function NewBuzzPage() {
                       <span className="text-sm font-medium">replies</span>
                     </div>
                   </div>
+                </div>
+
+                {/* Deadline Input */}
+                <div className="relative group sm:col-span-2">
+                  <label htmlFor="deadline" className="block text-sm font-medium text-gray-700">
+                    Campaign Deadline ⏰
+                  </label>
+                  <div className="mt-1 relative rounded-xl shadow-sm">
+                    <input
+                      type="date"
+                      name="deadline"
+                      id="deadline"
+                      min={new Date().toISOString().split('T')[0]}
+                      className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      value={formData.deadline}
+                      onChange={handleInputChange}
+                      required
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center px-4">
+                      <span className="text-sm text-gray-500">
+                        Campaign ends at 23:59 UTC
+                      </span>
+                    </div>
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    After this date, no more replies will be rewarded with BUZZ
+                  </p>
                 </div>
               </div>
 

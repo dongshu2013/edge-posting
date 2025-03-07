@@ -14,6 +14,7 @@ interface Buzz {
   credit: number;
   createdAt: Date;
   createdBy: string;
+  deadline: string;
   tweet: {
     author: {
       handle: string;
@@ -36,6 +37,7 @@ const MOCK_MY_BUZZES: Buzz[] = [
     credit: 0.05,
     createdAt: new Date('2024-03-05T10:30:00'),
     createdBy: '0x1234...5678',
+    deadline: '2024-04-05T23:59:59',
     tweet: {
       author: {
         handle: 'johnrushx',
@@ -113,6 +115,8 @@ export default function MyBuzzesPage() {
                   credit={buzz.credit}
                   replyCount={buzz.tweet.replyCount}
                   createdBy={buzz.createdBy}
+                  deadline={buzz.deadline}
+                  createdAt={buzz.createdAt}
                 />
               ))
             ) : (

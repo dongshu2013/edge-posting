@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { buzzId, replyLink, replier } = body;
+    const { buzzId, replyLink, replier, text } = body;
 
-    if (!buzzId || !replyLink || !replier) {
+    if (!buzzId || !replyLink || !replier || !text) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -90,6 +90,7 @@ export async function POST(request: Request) {
         replyLink,
         createdBy: replier,
         status: 'PENDING',
+        text: text,
         buzz: {
           connect: { id: buzzId },
         },

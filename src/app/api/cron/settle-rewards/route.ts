@@ -17,19 +17,6 @@ interface BuzzWithReplies {
   replies: Reply[];
 }
 
-interface TransactionClient {
-  reply: {
-    updateMany: (args: any) => Promise<any>;
-  };
-  transaction: {
-    createMany: (args: any) => Promise<any>;
-    create: (args: any) => Promise<any>;
-  };
-  buzz: {
-    update: (args: any) => Promise<any>;
-  };
-}
-
 export async function POST(request: Request) {
   try {
     // Verify the request is from a trusted source (e.g., cron job service)
@@ -62,7 +49,7 @@ export async function POST(request: Request) {
         const remainingSlots = buzz.totalReplies - eligibleReplies.length;
 
         // Create transactions in a single transaction
-        const result = await prisma.$transaction(async (tx: TransactionClient) => {
+        const result = await prisma.$transaction(async (tx) => {
           // Mark all eligible replies as APPROVED
           await tx.reply.updateMany({
             where: {

@@ -1,4 +1,5 @@
-import { NextAuthOptions } from 'next-auth';
+import { NextAuthOptions, Session } from 'next-auth';
+import { JWT } from 'next-auth/jwt';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { SiweMessage } from 'siwe';
 import { getCsrfToken } from 'next-auth/react';
@@ -39,7 +40,7 @@ export const authOptions: NextAuthOptions = {
             };
           }
           return null;
-        } catch (e) {
+        } catch {
           return null;
         }
       },
@@ -49,10 +50,10 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
   },
   callbacks: {
-    async session({ session, token }: { session: any; token: any }) {
-      session.address = token.sub;
+    async session({ session, token }: { session: Session; token: JWT }) {
+      session.address = token.sub ?? '';
       session.user = {
-        name: token.sub,
+        name: token.sub ?? '',
       };
       return session;
     },

@@ -10,7 +10,7 @@ export function getTweetId(url: string): string | null {
       return pathParts[statusIndex + 1];
     }
     return null;
-  } catch (err) {
+  } catch {
     return null;
   }
 }

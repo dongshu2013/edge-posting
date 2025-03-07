@@ -29,6 +29,7 @@ interface BuzzResponse {
 
 export default function MyBuzzesPage() {
   const { isConnected, address } = useAccount();
+  const router = useRouter();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,17 +39,6 @@ export default function MyBuzzesPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [onlyActive, setOnlyActive] = useState(true);
   const observer = useRef<IntersectionObserver | null>(null);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isConnected) {
-      router.push('/');
-    }
-  }, [isConnected, router]);
-
-  if (!isConnected) {
-    return null; // Return null to prevent flash of content before redirect
-  }
 
   const fetchBuzzes = useCallback(async (cursor?: string): Promise<BuzzResponse | null> => {
     if (!address) return null;
@@ -110,12 +100,12 @@ export default function MyBuzzesPage() {
   }, [isLoadingMore, hasMore, loadMore]);
 
   useEffect(() => {
-    const initialFetch = async () => {
-      if (!isConnected || !address) {
-        setIsLoading(false);
-        return;
-      }
+    if (!isConnected) {
+      router.push('/');
+      return;
+    }
 
+    const initialFetch = async () => {
       setIsLoading(true);
       try {
         const data = await fetchBuzzes();
@@ -133,9 +123,8 @@ export default function MyBuzzesPage() {
     };
 
     initialFetch();
-  }, [isConnected, address, fetchBuzzes]);
+  }, [isConnected, router, fetchBuzzes]);
 
-  // Clean up observer on component unmount
   useEffect(() => {
     return () => {
       if (observer.current) {
@@ -147,14 +136,18 @@ export default function MyBuzzesPage() {
   const sortedBuzzes = [...buzzes]
     .filter(buzz => onlyActive ? buzz.isActive : true)
     .sort((a, b) => {
-    switch (sortBy) {
-      case 'engagement':
-        return b.replyCount - a.replyCount;
-      case 'newest':
-      default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    }
-  });
+      switch (sortBy) {
+        case 'engagement':
+          return b.replyCount - a.replyCount;
+        case 'newest':
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+
+  if (!isConnected) {
+    return null;
+  }
 
   if (isLoading) {
     return (

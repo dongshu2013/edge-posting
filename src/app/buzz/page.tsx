@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import BuzzCard from '@/components/BuzzCard';
 import { SparklesIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
 
 interface Buzz {
   id: string;

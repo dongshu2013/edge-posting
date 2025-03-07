@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { format } from 'date-fns';
-import { SparklesIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import ReplyCard from '@/components/ReplyCard';
 import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';

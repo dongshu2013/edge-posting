@@ -330,7 +330,7 @@ export default function PlayPage() {
               <div className="px-3 py-1 bg-gray-100 rounded-md text-gray-800 flex items-center">
                 <CurrencyDollarIcon className="h-5 w-5 mr-2 text-yellow-500" />
                 <span className="font-medium">{credits.toFixed(2)}</span>
-                <span className="ml-1">CREDITS</span>
+                <span className="ml-1">BUZZ</span>
               </div>
               {isModelConnected && (
                 <button

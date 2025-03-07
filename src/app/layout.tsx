@@ -10,8 +10,13 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Edge Posting",
-  description: "Engage people to host models and help auto-post tweets",
+  title: "BUZZ",
+  description: "Engage with tweets and earn credits using AI",
+  icons: {
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+  },
 };
 
 export default function RootLayout({

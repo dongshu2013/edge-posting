@@ -56,7 +56,7 @@ export default function HistoryPage() {
           <div>
             <h3 className="text-lg leading-6 font-medium text-gray-900">Posting History</h3>
             <p className="mt-1 text-sm text-gray-500">
-              Total earnings: {totalEarnings.toFixed(2)} CREDITS
+              Total earnings: {totalEarnings.toFixed(2)} BUZZ
             </p>
           </div>
           <div>
@@ -99,7 +99,7 @@ export default function HistoryPage() {
                     </div>
                     <div className="ml-2 flex-shrink-0 flex">
                       <p className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        +{tweet.credit} CREDITS
+                        +{tweet.credit} BUZZ
                       </p>
                     </div>
                   </div>

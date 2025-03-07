@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useAccount } from 'wagmi';
 import { useState } from 'react';
+import Image from 'next/image';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -18,8 +19,15 @@ export function Navbar() {
         <div className="flex justify-between h-16">
           <div className="flex">
             <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                BUZZ
+              <Link href="/" className="flex items-center space-x-2">
+                <Image
+                  src="/logo.svg"
+                  alt="BUZZ Logo"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8"
+                />
+                <span className="text-xl font-bold text-gray-900">BUZZ</span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

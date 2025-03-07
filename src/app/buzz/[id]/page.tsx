@@ -2,19 +2,16 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChatBubbleLeftRightIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import BuzzCard from '@/components/BuzzCard';
+import ReplyCard from '@/components/ReplyCard';
 
 interface Reply {
   id: string;
   content: string;
   replyLink: string;
   createdAt: Date;
-  author: {
-    name: string;
-    handle: string;
-    avatar: string;
-  };
+  createdBy: string;  // wallet address instead of author object
 }
 
 interface BuzzDetail {
@@ -59,30 +56,27 @@ const MOCK_BUZZ: BuzzDetail = {
     {
       id: '1',
       content: 'This is a fascinating development! The reduced computational requirements while maintaining accuracy is impressive. Have you considered applying this to other domains?',
-      replyLink: 'https://twitter.com/ai_helper/status/123456790',
+      replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
       createdAt: new Date('2024-03-05T11:30:00'),
-      author: {
-        name: 'AI Helper 1',
-        handle: 'ai_helper1',
-        avatar: 'https://pbs.twimg.com/profile_images/123456789/helper1_400x400.jpg'
-      }
+      createdBy: '0x1234...5678'
     },
     {
       id: '2',
       content: 'The efficiency gains here are remarkable. Would love to hear more about the specific optimizations that made this possible.',
-      replyLink: 'https://twitter.com/ai_helper/status/123456791',
+      replyLink: 'https://x.com/xinyongweiben/status/1897827792378904662',
       createdAt: new Date('2024-03-05T12:15:00'),
-      author: {
-        name: 'AI Helper 2',
-        handle: 'ai_helper2',
-        avatar: 'https://pbs.twimg.com/profile_images/123456789/helper2_400x400.jpg'
-      }
+      createdBy: '0x8765...4321'
     }
   ]
 };
 
 export default function BuzzDetailPage() {
   const [buzz] = useState<BuzzDetail>(MOCK_BUZZ);
+
+  const handleRejectReply = (replyId: string) => {
+    // In a real app, this would call an API to reject the reply
+    console.log('Rejecting reply:', replyId);
+  };
 
   return (
     <div className="flex-1">
@@ -118,36 +112,16 @@ export default function BuzzDetailPage() {
         </h2>
 
         {buzz.replies.map((reply) => (
-          <div key={reply.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-6">
-            <div className="space-y-4">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-gray-900">{reply.author.name}</span>
-                  <span className="text-gray-500">@{reply.author.handle}</span>
-                  <span className="text-gray-500">·</span>
-                  <span className="text-gray-500">
-                    {new Date(reply.createdAt).toLocaleDateString(undefined, { 
-                      month: 'short', 
-                      day: 'numeric' 
-                    })}
-                  </span>
-                </div>
-                <a
-                  href={reply.replyLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-5 py-2 rounded-2xl bg-purple-500 hover:bg-purple-600 text-white text-base font-medium transition-colors w-fit"
-                >
-                  View Reply
-                  <ArrowTopRightOnSquareIcon className="ml-2 h-4 w-4" />
-                </a>
-              </div>
-              
-              <p className="text-gray-600 text-lg">
-                {reply.content}
-              </p>
-            </div>
-          </div>
+          <ReplyCard
+            key={reply.id}
+            id={reply.id}
+            content={reply.content}
+            replyLink={reply.replyLink}
+            createdAt={reply.createdAt}
+            createdBy={reply.createdBy}
+            buzzCreator={buzz.createdBy}
+            onReject={handleRejectReply}
+          />
         ))}
       </div>
     </div>

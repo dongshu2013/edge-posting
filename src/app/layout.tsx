@@ -26,10 +26,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full">
-      <body className={`${geist.className} antialiased min-h-screen bg-gradient-to-b from-indigo-50 to-white`}>
+      <body className={`${geist.className} antialiased flex flex-col min-h-screen bg-gradient-to-b from-indigo-50 to-white`}>
         <WalletProvider>
           <Navbar />
-          <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+          <main className="flex-1 max-w-7xl w-full mx-auto py-6 px-4 sm:px-6 lg:px-8">
             {children}
           </main>
         </WalletProvider>

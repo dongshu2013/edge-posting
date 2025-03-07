@@ -97,7 +97,7 @@ export default function MyBuzzesPage() {
     <div className="min-h-screen py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
+          <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
             <div>
               <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
                 <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
@@ -107,7 +107,7 @@ export default function MyBuzzesPage() {
                 Manage your active buzz requests
               </p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex flex-wrap items-center gap-4 sm:ml-auto">
               <select
                 id="sortBy"
                 value={sortBy}
@@ -131,8 +131,8 @@ export default function MyBuzzesPage() {
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
             sortedBuzzes.map((buzz) => (
-              <div key={buzz.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
-                <div className="flex justify-end space-x-2 mb-4">
+              <div key={buzz.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-4 sm:p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
+                <div className="flex flex-wrap gap-2 mb-4">
                   <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-medium shadow-sm">
                     {buzz.credit} BUZZ per reply
                   </span>
@@ -141,20 +141,22 @@ export default function MyBuzzesPage() {
                   </span>
                 </div>
 
-                <div className="flex items-start space-x-3">
-                  {!failedAvatars.has(buzz.tweet.author.avatar) ? (
-                    <img
-                      className="h-12 w-12 rounded-full ring-2 ring-indigo-500/20"
-                      src={buzz.tweet.author.avatar}
-                      alt=""
-                      onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
-                    />
-                  ) : (
-                    <DefaultAvatar />
-                  )}
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3">
+                  <div className="flex-shrink-0">
+                    {!failedAvatars.has(buzz.tweet.author.avatar) ? (
+                      <img
+                        className="h-10 w-10 rounded-full ring-2 ring-indigo-500/20"
+                        src={buzz.tweet.author.avatar}
+                        alt=""
+                        onError={() => setFailedAvatars(prev => new Set([...prev, buzz.tweet.author.avatar]))}
+                      />
+                    ) : (
+                      <DefaultAvatar />
+                    )}
+                  </div>
                   
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center space-x-1 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-1 text-sm">
                       <span className="font-semibold text-gray-900">{buzz.tweet.author.name}</span>
                       <span className="text-gray-500">@{buzz.tweet.author.handle}</span>
                       <span className="text-gray-500">·</span>
@@ -166,9 +168,9 @@ export default function MyBuzzesPage() {
                       </span>
                     </div>
                     
-                    <p className="mt-1 text-gray-900">{truncateText(buzz.tweet.text)}</p>
+                    <p className="mt-1 text-gray-900 break-words">{truncateText(buzz.tweet.text)}</p>
                     
-                    <div className="mt-2 flex items-center space-x-4 text-gray-500 text-sm">
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-gray-500 text-sm">
                       <span className="flex items-center">
                         <ChatBubbleLeftRightIcon className="h-5 w-5 mr-1 text-indigo-500" />
                         {buzz.tweet.replyCount.toLocaleString()} replies
@@ -179,7 +181,7 @@ export default function MyBuzzesPage() {
                           Image
                         </span>
                       )}
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <a
                           href={buzz.tweetLink}
                           target="_blank"
@@ -206,7 +208,7 @@ export default function MyBuzzesPage() {
                     <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />
                     How to Play
                   </h4>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 break-words">
                     {buzz.instructions}
                   </p>
                 </div>

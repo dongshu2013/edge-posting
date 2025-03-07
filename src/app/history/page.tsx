@@ -53,27 +53,29 @@ export default function HistoryPage() {
   return (
     <div className="py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header Card */}
         <div className="mb-6 bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-4 py-5 sm:px-6 flex justify-between items-center">
-            <div>
-              <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
-                <SparklesIcon className="h-7 w-7 mr-2 text-indigo-500" />
-                Posting History 📜
-              </h3>
-              <p className="mt-1 text-sm text-gray-500 flex items-center">
-                Total earnings: 
-                <span className="ml-2 text-lg font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+          <div className="px-4 py-5 sm:px-6 flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <SparklesIcon className="h-7 w-7 text-purple-500" />
+                <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-500 to-purple-700">
+                  Posting History
+                </h1>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <span className="text-gray-600">Total earnings:</span>
+                <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
                   {totalEarnings.toFixed(2)} BUZZ
                 </span>
-              </p>
+              </div>
             </div>
-            <div>
+            <div className="flex-shrink-0">
               <select
                 id="sortBy"
-                name="sortBy"
-                className="text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'newest' | 'highest-credit')}
+                className="w-full sm:w-auto text-sm border-gray-300 rounded-xl shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 hover:border-purple-300"
               >
                 <option value="newest">✨ Newest First</option>
                 <option value="highest-credit">💰 Highest Earnings</option>
@@ -82,51 +84,51 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* History List */}
+        <div className="space-y-4">
           {sortedHistory.length > 0 ? (
             sortedHistory.map((tweet) => (
-              <div key={tweet.id} className="bg-white rounded-2xl shadow-xl hover:shadow-2xl hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-purple-50/50 transition-all duration-300 p-6 backdrop-blur-xl bg-white/90 border border-gray-100">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <a
-                      href={tweet.tweetLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 transform hover:scale-105"
-                    >
-                      Original Tweet
-                      <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
-                    </a>
-                    <span className="text-gray-300">|</span>
-                    <a
-                      href={tweet.replyLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
-                    >
-                      Your Reply
-                      <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
-                    </a>
-                  </div>
-                  <div className="ml-2 flex-shrink-0">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium shadow-sm">
-                      +{tweet.credit} BUZZ
-                    </span>
-                  </div>
+              <div key={tweet.id} className="bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow p-4 sm:p-6">
+                <div className="flex flex-wrap items-center gap-2 mb-4">
+                  <a
+                    href={tweet.tweetLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white text-sm font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+                  >
+                    Original Tweet
+                    <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
+                  </a>
+                  <div className="text-gray-300">|</div>
+                  <a
+                    href={tweet.replyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center px-3 py-1 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white text-sm font-medium hover:from-purple-600 hover:to-purple-700 transition-all duration-200"
+                  >
+                    Your Reply
+                    <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
+                  </a>
+                  <div className="flex-grow"></div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-gradient-to-r from-green-500 to-green-600 text-white text-sm font-medium">
+                    +{tweet.credit} BUZZ
+                  </span>
                 </div>
-                <div className="mt-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4">
-                  <p className="text-sm text-gray-600">
+
+                <div className="bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-4">
+                  <p className="text-gray-600 text-sm">
                     {tweet.content}
                   </p>
                 </div>
-                <div className="mt-2 text-sm text-gray-500 flex items-center">
+
+                <div className="mt-3 flex items-center text-sm text-gray-500">
                   <ClockIcon className="h-4 w-4 mr-1" />
                   {format(tweet.postedAt, 'MMM d, yyyy h:mm a')}
                 </div>
               </div>
             ))
           ) : (
-            <div className="bg-white rounded-2xl shadow-xl p-12 text-center backdrop-blur-xl bg-white/90 border border-gray-100">
+            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">No history yet</h3>
               <p className="mt-1 text-sm text-gray-500">

@@ -10,6 +10,7 @@ export default function NewBuzzPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
     tweetLink: '',
+    context: '',
     instructions: '',
     pricePerReply: 0.01,
     numberOfReplies: 100
@@ -77,6 +78,25 @@ export default function NewBuzzPage() {
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                     <BoltIcon className="h-5 w-5 text-indigo-500" />
                   </div>
+                </div>
+              </div>
+
+              {/* Context Input */}
+              <div className="space-y-1">
+                <label htmlFor="context" className="block text-sm font-medium text-gray-700">
+                  Context ☕️
+                </label>
+                <div className="mt-1">
+                  <textarea
+                    id="context"
+                    name="context"
+                    rows={2}
+                    className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                    placeholder="Provide context about the tweet and what you're looking for..."
+                    required
+                    value={formData.context}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
 

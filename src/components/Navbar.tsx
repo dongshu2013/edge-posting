@@ -56,7 +56,7 @@ export default function Navbar() {
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                 }`}
               >
-                My Posts
+                My Replies
               </Link>
               <Link
                 href="/buzz/my"
@@ -149,7 +149,7 @@ export default function Navbar() {
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
-            My Posts
+            My Replies
           </Link>
           <Link
             href="/buzz/my"

@@ -81,6 +81,10 @@ export default function PlayPage() {
   const [generatedReply, setGeneratedReply] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
   const [isTwitterConfigured, setIsTwitterConfigured] = useState(false);
+  const [tweetLink, setTweetLink] = useState('');
+  const [instructions, setInstructions] = useState('');
+  const [context, setContext] = useState('');
+  const [credit, setCredit] = useState(0.05);
 
   // Handle engine change
   const handleEngineChange = (engineId: string) => {
@@ -202,6 +206,21 @@ export default function PlayPage() {
         setGeneratedReply(replies[Math.floor(Math.random() * replies.length)]);
       }, 2000);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log({
+      tweetLink,
+      instructions,
+      context,
+      credit,
+    });
+    // Reset form
+    setTweetLink('');
+    setInstructions('');
+    setContext('');
+    setCredit(0.05);
   };
 
   return (
@@ -498,6 +517,102 @@ export default function PlayPage() {
               )}
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="bg-white shadow-xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
+        <div className="px-4 py-5 sm:p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 flex items-center">
+              Create New Buzz
+            </h3>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Tweet Link Input */}
+            <div>
+              <label htmlFor="tweetLink" className="block text-sm font-medium text-gray-700">
+                Tweet Link
+              </label>
+              <div className="mt-1">
+                <input
+                  type="text"
+                  name="tweetLink"
+                  id="tweetLink"
+                  value={tweetLink}
+                  onChange={(e) => setTweetLink(e.target.value)}
+                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  placeholder="https://twitter.com/username/status/123456789"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Context Input */}
+            <div>
+              <label htmlFor="context" className="block text-sm font-medium text-gray-700">
+                Context
+              </label>
+              <div className="mt-1">
+                <textarea
+                  id="context"
+                  name="context"
+                  rows={2}
+                  value={context}
+                  onChange={(e) => setContext(e.target.value)}
+                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  placeholder="Provide context about the tweet and what you're looking for..."
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Instructions Input */}
+            <div>
+              <label htmlFor="instructions" className="block text-sm font-medium text-gray-700">
+                Instructions
+              </label>
+              <div className="mt-1">
+                <textarea
+                  id="instructions"
+                  name="instructions"
+                  rows={3}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  placeholder="What would you like people to analyze or discuss about this tweet?"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Credit Input */}
+            <div>
+              <label htmlFor="credit" className="block text-sm font-medium text-gray-700">
+                Credit
+              </label>
+              <div className="mt-1">
+                <input
+                  type="number"
+                  name="credit"
+                  id="credit"
+                  value={credit}
+                  onChange={(e) => setCredit(Number(e.target.value))}
+                  className="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-xl shadow-xl text-white bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                Create Buzz
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

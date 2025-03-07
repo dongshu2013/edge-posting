@@ -7,6 +7,7 @@ interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
+  context: string;
   credit: number;
   createdAt: Date;
   createdBy: string;
@@ -28,6 +29,7 @@ const MOCK_BUZZES: Buzz[] = [
     id: '1',
     tweetLink: 'https://twitter.com/elonmusk/status/123456789',
     instructions: 'Share your thoughts on the scalability solutions presented in the thread and suggest potential improvements.',
+    context: 'This tweet discusses our latest breakthrough in AI model efficiency.',
     credit: 0.05,
     createdAt: new Date('2024-03-05T10:30:00'),
     createdBy: '0x1234...5678',
@@ -46,6 +48,7 @@ const MOCK_BUZZES: Buzz[] = [
     id: '2',
     tweetLink: 'https://twitter.com/johnrushx/status/1897655569101779201',
     instructions: 'Discuss the potential impact of this AI development on content creation and suggest innovative ways it could be applied.',
+    context: 'This tweet discusses the potential impact of AI on content creation.',
     credit: 0.1,
     createdAt: new Date('2024-03-06T14:20:00'),
     createdBy: '0x8765...4321',
@@ -101,6 +104,7 @@ export default function BuzzesPage() {
               id={buzz.id}
               tweetLink={buzz.tweetLink}
               instructions={buzz.instructions}
+              context={buzz.context}
               credit={buzz.credit}
               replyCount={buzz.tweet.replyCount}
               createdBy={buzz.createdBy}

@@ -8,6 +8,7 @@ interface BuzzCardProps {
   id: string;
   tweetLink: string;
   instructions: string;
+  context: string;
   credit: number;
   replyCount: number;
   createdBy: string;
@@ -42,6 +43,7 @@ export default function BuzzCard({
   id, 
   tweetLink, 
   instructions, 
+  context,
   credit, 
   replyCount, 
   createdBy,
@@ -79,6 +81,18 @@ export default function BuzzCard({
             </div>
           </div>
           
+          {/* Context Section */}
+          <div className="bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50 rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01]">
+            <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
+              <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2 text-blue-500" />
+              Context
+            </h4>
+            <p className="text-sm text-gray-600 break-words">
+              {context || "No context provided"}
+            </p>
+          </div>
+          
+          {/* Instructions Section */}
           <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01]">
             <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
               <SparklesIcon className="h-5 w-5 mr-2 text-indigo-500" />

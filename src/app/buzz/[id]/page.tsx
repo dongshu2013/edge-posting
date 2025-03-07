@@ -14,10 +14,11 @@ interface Reply {
   createdBy: string;  // wallet address instead of author object
 }
 
-interface BuzzDetail {
+interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
+  context: string;
   credit: number;
   createdAt: Date;
   createdBy: string;
@@ -35,18 +36,19 @@ interface BuzzDetail {
 }
 
 // Mock data for demonstration
-const MOCK_BUZZ: BuzzDetail = {
+const MOCK_BUZZ: Buzz = {
   id: '1',
-  tweetLink: 'https://twitter.com/johnrushx/status/1897655569101779201',
-  instructions: 'Discuss the potential impact of this AI development on content creation and suggest innovative ways it could be applied.',
+  tweetLink: 'https://twitter.com/elonmusk/status/123456789',
+  instructions: 'Share your thoughts on the scalability solutions presented in the thread and suggest potential improvements.',
+  context: 'This tweet discusses our latest breakthrough in AI model efficiency.',
   credit: 0.05,
   createdAt: new Date('2024-03-05T10:30:00'),
   createdBy: '0x1234...5678',
   tweet: {
     author: {
-      handle: 'johnrushx',
-      name: 'John Rush',
-      avatar: 'https://pbs.twimg.com/profile_images/1897655569101779201/john_400x400.jpg'
+      handle: 'elonmusk',
+      name: 'Elon Musk',
+      avatar: 'https://pbs.twimg.com/profile_images/123456789/elon_400x400.jpg'
     },
     text: 'finally I\'m done with all my queries I just need to put everything together and we are up an running',
     hasImages: false,
@@ -71,7 +73,7 @@ const MOCK_BUZZ: BuzzDetail = {
 };
 
 export default function BuzzDetailPage() {
-  const [buzz] = useState<BuzzDetail>(MOCK_BUZZ);
+  const [buzz] = useState<Buzz>(MOCK_BUZZ);
 
   const handleRejectReply = (replyId: string) => {
     // In a real app, this would call an API to reject the reply
@@ -96,6 +98,7 @@ export default function BuzzDetailPage() {
           id={buzz.id}
           tweetLink={buzz.tweetLink}
           instructions={buzz.instructions}
+          context={buzz.context}
           credit={buzz.credit}
           replyCount={buzz.tweet.replyCount}
           showViewReplies={false}

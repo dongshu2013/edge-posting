@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
-import { adminAuth } from '@/lib/firebase-admin';
-import { fetchApi } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { fetchApi } from "@/lib/api";
 
 interface UserInfo {
+  uid: string;
   email: string | null;
-  displayName: string | null;
+  username: string | null;
+  nikename: string | null;
+  avatar: string | null;
+  bio: string | null;
+  totalEarned: number;
+  balance: number;
+  createdAt: Date;
 }
 
 export function useUserInfo(uid: string) {
@@ -20,8 +26,10 @@ export function useUserInfo(uid: string) {
         const data = await fetchApi(`/api/user/${uid}`);
         setUserInfo(data);
       } catch (err) {
-        console.error('Error fetching user info:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch user info');
+        console.error("Error fetching user info:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch user info"
+        );
       } finally {
         setLoading(false);
       }
@@ -33,4 +41,4 @@ export function useUserInfo(uid: string) {
   }, [uid]);
 
   return { userInfo, loading, error };
-} 
+}

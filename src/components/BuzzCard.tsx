@@ -42,12 +42,6 @@ const getEmbedUrl = (tweetUrl: string) => {
   }
 };
 
-// Utility function to format ID (kept as fallback)
-const formatAddress = (address: string) => {
-  if (!address) return "";
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-};
-
 export default function BuzzCard({
   id,
   tweetLink,
@@ -65,8 +59,6 @@ export default function BuzzCard({
   const { address } = useAccount();
   const { user } = useAuth();
   const { userInfo } = useUserInfo(createdBy);
-  // const isOwner =
-  //   address && createdBy && address.toLowerCase() === createdBy.toLowerCase();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -180,7 +172,7 @@ export default function BuzzCard({
                   <div className="text-sm text-gray-500">Created by</div>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {userInfo?.displayName || formatAddress(createdBy)}
+                      {userInfo?.nikename || createdBy}
                     </div>
                     <button
                       onClick={handleCopyAddress}

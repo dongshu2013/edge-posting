@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase-admin';
+import { NextRequest, NextResponse } from "next/server";
+// import { adminAuth } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
@@ -7,25 +8,38 @@ export async function GET(
 ) {
   try {
     const { uid } = await params;
-    
+
     if (!uid) {
-      return NextResponse.json(
-        { error: 'Missing user ID' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
     }
 
-    const user = await adminAuth.getUser(uid);
+    // await adminAuth.getUser(uid);
 
-    return NextResponse.json({
-      email: user.email || null,
-      displayName: user.displayName || user.email?.split('@')[0] || null,
+    const user = await prisma.user.findUnique({
+      where: { uid },
+      select: {
+        uid: true,
+        email: true,
+        username: true,
+        nikename: true,
+        avatar: true,
+        bio: true,
+        totalEarned: true,
+        balance: true,
+        createdAt: true,
+      },
     });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
+    console.error("Error fetching user:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch user information' },
+      { error: "Failed to fetch user information" },
       { status: 500 }
     );
   }
-} 
+}

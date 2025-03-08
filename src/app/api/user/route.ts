@@ -3,15 +3,15 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { address } = await request.json();
+    const { uid, username } = await request.json();
 
     const user = await prisma.user.upsert({
-      where: { address },
+      where: { uid },
       update: {},
       create: {
-        address,
-        username: `User_${address.slice(0, 6)}`,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`,
+        uid,
+        username,
+        avatar: `https://api.dicebear.com/7.x/avataaars/svg?`,
       },
     });
 

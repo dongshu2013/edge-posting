@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       update: {
         email,
         username,
-        nikename,
         avatar:
           avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
       },

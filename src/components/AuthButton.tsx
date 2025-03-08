@@ -7,7 +7,7 @@ import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 
 export function AuthButton({ buttonText }: { buttonText?: string }) {
-  const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
+  const { userInfo, signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -38,7 +38,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
     }
   };
 
-  if (!user) {
+  if (!userInfo) {
     return (
       <>
         <button
@@ -165,9 +165,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 transition-all duration-200">
-        <span className="text-gray-900">
-          {user.email?.split("@")[0] || "User"}
-        </span>
+        <span className="text-gray-900">{userInfo?.nikename}</span>
         <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
       </Menu.Button>
 
@@ -185,7 +183,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
             <Menu.Item>
               {({ active }) => (
                 <button
-                  onClick={() => router.push(`/profile/${user.uid}`)}
+                  onClick={() => router.push(`/profile/${userInfo?.uid}`)}
                   className={`${
                     active ? "bg-gray-50 text-gray-900" : "text-gray-700"
                   } block w-full text-left px-4 py-2 text-sm`}

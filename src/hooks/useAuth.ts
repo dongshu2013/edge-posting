@@ -11,15 +11,17 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
+import { UserInfo } from "./useUserInfo";
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(null); // firebase auth user
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userInfo, setUserInfo] = useState<UserInfo | null>(null); // New state for saving user to database
 
   const saveUserToDatabase = async (user: User) => {
     try {
-      await fetchApi("/api/user", {
+      const saveUser = await fetchApi("/api/user", {
         method: "POST",
         body: JSON.stringify({
           uid: user.uid,
@@ -29,6 +31,7 @@ export function useAuth() {
           avatar: user.photoURL,
         }),
       });
+      setUserInfo(saveUser);
     } catch (error) {
       console.error("Failed to save user to database:", error);
     }
@@ -142,5 +145,6 @@ export function useAuth() {
     verifyMagicLink,
     signOut: signOutUser,
     getAuthToken,
+    userInfo,
   };
 }

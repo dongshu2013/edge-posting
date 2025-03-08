@@ -1,4 +1,4 @@
-import { headers } from 'next/headers';
+import { headers } from "next/headers";
 
 export interface AuthUser {
   uid: string;
@@ -8,8 +8,8 @@ export interface AuthUser {
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
     const headersList = await headers();
-    const userId = headersList.get('x-user-id');
-    const userEmail = headersList.get('x-user-email');
+    const userId = headersList.get("x-user-id");
+    const userEmail = headersList.get("x-user-email");
 
     if (!userId) return null;
 
@@ -18,7 +18,7 @@ export async function getAuthUser(): Promise<AuthUser | null> {
       email: userEmail,
     };
   } catch (error) {
-    console.error('Error getting auth user:', error);
+    console.error("Error getting auth user:", error);
     return null;
   }
-} 
+}

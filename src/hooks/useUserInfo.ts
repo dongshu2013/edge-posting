@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { fetchApi } from "@/lib/api";
 
-interface UserInfo {
+export interface UserInfo {
   uid: string;
   email: string | null;
   username: string | null;

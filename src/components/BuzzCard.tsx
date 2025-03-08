@@ -172,7 +172,7 @@ export default function BuzzCard({
                   <div className="text-sm text-gray-500">Created by</div>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {userInfo?.nikename || createdBy}
+                      {userInfo?.nickname || createdBy}
                     </div>
                     <button
                       onClick={handleCopyAddress}

@@ -28,7 +28,7 @@ export function useAuth() {
             uid: user.uid,
             email: user.email,
             username: user.displayName,
-            nikename: user.displayName,
+            nickname: user.displayName,
             avatar: user.photoURL,
           }),
         });

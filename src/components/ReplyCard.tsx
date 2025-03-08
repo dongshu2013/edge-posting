@@ -137,7 +137,7 @@ export default function ReplyCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  {userInfo?.nikename || createdBy}
+                  {userInfo?.nickname || createdBy}
                 </span>
                 <button
                   onClick={handleCopyAddress}

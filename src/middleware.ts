@@ -45,7 +45,7 @@ export async function middleware(request: NextRequest) {
       {
         method: "POST",
         headers: {
-          Authorization: authHeader,
+          authorization: authHeader,
         },
       }
     );

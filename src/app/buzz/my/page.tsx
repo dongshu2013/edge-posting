@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import BuzzCard from '@/components/BuzzCard';
-import { SparklesIcon } from '@heroicons/react/24/outline';
-import { fetchApi } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import BuzzCard from "@/components/BuzzCard";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import { fetchApi } from "@/lib/api";
 
 interface Buzz {
   id: string;
@@ -19,12 +19,6 @@ interface Buzz {
   replyCount: number;
   totalReplies: number;
   isActive: boolean;
-}
-
-interface BuzzResponse {
-  items: Buzz[];
-  nextCursor?: string;
-  hasMore: boolean;
 }
 
 export default function MyBuzzesPage() {
@@ -45,7 +39,7 @@ export default function MyBuzzesPage() {
         setError(null);
 
         if (!user) {
-          router.push('/buzz');
+          router.push("/buzz");
           return;
         }
 
@@ -54,8 +48,8 @@ export default function MyBuzzesPage() {
         setNextCursor(data.nextCursor);
         setHasMore(data.hasMore);
       } catch (err) {
-        console.error('Error fetching buzzes:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch buzzes');
+        console.error("Error fetching buzzes:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch buzzes");
       } finally {
         setIsLoading(false);
       }
@@ -68,13 +62,17 @@ export default function MyBuzzesPage() {
     if (!nextCursor || !hasMore || !user) return;
 
     try {
-      const data = await fetchApi(`/api/buzz?createdBy=${user.uid}&cursor=${nextCursor}`);
-      setBuzzes(prev => [...prev, ...data.items]);
+      const data = await fetchApi(
+        `/api/buzz?createdBy=${user.uid}&cursor=${nextCursor}`
+      );
+      setBuzzes((prev) => [...prev, ...data.items]);
       setNextCursor(data.nextCursor);
       setHasMore(data.hasMore);
     } catch (err) {
-      console.error('Error fetching more buzzes:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch more buzzes');
+      console.error("Error fetching more buzzes:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch more buzzes"
+      );
     }
   };
 
@@ -140,7 +138,9 @@ export default function MyBuzzesPage() {
           ) : (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
+                No buzzes yet
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Create your first buzz to start engaging with the community! ✨
               </p>
@@ -150,4 +150,4 @@ export default function MyBuzzesPage() {
       </div>
     </div>
   );
-} 
+}

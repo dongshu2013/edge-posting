@@ -1,22 +1,23 @@
-import { useState, Fragment } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { Dialog, Transition } from '@headlessui/react';
-import { Menu } from '@headlessui/react';
-import { ChevronDownIcon } from '@heroicons/react/24/outline';
+import { useState, Fragment } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { Dialog, Transition } from "@headlessui/react";
+import { Menu } from "@headlessui/react";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import Image from "next/image";
 
 export function AuthButton({ buttonText }: { buttonText?: string }) {
   const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSignOut = async () => {
     await signOut();
-    router.push('/buzz');
+    router.push("/buzz");
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -29,7 +30,9 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
       await sendMagicLink(email);
       setEmailSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send magic link');
+      setError(
+        err instanceof Error ? err.message : "Failed to send magic link"
+      );
     } finally {
       setIsSending(false);
     }
@@ -42,11 +45,15 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
           onClick={() => setIsOpen(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
         >
-          {buttonText || 'Sign In'}
+          {buttonText || "Sign In"}
         </button>
 
         <Transition appear show={isOpen} as={Fragment}>
-          <Dialog as="div" className="relative z-50" onClose={() => setIsOpen(false)}>
+          <Dialog
+            as="div"
+            className="relative z-50"
+            onClose={() => setIsOpen(false)}
+          >
             <Transition.Child
               as={Fragment}
               enter="ease-out duration-300"
@@ -90,7 +97,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                           onClick={signInWithGoogle}
                           className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 mb-4"
                         >
-                          <img
+                          <Image
                             src="https://www.google.com/favicon.ico"
                             alt="Google"
                             className="w-4 h-4 mr-2"
@@ -103,13 +110,18 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                             <div className="w-full border-t border-gray-300" />
                           </div>
                           <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-gray-500">Or</span>
+                            <span className="px-2 bg-white text-gray-500">
+                              Or
+                            </span>
                           </div>
                         </div>
 
                         <form onSubmit={handleEmailLogin} className="space-y-4">
                           <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                            <label
+                              htmlFor="email"
+                              className="block text-sm font-medium text-gray-700"
+                            >
                               Email address
                             </label>
                             <input
@@ -125,9 +137,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                           </div>
 
                           {error && (
-                            <p className="text-sm text-red-600">
-                              {error}
-                            </p>
+                            <p className="text-sm text-red-600">{error}</p>
                           )}
 
                           <button
@@ -135,7 +145,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                             disabled={isSending}
                             className="w-full flex justify-center py-2 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
                           >
-                            {isSending ? 'Sending...' : 'Send Magic Link'}
+                            {isSending ? "Sending..." : "Send Magic Link"}
                           </button>
                         </form>
                       </>
@@ -154,7 +164,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 transition-all duration-200">
         <span className="text-gray-900">
-          {user.email?.split('@')[0] || 'User'}
+          {user.email?.split("@")[0] || "User"}
         </span>
         <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
       </Menu.Button>
@@ -175,7 +185,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                 <button
                   onClick={() => router.push(`/profile/${user.uid}`)}
                   className={`${
-                    active ? 'bg-gray-50 text-gray-900' : 'text-gray-700'
+                    active ? "bg-gray-50 text-gray-900" : "text-gray-700"
                   } block w-full text-left px-4 py-2 text-sm`}
                 >
                   Profile
@@ -189,7 +199,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                 <button
                   onClick={handleSignOut}
                   className={`${
-                    active ? 'bg-gray-50 text-red-600' : 'text-red-500'
+                    active ? "bg-gray-50 text-red-600" : "text-red-500"
                   } block w-full text-left px-4 py-2 text-sm`}
                 >
                   Sign Out
@@ -201,4 +211,4 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
       </Transition>
     </Menu>
   );
-} 
+}

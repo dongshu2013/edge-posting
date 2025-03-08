@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getAuthUser } from '@/lib/auth-helpers';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth-helpers";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const replies = await prisma.reply.findMany({
@@ -25,16 +22,16 @@ export async function GET(request: Request) {
         },
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
 
     return NextResponse.json(replies);
   } catch (error) {
-    console.error('Error fetching replies:', error);
+    console.error("Error fetching replies:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch replies' },
+      { error: "Failed to fetch replies" },
       { status: 500 }
     );
   }
-} 
+}

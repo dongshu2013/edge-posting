@@ -1,15 +1,19 @@
-'use client';
+"use client";
 
-import { SparklesIcon, ChatBubbleLeftRightIcon, ArrowTopRightOnSquareIcon, DocumentDuplicateIcon, CheckIcon } from '@heroicons/react/24/outline';
-import { useAccount } from 'wagmi';
-import Link from 'next/link';
-import { useState, Fragment } from 'react';
-import ReplyLinkModal from './ReplyLinkModal';
-import { getReplyIntentUrl } from '@/lib/twitter';
-import { useAuth } from '@/hooks/useAuth';
-import { AuthButton } from '@/components/AuthButton';
-import { Dialog, Transition } from '@headlessui/react';
-import { useUserInfo } from '@/hooks/useUserInfo';
+import {
+  SparklesIcon,
+  ChatBubbleLeftRightIcon,
+  DocumentDuplicateIcon,
+  CheckIcon,
+} from "@heroicons/react/24/outline";
+import { useAccount } from "wagmi";
+import Link from "next/link";
+import { useState } from "react";
+import ReplyLinkModal from "./ReplyLinkModal";
+import { getReplyIntentUrl } from "@/lib/twitter";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthButton } from "@/components/AuthButton";
+import { useUserInfo } from "@/hooks/useUserInfo";
 
 interface BuzzCardProps {
   id: string;
@@ -30,7 +34,7 @@ interface BuzzCardProps {
 const getEmbedUrl = (tweetUrl: string) => {
   try {
     const url = new URL(tweetUrl);
-    const pathParts = url.pathname.split('/');
+    const pathParts = url.pathname.split("/");
     const tweetId = pathParts[pathParts.length - 1];
     return `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}`;
   } catch {
@@ -40,16 +44,16 @@ const getEmbedUrl = (tweetUrl: string) => {
 
 // Utility function to format ID (kept as fallback)
 const formatAddress = (address: string) => {
-  if (!address) return '';
+  if (!address) return "";
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 };
 
-export default function BuzzCard({ 
-  id, 
-  tweetLink, 
-  instructions, 
+export default function BuzzCard({
+  id,
+  tweetLink,
+  instructions,
   context,
-  credit, 
+  credit,
   replyCount,
   totalReplies,
   createdBy,
@@ -58,13 +62,14 @@ export default function BuzzCard({
   showViewReplies = true,
   isActive = true,
 }: BuzzCardProps) {
-  const { address, isConnected } = useAccount();
-  const { user, signInWithGoogle } = useAuth();
+  const { address } = useAccount();
+  const { user } = useAuth();
   const { userInfo } = useUserInfo(createdBy);
-  const isOwner = address && createdBy && address.toLowerCase() === createdBy.toLowerCase();
+  // const isOwner =
+  //   address && createdBy && address.toLowerCase() === createdBy.toLowerCase();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
-  
+
   // Parse dates and ensure proper comparison
   const deadlineTime = new Date(deadline).getTime();
   const currentTime = Date.now();
@@ -76,16 +81,16 @@ export default function BuzzCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy address:', err);
+      console.error("Failed to copy address:", err);
     }
   };
 
   const handleReplySubmit = async (replyLink: string) => {
     try {
-      const response = await fetch('/api/reply', {
-        method: 'POST',
+      const response = await fetch("/api/reply", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           buzzId: id,
@@ -96,7 +101,7 @@ export default function BuzzCard({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to submit reply');
+        throw new Error(error.error || "Failed to submit reply");
       }
 
       // Optionally refresh the page or update the UI
@@ -108,7 +113,7 @@ export default function BuzzCard({
 
   const handleReplyClick = () => {
     // Open Twitter reply intent in a new window
-    window.open(getReplyIntentUrl(tweetLink), '_blank');
+    window.open(getReplyIntentUrl(tweetLink), "_blank");
     // Show the reply modal
     setIsReplyModalOpen(true);
   };
@@ -141,15 +146,19 @@ export default function BuzzCard({
 
   return (
     <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div className={`rounded-2xl transition-all duration-300 p-4 sm:p-6 relative ${
-        isExpired 
-          ? 'bg-gray-50 border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)]' 
-          : 'bg-white border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)]'
-      }`}>
+      <div
+        className={`rounded-2xl transition-all duration-300 p-4 sm:p-6 relative ${
+          isExpired
+            ? "bg-gray-50 border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)]"
+            : "bg-white border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)]"
+        }`}
+      >
         <div className="flex flex-col lg:flex-row lg:gap-6">
-          <div className={`w-full lg:w-[350px] border rounded-xl overflow-hidden shrink-0 mb-4 lg:mb-0 ${
-            isExpired ? 'border-gray-200 opacity-75' : 'border-gray-200'
-          }`}>
+          <div
+            className={`w-full lg:w-[350px] border rounded-xl overflow-hidden shrink-0 mb-4 lg:mb-0 ${
+              isExpired ? "border-gray-200 opacity-75" : "border-gray-200"
+            }`}
+          >
             <div className="aspect-[3/4]">
               <iframe
                 src={getEmbedUrl(tweetLink)}
@@ -161,9 +170,11 @@ export default function BuzzCard({
           </div>
 
           <div className="flex-1 space-y-4">
-            <div className={`rounded-xl p-4 ${
-              isExpired ? 'bg-gray-100' : 'bg-gray-50'
-            }`}>
+            <div
+              className={`rounded-xl p-4 ${
+                isExpired ? "bg-gray-100" : "bg-gray-50"
+              }`}
+            >
               <div className="flex flex-col space-y-2">
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-gray-500">Created by</div>
@@ -187,12 +198,16 @@ export default function BuzzCard({
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-gray-500">Total deposit</div>
                   <div className="flex items-center gap-2">
-                    <SparklesIcon className={`h-5 w-5 ${
-                      isExpired ? 'text-gray-400' : 'text-amber-500'
-                    }`} />
-                    <span className={`text-lg font-semibold ${
-                      isExpired ? 'text-gray-500' : 'text-gray-900'
-                    }`}>
+                    <SparklesIcon
+                      className={`h-5 w-5 ${
+                        isExpired ? "text-gray-400" : "text-amber-500"
+                      }`}
+                    />
+                    <span
+                      className={`text-lg font-semibold ${
+                        isExpired ? "text-gray-500" : "text-gray-900"
+                      }`}
+                    >
                       {(credit * totalReplies).toFixed(2)} BUZZ
                     </span>
                   </div>
@@ -202,62 +217,78 @@ export default function BuzzCard({
                     <div className="text-sm text-gray-500">Created on</div>
                     <div className="text-sm font-medium text-gray-900">
                       {new Date(createdAt).toLocaleDateString(undefined, {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </div>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
                   <div className="text-sm text-gray-500">Expires on</div>
-                  <div className={`text-sm font-medium ${isExpired ? 'text-red-600' : 'text-gray-900'}`}>
+                  <div
+                    className={`text-sm font-medium ${
+                      isExpired ? "text-red-600" : "text-gray-900"
+                    }`}
+                  >
                     {new Date(deadline).toLocaleDateString(undefined, {
-                      year: 'numeric',
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
                     })}
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
-              isExpired 
-                ? 'bg-gray-100'
-                : 'bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50'
-            }`}>
+            <div
+              className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
+                isExpired
+                  ? "bg-gray-100"
+                  : "bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50"
+              }`}
+            >
               <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                <ChatBubbleLeftRightIcon className={`h-5 w-5 mr-2 ${
-                  isExpired ? 'text-gray-400' : 'text-blue-500'
-                }`} />
+                <ChatBubbleLeftRightIcon
+                  className={`h-5 w-5 mr-2 ${
+                    isExpired ? "text-gray-400" : "text-blue-500"
+                  }`}
+                />
                 Context
               </h4>
-              <p className={`text-sm break-words ${
-                isExpired ? 'text-gray-500' : 'text-gray-600'
-              }`}>
+              <p
+                className={`text-sm break-words ${
+                  isExpired ? "text-gray-500" : "text-gray-600"
+                }`}
+              >
                 {context || "No context provided"}
               </p>
             </div>
 
-            <div className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
-              isExpired 
-                ? 'bg-gray-100'
-                : 'bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50'
-            }`}>
+            <div
+              className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
+                isExpired
+                  ? "bg-gray-100"
+                  : "bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50"
+              }`}
+            >
               <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                <SparklesIcon className={`h-5 w-5 mr-2 ${
-                  isExpired ? 'text-gray-400' : 'text-indigo-500'
-                }`} />
+                <SparklesIcon
+                  className={`h-5 w-5 mr-2 ${
+                    isExpired ? "text-gray-400" : "text-indigo-500"
+                  }`}
+                />
                 Instructions
               </h4>
-              <p className={`text-sm break-words ${
-                isExpired ? 'text-gray-500' : 'text-gray-600'
-              }`}>
+              <p
+                className={`text-sm break-words ${
+                  isExpired ? "text-gray-500" : "text-gray-600"
+                }`}
+              >
                 {instructions}
               </p>
             </div>
@@ -268,17 +299,15 @@ export default function BuzzCard({
                   href={`/buzz/${encodeURIComponent(id)}`}
                   className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                     isExpired
-                      ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
-                      : 'bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700'
+                      ? "bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
+                      : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                   }`}
                 >
                   <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-                  View {replyCount} {replyCount === 1 ? 'Reply' : 'Replies'}
+                  View {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
                 </Link>
               )}
-              <div className="flex-shrink-0">
-                {renderReplyButton()}
-              </div>
+              <div className="flex-shrink-0">{renderReplyButton()}</div>
             </div>
           </div>
         </div>
@@ -292,4 +321,4 @@ export default function BuzzCard({
       />
     </div>
   );
-} 
+}

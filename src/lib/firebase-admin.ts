@@ -1,5 +1,5 @@
-import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
+import { getApps, initializeApp, cert } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
 
 // Initialize Firebase Admin if it hasn't been initialized
 function getFirebaseAdminApp() {
@@ -7,10 +7,14 @@ function getFirebaseAdminApp() {
     return getApps()[0];
   }
 
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || !process.env.FIREBASE_CLIENT_EMAIL || !privateKey) {
-    throw new Error('Firebase Admin environment variables are not set');
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+
+  if (
+    !process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    !process.env.FIREBASE_CLIENT_EMAIL ||
+    !privateKey
+  ) {
+    throw new Error("Firebase Admin environment variables are not set");
   }
 
   return initializeApp({
@@ -22,4 +26,4 @@ function getFirebaseAdminApp() {
   });
 }
 
-export const adminAuth = getAuth(getFirebaseAdminApp()); 
+export const adminAuth = getAuth(getFirebaseAdminApp());

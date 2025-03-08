@@ -1,10 +1,10 @@
-import { PrismaClient, ReplyStatus } from '@prisma/client';
+import { PrismaClient, ReplyStatus } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-const MY_ADDRESS = '0xA6Bf022bc8761937bEe6A435Fc12087760EC2196';
-const OTHER_ADDRESS = '0x742d35Cc6634C0532925a3b844Bc454e4438f44e';
-const REPLY_LINK = 'https://x.com/sjpwa1/status/1897818839767040409';
+const MY_ADDRESS = "0xA6Bf022bc8761937bEe6A435Fc12087760EC2196";
+const OTHER_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
+const REPLY_LINK = "https://x.com/sjpwa1/status/1897818839767040409";
 
 const REPLY_TEXTS = [
   "This is a fascinating approach to blockchain integration. The potential impact on scalability is significant.",
@@ -28,7 +28,7 @@ async function main() {
   });
 
   if (buzzes.length === 0) {
-    console.log('No buzzes found. Please run the main seed script first.');
+    console.log("No buzzes found. Please run the main seed script first.");
     return;
   }
 
@@ -89,14 +89,16 @@ async function main() {
     });
   }
 
-  console.log(`Added ${replies.length} test replies to ${buzzes.length} buzzes!`);
+  console.log(
+    `Added ${replies.length} test replies to ${buzzes.length} buzzes!`
+  );
 }
 
 main()
   .catch((e) => {
-    console.error('Error seeding replies:', e);
+    console.error("Error seeding replies:", e);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
-  }); 
+  });

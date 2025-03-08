@@ -9,7 +9,7 @@
     "lint": "next lint",
     "check-data": "ts-node scripts/check-data.ts",
     "seed": "prisma db seed",
-    "seed:replies": "ts-node prisma/seed-replies.ts"
+    "seed:replies": "ts-node prisma/seed.ts"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/seed.ts"

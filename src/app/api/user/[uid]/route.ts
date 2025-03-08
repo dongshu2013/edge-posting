@@ -3,10 +3,10 @@ import { adminAuth } from '@/lib/firebase-admin';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { uid: string } }
+  { params }: { params: Promise<{ uid: string }> }
 ) {
   try {
-    const uid = params.uid;
+    const { uid } = await params;
     
     if (!uid) {
       return NextResponse.json(

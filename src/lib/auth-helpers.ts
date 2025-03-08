@@ -7,7 +7,7 @@ export interface AuthUser {
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
-    const headersList = headers();
+    const headersList = await headers();
     const userId = headersList.get('x-user-id');
     const userEmail = headersList.get('x-user-email');
 

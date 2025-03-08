@@ -18,13 +18,15 @@ model User {
   email       String?   @unique
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  username    String?
+  username    String?   @unique
   avatar      String?
   bio         String?   @db.Text
   totalEarned Float     @default(0)
   reputation  Int       @default(0)
+  balance     Float       @default(0)
   buzzes      Buzz[]
   replies     Reply[]
+  withdrawals Withdrawal[]
 
   @@index([reputation])
 }
@@ -88,6 +90,20 @@ model Transaction {
   @@index([toAddress])
 }
 
+model Withdrawal {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Float
+  address   String
+  status    WithdrawalStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [uid])
+
+  @@index([userId])
+  @@index([status])
+}
+
 enum ReplyStatus {
   PENDING
   APPROVED
@@ -100,6 +116,12 @@ enum TransactionType {
 }
 
 enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum WithdrawalStatus {
   PENDING
   COMPLETED
   FAILED

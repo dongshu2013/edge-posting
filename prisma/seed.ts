@@ -4,27 +4,36 @@ const prisma = new PrismaClient({
   log: ["query", "info", "warn", "error"],
 });
 
-// Mock Firebase UIDs
+const MY_UID = "user_01";
+const OTHER_UID = "user_02";
+
 const MOCK_USERS = [
   {
-    uid: "user1", // Mock Firebase UID for first user
+    uid: MY_UID,
     email: "alice@example.com",
-    username: "Alice",
+    username: "alice",
+    nikename: "Alice",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
     bio: "Web3 Developer & AI Enthusiast",
+    totalEarned: 0,
+    balance: 0,
   },
   {
-    uid: "user2", // Mock Firebase UID for second user
+    uid: OTHER_UID,
     email: "bob@example.com",
-    username: "Bob",
+    username: "bob",
+    nikename: "Bob",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
     bio: "Blockchain Researcher",
+    totalEarned: 0,
+    balance: 0,
   },
 ];
 
 async function cleanDatabase() {
   await prisma.transaction.deleteMany();
   await prisma.reply.deleteMany();
+  await prisma.withdrawal.deleteMany();
   await prisma.buzz.deleteMany();
   await prisma.user.deleteMany();
   console.log("Database cleaned");
@@ -46,7 +55,7 @@ async function seedUsers() {
 
 async function seedBuzzes() {
   const buzzes = await Promise.all([
-    // Expired buzz
+    // 已结束的活动
     prisma.buzz.create({
       data: {
         tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
@@ -55,27 +64,29 @@ async function seedBuzzes() {
         context:
           "Vitalik discusses new developments in Ethereum scaling solutions.",
         credit: 0.05,
-        createdBy: MOCK_USERS[0].uid,
+        createdBy: MY_UID,
         deadline: new Date("2024-03-01"),
         createdAt: new Date("2024-02-28"),
         totalReplies: 100,
         replyCount: 0,
         isActive: false,
+        isSettled: true,
       },
     }),
-    // Active buzz
+    // 进行中的活动
     prisma.buzz.create({
       data: {
         tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
         instructions: "Share your perspective on web3 social networks.",
         context: "Discussion about decentralized platforms.",
         credit: 0.1,
-        createdBy: MOCK_USERS[1].uid,
+        createdBy: OTHER_UID,
         deadline: new Date("2035-04-01"),
         createdAt: new Date(),
         totalReplies: 150,
         replyCount: 0,
         isActive: true,
+        isSettled: false,
       },
     }),
   ]);
@@ -89,21 +100,21 @@ const MOCK_REPLIES = [
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "This is a fascinating approach to blockchain integration. The potential impact on scalability is significant.",
     status: "PENDING",
-    createdBy: MOCK_USERS[0].uid,
+    createdBy: MY_UID,
     createdAt: new Date(),
   },
   {
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "Great analysis! I particularly appreciate how this could improve user experience while maintaining decentralization.",
     status: "APPROVED",
-    createdBy: MOCK_USERS[1].uid,
+    createdBy: OTHER_UID,
     createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
   },
   {
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "Interesting perspective on DeFi adoption. Have you considered the regulatory implications?",
     status: "REJECTED",
-    createdBy: MOCK_USERS[0].uid,
+    createdBy: MY_UID,
     createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
   },
 ];
@@ -116,6 +127,11 @@ async function seedReplies(buzzes: { id: string }[]) {
       replies.push({
         ...replyData,
         buzzId: buzz.id,
+        user: {
+          connect: {
+            uid: replyData.createdBy,
+          },
+        },
       });
     }
   }
@@ -126,7 +142,6 @@ async function seedReplies(buzzes: { id: string }[]) {
         data: {
           replyLink: reply.replyLink,
           text: reply.text,
-          status: reply.status as "PENDING" | "APPROVED" | "REJECTED",
           createdBy: reply.createdBy,
           createdAt: reply.createdAt,
           buzzId: reply.buzzId,

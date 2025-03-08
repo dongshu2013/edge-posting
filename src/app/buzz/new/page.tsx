@@ -51,7 +51,7 @@ export default function NewBuzzPage() {
         body: JSON.stringify({
           tweetLink: formData.tweetLink,
           instructions: formData.instructions,
-          credit: formData.pricePerReply,
+          price: formData.pricePerReply,
           createdBy: address, // from useAccount
           deadline: deadline.toISOString(),
           numberOfReplies: formData.numberOfReplies,
@@ -147,7 +147,7 @@ export default function NewBuzzPage() {
                     htmlFor="pricePerReply"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Price per Reply 💰
+                    BUZZ per Reply 💰
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <input

@@ -10,8 +10,8 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "BUZZ",
-  description: "Engage with tweets and earn credits using AI",
+  title: "Edge Posting",
+  description: "Engage with tweets and earn BUZZ tokens using AI",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },

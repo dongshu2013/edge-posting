@@ -23,9 +23,10 @@ export function useAuth() {
   const saveUserToDatabase = useCallback(
     async (user: User) => {
       if (isSyncing) return;
+      
       try {
         setIsSyncing(true);
-        const saveUser = await fetchApi("/api/user", {
+        await fetchApi("/api/user", {
           method: "POST",
           body: JSON.stringify({
             uid: user.uid,
@@ -35,14 +36,25 @@ export function useAuth() {
             avatar: user.photoURL,
           }),
         });
-        setUserInfo(saveUser);
+        setUserInfo({
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName,
+          nickname: user.displayName,
+          avatar: user.photoURL,
+          bio: null,
+          totalEarned: 0,
+          balance: 0,
+          createdAt: new Date(),
+        });
       } catch (error) {
         console.error("Failed to save user to database:", error);
+        throw error;
       } finally {
         setIsSyncing(false);
       }
     },
-    [setUserInfo] // 移除 isSyncing 依赖
+    [setUserInfo, isSyncing]
   );
 
   useEffect(() => {
@@ -52,37 +64,43 @@ export function useAuth() {
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      setLoading(false);
 
       if (user) {
-        const token = await getIdToken(user);
-        localStorage.setItem("authToken", token);
-        if (isInitialSync) {
-          // 添加延迟避免快速重复调用
-          clearTimeout(syncTimeout);
-          syncTimeout = setTimeout(() => {
-            saveUserToDatabase(user);
-            isInitialSync = false;
-          }, 1000);
+        try {
+          const token = await getIdToken(user);
+          localStorage.setItem("authToken", token);
+          if (isInitialSync && !isSyncing) {
+            clearTimeout(syncTimeout);
+            syncTimeout = setTimeout(() => {
+              saveUserToDatabase(user).catch(console.error);
+              isInitialSync = false;
+            }, 1000);
+          }
+        } catch (error) {
+          console.error("Error during auth state change:", error);
         }
       } else {
         localStorage.removeItem("authToken");
         setUserInfo(null);
       }
+      
+      setLoading(false);
     });
 
     return () => {
       unsubscribe();
       clearTimeout(syncTimeout);
     };
-  }, [saveUserToDatabase, setUserInfo]);
+  }, [saveUserToDatabase, setUserInfo, isSyncing]);
 
   const signInWithGoogle = async () => {
     try {
       if (!auth) throw new Error("Auth is not initialized");
       setError(null);
       const result = await signInWithPopup(auth, googleProvider);
-      await saveUserToDatabase(result.user);
+      if (!isSyncing) {
+        await saveUserToDatabase(result.user);
+      }
       return result.user;
     } catch (err) {
       setError(
@@ -159,7 +177,7 @@ export function useAuth() {
 
   return {
     user,
-    loading,
+    loading: loading || isSyncing,
     error,
     signInWithGoogle,
     sendMagicLink,

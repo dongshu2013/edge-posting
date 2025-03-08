@@ -37,8 +37,7 @@ model Buzz {
   id           String        @id @default(cuid())
   tweetLink    String
   instructions String        @db.Text
-  context      String        @db.Text
-  credit       Float
+  price        Float
   createdAt    DateTime      @default(now())
   createdBy    String // Firebase UID
   deadline     DateTime

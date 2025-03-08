@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-helpers";
+import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,20 +11,19 @@ export async function GET(request: NextRequest) {
     const limit = 10; // Number of items per page
 
     // Build the query
-    const query = {
+    const query: Prisma.BuzzFindManyArgs = {
       where: {
         ...(createdBy && { createdBy }),
       },
       take: limit + 1, // Take one extra to know if there are more items
       orderBy: {
-        createdAt: "desc" as const,
+        createdAt: "desc",
       },
       select: {
         id: true,
         tweetLink: true,
         instructions: true,
-        context: true,
-        credit: true,
+        price: true,
         createdAt: true,
         createdBy: true,
         deadline: true,
@@ -68,10 +68,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { tweetLink, instructions, context, credit, deadline } = body;
+    const { tweetLink, instructions, price, deadline } = body;
 
     // Validate required fields
-    if (!tweetLink || !instructions || !context || !credit || !deadline) {
+    if (!tweetLink || !instructions || !price || !deadline) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -83,8 +83,7 @@ export async function POST(request: Request) {
       data: {
         tweetLink,
         instructions,
-        context,
-        credit: parseFloat(credit),
+        price: parseFloat(price),
         createdBy: user.uid,
         deadline: new Date(deadline),
         totalReplies: body.numberOfReplies || 100, // Default to 100 if not specified

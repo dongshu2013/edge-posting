@@ -3,9 +3,13 @@ import type { NextRequest } from "next/server";
 
 // Routes that require authentication
 const protectedRoutes = [
-  "/api/buzz/*",
+  "/api/buzz", // 添加无通配符的路由
+  "/api/buzz/*", // 保留通配符路由用于子路径
+  "/api/reply",
   "/api/reply/*",
+  "/api/user",
   "/api/user/*",
+  "/api/withdraw",
   "/api/withdraw/*",
 ];
 
@@ -31,7 +35,8 @@ export async function middleware(request: NextRequest) {
   }
 
   try {
-    const authHeader = request.headers.get("authorization");
+    const authHeader = request.headers.get("Authorization");
+    console.log("(....)", authHeader);
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
         { error: "Missing or invalid authorization header" },
@@ -45,7 +50,7 @@ export async function middleware(request: NextRequest) {
       {
         method: "POST",
         headers: {
-          authorization: authHeader,
+          Authorization: authHeader,
         },
       }
     );

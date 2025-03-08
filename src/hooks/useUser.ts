@@ -1,6 +1,7 @@
 import { useAccount, useSignMessage } from "wagmi";
 import { useEffect, useState, useCallback } from "react";
 import { SiweMessage } from "siwe";
+import { fetchApi } from "@/lib/api";
 
 export function useUser() {
   const { address, isConnected } = useAccount();
@@ -11,8 +12,7 @@ export function useUser() {
     try {
       setLoading(true);
 
-      const nonceRes = await fetch("/api/auth/nonce");
-      const nonce = await nonceRes.text();
+      const nonce = await fetchApi("/api/auth/nonce");
 
       const message = new SiweMessage({
         domain: window.location.host,
@@ -29,21 +29,15 @@ export function useUser() {
       });
 
       // 4. Verify signature and create session
-      const verifyRes = await fetch("/api/auth/verify", {
+      const verifyRes = await fetchApi("/api/auth/verify", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({ message, signature }),
       });
 
-      if (!verifyRes.ok) throw new Error("Failed to verify signature");
+      if (verifyRes.error) throw new Error("Failed to verify signature");
 
-      await fetch("/api/user", {
+      await fetchApi("/api/user", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           address,
         }),

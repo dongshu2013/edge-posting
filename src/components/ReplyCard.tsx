@@ -7,7 +7,7 @@ import {
   DocumentDuplicateIcon,
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useUserInfo } from "@/hooks/useUserInfo";
+import { fetchApi } from "@/lib/api";
 
 interface ReplyCardProps {
   id: string;
@@ -47,7 +47,6 @@ export default function ReplyCard({
   showRejectButton = true,
 }: ReplyCardProps) {
   const { address } = useAccount();
-  const { userInfo } = useUserInfo(createdBy);
   const isOwner =
     address &&
     buzzCreator &&
@@ -74,13 +73,12 @@ export default function ReplyCard({
       setIsRejecting(true);
       setError(null);
 
-      const response = await fetch(`/api/reply/${id}/reject`, {
+      const response = await fetchApi(`/api/reply/${id}/reject`, {
         method: "POST",
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to reject reply");
+      if (response.error) {
+        throw new Error(response.error || "Failed to reject reply");
       }
 
       setCurrentStatus("REJECTED");
@@ -137,7 +135,7 @@ export default function ReplyCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  {userInfo?.nickname || createdBy}
+                  {createdBy}
                 </span>
                 <button
                   onClick={handleCopyAddress}

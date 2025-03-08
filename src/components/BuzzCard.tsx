@@ -13,7 +13,7 @@ import ReplyLinkModal from "./ReplyLinkModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthButton } from "@/components/AuthButton";
-import { useUserInfo } from "@/hooks/useUserInfo";
+import { fetchApi } from "@/lib/api";
 
 interface BuzzCardProps {
   id: string;
@@ -58,7 +58,6 @@ export default function BuzzCard({
 }: BuzzCardProps) {
   const { address } = useAccount();
   const { user } = useAuth();
-  const { userInfo } = useUserInfo(createdBy);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -79,11 +78,8 @@ export default function BuzzCard({
 
   const handleReplySubmit = async (replyLink: string) => {
     try {
-      const response = await fetch("/api/reply", {
+      const response = await fetchApi("/api/reply", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           buzzId: id,
           replyLink,
@@ -91,9 +87,8 @@ export default function BuzzCard({
         }),
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to submit reply");
+      if (response.error) {
+        throw new Error(response.error || "Failed to submit reply");
       }
 
       // Optionally refresh the page or update the UI
@@ -172,7 +167,7 @@ export default function BuzzCard({
                   <div className="text-sm text-gray-500">Created by</div>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {userInfo?.nickname || createdBy}
+                      {createdBy}
                     </div>
                     <button
                       onClick={handleCopyAddress}

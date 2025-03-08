@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getAuthUser } from '@/lib/auth-helpers';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const createdBy = searchParams.get('createdBy');
-    const cursor = searchParams.get('cursor');
+    const createdBy = searchParams.get("createdBy");
+    const cursor = searchParams.get("cursor");
     const limit = 10; // Number of items per page
 
     // Build the query
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
       },
       take: limit + 1, // Take one extra to know if there are more items
       orderBy: {
-        createdAt: 'desc' as const,
+        createdAt: "desc" as const,
       },
       select: {
         id: true,
@@ -52,9 +52,9 @@ export async function GET(request: NextRequest) {
       hasMore,
     });
   } catch (error) {
-    console.error('Failed to fetch buzzes:', error);
+    console.error("Failed to fetch buzzes:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch buzzes' },
+      { error: "Failed to fetch buzzes" },
       { status: 500 }
     );
   }
@@ -64,10 +64,7 @@ export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -76,7 +73,7 @@ export async function POST(request: Request) {
     // Validate required fields
     if (!tweetLink || !instructions || !context || !credit || !deadline) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -96,10 +93,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(buzz);
   } catch (error) {
-    console.error('Failed to create buzz:', error);
+    console.error("Failed to create buzz:", error);
     return NextResponse.json(
-      { error: 'Failed to create buzz' },
+      { error: "Failed to create buzz" },
       { status: 500 }
     );
   }
-} 
+}

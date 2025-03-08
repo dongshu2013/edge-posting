@@ -1,11 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
-import BuzzCard from '@/components/BuzzCard';
-import ReplyCard from '@/components/ReplyCard';
-import { useParams } from 'next/navigation';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
+import BuzzCard from "@/components/BuzzCard";
+import ReplyCard from "@/components/ReplyCard";
+import { useParams } from "next/navigation";
+import { fetchApi } from "@/lib/api";
 
 interface Reply {
   id: string;
@@ -13,7 +14,7 @@ interface Reply {
   replyLink: string;
   createdAt: Date;
   createdBy: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
 }
 
 interface Buzz {
@@ -40,17 +41,18 @@ export default function BuzzDetailPage() {
   useEffect(() => {
     const fetchBuzzDetails = async () => {
       try {
-        const response = await fetch(`/api/buzz/${params.id}`);
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to fetch buzz details');
+        const data = await fetchApi(`/api/buzz/${params.id}`);
+
+        if (!data) {
+          throw new Error(data.error || "Failed to fetch buzz details");
         }
 
         setBuzz(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to fetch buzz details');
-        console.error('Error fetching buzz details:', err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch buzz details"
+        );
+        console.error("Error fetching buzz details:", err);
       } finally {
         setIsLoading(false);
       }
@@ -148,11 +150,13 @@ export default function BuzzDetailPage() {
               status={reply.status}
             />
           ))}
-          
+
           {buzz.replies.length === 0 && (
             <div className="bg-gray-50 rounded-2xl p-8 text-center">
               <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No replies yet</h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
+                No replies yet
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Be the first to reply and earn BUZZ! 🚀
               </p>
@@ -162,4 +166,4 @@ export default function BuzzDetailPage() {
       </div>
     </div>
   );
-} 
+}

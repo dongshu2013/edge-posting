@@ -1,20 +1,38 @@
-import { useState, useEffect } from 'react';
-import { 
-  signInWithPopup, 
-  signOut, 
-  onAuthStateChanged, 
+import { useState, useEffect } from "react";
+import {
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
   User,
-  getIdToken
-} from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
+  getIdToken,
+} from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase";
+import { fetchApi } from "@/lib/api";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const saveUserToDatabase = async (user: User) => {
+    try {
+      await fetchApi("/api/user", {
+        method: "POST",
+        body: JSON.stringify({
+          uid: user.uid,
+          email: user.email,
+          username: user.displayName || `user_${user.uid.slice(0, 6)}`,
+          nikename: user.displayName,
+          avatar: user.photoURL,
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to save user to database:", error);
+    }
+  };
 
   useEffect(() => {
     if (!auth) return;
@@ -23,12 +41,12 @@ export function useAuth() {
       setUser(user);
       setLoading(false);
 
-      // If user is logged in, get their token and store it
       if (user) {
         const token = await getIdToken(user);
-        localStorage.setItem('authToken', token);
+        localStorage.setItem("authToken", token);
+        await saveUserToDatabase(user);
       } else {
-        localStorage.removeItem('authToken');
+        localStorage.removeItem("authToken");
       }
     });
 
@@ -37,63 +55,74 @@ export function useAuth() {
 
   const signInWithGoogle = async () => {
     try {
-      if (!auth) throw new Error('Auth is not initialized');
+      if (!auth) throw new Error("Auth is not initialized");
       setError(null);
       const result = await signInWithPopup(auth, googleProvider);
+      await saveUserToDatabase(result.user);
       return result.user;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign in with Google');
+      setError(
+        err instanceof Error ? err.message : "Failed to sign in with Google"
+      );
       throw err;
     }
   };
 
   const sendMagicLink = async (email: string) => {
     try {
-      if (!auth) throw new Error('Auth is not initialized');
+      if (!auth) throw new Error("Auth is not initialized");
       setError(null);
       const actionCodeSettings = {
-        url: window.location.origin + '/auth/verify',
+        url: window.location.origin + "/auth/verify",
         handleCodeInApp: true,
       };
 
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       // Save the email for verification
-      window.localStorage.setItem('emailForSignIn', email);
+      window.localStorage.setItem("emailForSignIn", email);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send magic link');
+      setError(
+        err instanceof Error ? err.message : "Failed to send magic link"
+      );
       throw err;
     }
   };
 
   const verifyMagicLink = async () => {
     try {
-      if (!auth) throw new Error('Auth is not initialized');
+      if (!auth) throw new Error("Auth is not initialized");
       setError(null);
       if (isSignInWithEmailLink(auth, window.location.href)) {
-        const email = window.localStorage.getItem('emailForSignIn');
+        const email = window.localStorage.getItem("emailForSignIn");
         if (!email) {
-          throw new Error('Email not found. Please try signing in again.');
+          throw new Error("Email not found. Please try signing in again.");
         }
 
-        const result = await signInWithEmailLink(auth, email, window.location.href);
-        window.localStorage.removeItem('emailForSignIn');
+        const result = await signInWithEmailLink(
+          auth,
+          email,
+          window.location.href
+        );
+        window.localStorage.removeItem("emailForSignIn");
         return result.user;
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify magic link');
+      setError(
+        err instanceof Error ? err.message : "Failed to verify magic link"
+      );
       throw err;
     }
   };
 
   const signOutUser = async () => {
     try {
-      if (!auth) throw new Error('Auth is not initialized');
+      if (!auth) throw new Error("Auth is not initialized");
       setError(null);
       await signOut(auth);
-      localStorage.removeItem('authToken');
+      localStorage.removeItem("authToken");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to sign out');
+      setError(err instanceof Error ? err.message : "Failed to sign out");
       throw err;
     }
   };
@@ -114,4 +143,4 @@ export function useAuth() {
     signOut: signOutUser,
     getAuthToken,
   };
-} 
+}

@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth-helpers';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: NextRequest,
@@ -9,18 +9,12 @@ export async function POST(
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Only allow users to update their own username
     if (user.uid !== params.uid) {
-      return NextResponse.json(
-        { error: 'Forbidden' },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -28,7 +22,7 @@ export async function POST(
 
     if (!username) {
       return NextResponse.json(
-        { error: 'Username is required' },
+        { error: "Username is required" },
         { status: 400 }
       );
     }
@@ -38,14 +32,14 @@ export async function POST(
       where: {
         username,
         NOT: {
-          uid: user.uid
-        }
-      }
+          uid: user.uid,
+        },
+      },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: 'Username is already taken' },
+        { error: "Username is already taken" },
         { status: 400 }
       );
     }
@@ -59,16 +53,15 @@ export async function POST(
         email: true,
         username: true,
         totalEarned: true,
-        reputation: true,
       },
     });
 
     return NextResponse.json(updatedUser);
   } catch (error) {
-    console.error('Error updating username:', error);
+    console.error("Error updating username:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

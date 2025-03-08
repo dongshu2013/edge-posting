@@ -3,15 +3,33 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { uid, username } = await request.json();
+    const { uid, email, username, nikename, avatar } = await request.json();
+
+    if (!uid) {
+      return NextResponse.json(
+        { error: "User ID is required" },
+        { status: 400 }
+      );
+    }
 
     const user = await prisma.user.upsert({
       where: { uid },
-      update: {},
+      update: {
+        email,
+        username,
+        nikename,
+        avatar:
+          avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+      },
       create: {
         uid,
+        email,
         username,
-        avatar: `https://api.dicebear.com/7.x/avataaars/svg?`,
+        nikename,
+        avatar:
+          avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+        totalEarned: 0,
+        balance: 0,
       },
     });
 

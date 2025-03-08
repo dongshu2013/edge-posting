@@ -101,6 +101,8 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                             src="https://www.google.com/favicon.ico"
                             alt="Google"
                             className="w-4 h-4 mr-2"
+                            width={16}
+                            height={16}
                           />
                           Continue with Google
                         </button>

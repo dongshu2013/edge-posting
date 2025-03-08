@@ -1,8 +1,13 @@
-import { useAccount } from 'wagmi';
-import { useState } from 'react';
-import { XMarkIcon, CheckIcon, ArrowTopRightOnSquareIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
-import Link from 'next/link';
-import { useUserInfo } from '@/hooks/useUserInfo';
+import { useAccount } from "wagmi";
+import { useState } from "react";
+import {
+  XMarkIcon,
+  CheckIcon,
+  ArrowTopRightOnSquareIcon,
+  DocumentDuplicateIcon,
+} from "@heroicons/react/24/outline";
+import Link from "next/link";
+import { useUserInfo } from "@/hooks/useUserInfo";
 
 interface ReplyCardProps {
   id: string;
@@ -12,7 +17,7 @@ interface ReplyCardProps {
   createdBy: string;
   buzzCreator: string;
   buzzId: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   showOriginalBuzzButton?: boolean;
   showRejectButton?: boolean;
 }
@@ -21,7 +26,7 @@ interface ReplyCardProps {
 const getEmbedUrl = (tweetUrl: string) => {
   try {
     const url = new URL(tweetUrl);
-    const pathParts = url.pathname.split('/');
+    const pathParts = url.pathname.split("/");
     const tweetId = pathParts[pathParts.length - 1];
     return `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}`;
   } catch {
@@ -29,27 +34,24 @@ const getEmbedUrl = (tweetUrl: string) => {
   }
 };
 
-// Utility function to format ID (kept as fallback)
-const formatAddress = (address: string) => {
-  if (!address) return '';
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-};
-
-export default function ReplyCard({ 
-  id, 
+export default function ReplyCard({
+  id,
   replyLink,
   text,
-  createdAt, 
+  createdAt,
   createdBy,
   buzzCreator,
   buzzId,
-  status = 'PENDING',
+  status = "PENDING",
   showOriginalBuzzButton = false,
   showRejectButton = true,
 }: ReplyCardProps) {
   const { address } = useAccount();
   const { userInfo } = useUserInfo(createdBy);
-  const isOwner = address && buzzCreator && address.toLowerCase() === buzzCreator.toLowerCase();
+  const isOwner =
+    address &&
+    buzzCreator &&
+    address.toLowerCase() === buzzCreator.toLowerCase();
   const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(status);
@@ -61,30 +63,30 @@ export default function ReplyCard({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
-      console.error('Failed to copy address:', err);
+      console.error("Failed to copy address:", err);
     }
   };
 
   const handleReject = async () => {
-    if (!isOwner || currentStatus !== 'PENDING') return;
+    if (!isOwner || currentStatus !== "PENDING") return;
 
     try {
       setIsRejecting(true);
       setError(null);
 
       const response = await fetch(`/api/reply/${id}/reject`, {
-        method: 'POST',
+        method: "POST",
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to reject reply');
+        throw new Error(error.error || "Failed to reject reply");
       }
 
-      setCurrentStatus('REJECTED');
+      setCurrentStatus("REJECTED");
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reject reply');
-      console.error('Error rejecting reply:', err);
+      setError(err instanceof Error ? err.message : "Failed to reject reply");
+      console.error("Error rejecting reply:", err);
     } finally {
       setIsRejecting(false);
     }
@@ -92,14 +94,14 @@ export default function ReplyCard({
 
   const getStatusBadge = () => {
     switch (currentStatus) {
-      case 'APPROVED':
+      case "APPROVED":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
             <CheckIcon className="mr-1 h-4 w-4" />
             Approved
           </span>
         );
-      case 'REJECTED':
+      case "REJECTED":
         return (
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
             <XMarkIcon className="mr-1 h-4 w-4" />
@@ -135,7 +137,7 @@ export default function ReplyCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  {userInfo?.displayName || formatAddress(createdBy)}
+                  {userInfo?.nikename || createdBy}
                 </span>
                 <button
                   onClick={handleCopyAddress}
@@ -151,27 +153,27 @@ export default function ReplyCard({
               </div>
               <span className="text-gray-400 hidden sm:inline">·</span>
               <span className="text-sm text-gray-500">
-                {new Date(createdAt).toLocaleDateString(undefined, { 
-                  month: 'short', 
-                  day: 'numeric' 
+                {new Date(createdAt).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
                 })}
               </span>
               <span className="text-gray-400 hidden sm:inline">·</span>
               {getStatusBadge()}
             </div>
             <div className="flex items-center gap-2">
-              {showRejectButton && isOwner && currentStatus === 'PENDING' && (
+              {showRejectButton && isOwner && currentStatus === "PENDING" && (
                 <button
                   onClick={handleReject}
                   disabled={isRejecting}
                   className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1.5 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isRejecting ? 'Rejecting...' : 'Reject'}
+                  {isRejecting ? "Rejecting..." : "Reject"}
                 </button>
               )}
             </div>
           </div>
-          
+
           {error && (
             <div className="mb-4 rounded-md bg-red-50 p-4">
               <p className="text-sm text-red-700">{error}</p>
@@ -201,4 +203,4 @@ export default function ReplyCard({
       </div>
     </div>
   );
-} 
+}

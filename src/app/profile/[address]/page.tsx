@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { sepolia } from 'wagmi/chains';
 import { formatEther } from 'viem';
 import { DocumentDuplicateIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TokenTransfer {
   hash: string;
@@ -24,6 +25,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { address } = useAccount();
   const { disconnect } = useDisconnect();
+  const { user, loading } = useAuth();
   const { data: balance } = useBalance({ address: params.address as `0x${string}` });
   const { data: buzzBalance } = useBalance({ 
     address: params.address as `0x${string}`,
@@ -32,6 +34,15 @@ export default function ProfilePage() {
   const [transfers, setTransfers] = useState<TokenTransfer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    
+    if (!user) {
+      router.push('/buzz');
+      return;
+    }
+  }, [user, loading, router]);
 
   const handleCopyAddress = async () => {
     if (!params.address || typeof params.address !== 'string') return;

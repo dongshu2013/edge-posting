@@ -1,21 +1,20 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthUser } from '@/lib/auth-helpers';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const address = searchParams.get('address');
-
-    if (!address) {
+    const user = await getAuthUser();
+    if (!user) {
       return NextResponse.json(
-        { error: 'Address is required' },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
     const replies = await prisma.reply.findMany({
       where: {
-        createdBy: address,
+        createdBy: user.uid,
       },
       include: {
         buzz: {

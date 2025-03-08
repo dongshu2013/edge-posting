@@ -61,9 +61,6 @@ async function seedBuzzes() {
         totalReplies: 100,
         replyCount: 0,
         isActive: false,
-        user: {
-          connect: { uid: MOCK_USERS[0].uid }
-        },
       },
     }),
     // Active buzz
@@ -79,9 +76,6 @@ async function seedBuzzes() {
         totalReplies: 150,
         replyCount: 0,
         isActive: true,
-        user: {
-          connect: { uid: MOCK_USERS[1].uid }
-        },
       },
     }),
   ]);
@@ -135,8 +129,7 @@ async function seedReplies(buzzes: { id: string }[]) {
           status: reply.status as "PENDING" | "APPROVED" | "REJECTED",
           createdBy: reply.createdBy,
           createdAt: reply.createdAt,
-          buzz: { connect: { id: reply.buzzId } },
-          user: { connect: { uid: reply.createdBy } },
+          buzzId: reply.buzzId,
         },
       })
     )

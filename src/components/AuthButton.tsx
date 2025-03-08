@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 
-export function AuthButton() {
+export function AuthButton({ buttonText }: { buttonText?: string }) {
   const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -17,6 +17,11 @@ export function AuthButton() {
     if (user) {
       router.push(`/profile/${user.uid}`);
     }
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.push('/buzz');
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -42,7 +47,7 @@ export function AuthButton() {
           onClick={() => setIsOpen(true)}
           className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
         >
-          Sign In
+          {buttonText || "Sign In"}
         </button>
 
         <Transition appear show={isOpen} as={Fragment}>
@@ -161,7 +166,7 @@ export function AuthButton() {
         </span>
       </button>
       <button
-        onClick={() => signOut()}
+        onClick={handleSignOut}
         className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 text-gray-700 transition-all duration-200"
       >
         Sign Out

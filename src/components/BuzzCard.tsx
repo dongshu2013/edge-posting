@@ -3,9 +3,13 @@
 import { SparklesIcon, ChatBubbleLeftRightIcon, ArrowTopRightOnSquareIcon, DocumentDuplicateIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { useAccount } from 'wagmi';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import ReplyLinkModal from './ReplyLinkModal';
 import { getReplyIntentUrl } from '@/lib/twitter';
+import { useAuth } from '@/hooks/useAuth';
+import { AuthButton } from '@/components/AuthButton';
+import { Dialog, Transition } from '@headlessui/react';
+import { useUserInfo } from '@/hooks/useUserInfo';
 
 interface BuzzCardProps {
   id: string;
@@ -34,7 +38,7 @@ const getEmbedUrl = (tweetUrl: string) => {
   }
 };
 
-// Utility function to format wallet address
+// Utility function to format ID (kept as fallback)
 const formatAddress = (address: string) => {
   if (!address) return '';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -55,6 +59,8 @@ export default function BuzzCard({
   isActive = true,
 }: BuzzCardProps) {
   const { address, isConnected } = useAccount();
+  const { user, signInWithGoogle } = useAuth();
+  const { userInfo } = useUserInfo(createdBy);
   const isOwner = address && createdBy && address.toLowerCase() === createdBy.toLowerCase();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -108,46 +114,33 @@ export default function BuzzCard({
   };
 
   const renderReplyButton = () => {
-    // Don't show button if user is the owner
-    if (isOwner) {
-      return null;
-    }
-
-    // Show connect wallet button if not connected
-    if (!isConnected) {
+    if (!isActive) {
       return (
         <button
-          type="button"
-          className="inline-flex items-center justify-center px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-medium hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
-          onClick={() => {
-            const connectButton = document.querySelector('[aria-label="Connect"]') as HTMLButtonElement;
-            if (connectButton) connectButton.click();
-          }}
+          disabled
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
         >
-          <ArrowTopRightOnSquareIcon className="h-5 w-5 mr-2" />
-          Connect Wallet to Reply
+          Expired
         </button>
       );
     }
 
-    // Show appropriate reply button based on campaign status
+    if (!user) {
+      return <AuthButton buttonText={`Reply & Earn ${credit} BUZZ`} />;
+    }
+
     return (
       <button
         onClick={handleReplyClick}
-        className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
-          isExpired 
-            ? 'bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700'
-            : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700'
-        }`}
+        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
       >
-        <ArrowTopRightOnSquareIcon className="h-5 w-5 mr-2" />
-        {isExpired ? 'Reply (No Rewards)' : `Reply to Earn ${credit} BUZZ`}
+        Reply & Earn {credit} BUZZ
       </button>
     );
   };
 
   return (
-    <>
+    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
       <div className={`rounded-2xl transition-all duration-300 p-4 sm:p-6 relative ${
         isExpired 
           ? 'bg-gray-50 border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)]' 
@@ -176,12 +169,12 @@ export default function BuzzCard({
                   <div className="text-sm text-gray-500">Created by</div>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {formatAddress(createdBy)}
+                      {userInfo?.displayName || formatAddress(createdBy)}
                     </div>
                     <button
                       onClick={handleCopyAddress}
                       className="inline-flex items-center justify-center p-1 rounded-md hover:bg-gray-200 transition-colors"
-                      title={`Copy address: ${createdBy}`}
+                      title={`Copy ID: ${createdBy}`}
                     >
                       {copied ? (
                         <CheckIcon className="h-4 w-4 text-green-500" />
@@ -295,8 +288,8 @@ export default function BuzzCard({
         isOpen={isReplyModalOpen}
         onClose={() => setIsReplyModalOpen(false)}
         onSubmit={handleReplySubmit}
-        buzzAmount={isExpired ? undefined : credit}
+        buzzAmount={credit}
       />
-    </>
+    </div>
   );
 } 

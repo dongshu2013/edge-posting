@@ -2,6 +2,7 @@ import { useAccount } from 'wagmi';
 import { useState } from 'react';
 import { XMarkIcon, CheckIcon, ArrowTopRightOnSquareIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
+import { useUserInfo } from '@/hooks/useUserInfo';
 
 interface ReplyCardProps {
   id: string;
@@ -16,19 +17,19 @@ interface ReplyCardProps {
   showRejectButton?: boolean;
 }
 
-// Utility function to convert tweet URL to embed URL
+// Get embed URL from tweet URL
 const getEmbedUrl = (tweetUrl: string) => {
   try {
     const url = new URL(tweetUrl);
     const pathParts = url.pathname.split('/');
     const tweetId = pathParts[pathParts.length - 1];
-    return `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}&theme=light&cards=hidden&conversation=none&align=center`;
+    return `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}`;
   } catch {
     return tweetUrl;
   }
 };
 
-// Utility function to format wallet address
+// Utility function to format ID (kept as fallback)
 const formatAddress = (address: string) => {
   if (!address) return '';
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
@@ -47,6 +48,7 @@ export default function ReplyCard({
   showRejectButton = true,
 }: ReplyCardProps) {
   const { address } = useAccount();
+  const { userInfo } = useUserInfo(createdBy);
   const isOwner = address && buzzCreator && address.toLowerCase() === buzzCreator.toLowerCase();
   const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -133,12 +135,12 @@ export default function ReplyCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  {formatAddress(createdBy)}
+                  {userInfo?.displayName || formatAddress(createdBy)}
                 </span>
                 <button
                   onClick={handleCopyAddress}
                   className="inline-flex items-center justify-center p-1 rounded-md hover:bg-gray-200 transition-colors"
-                  title={`Copy address: ${createdBy}`}
+                  title={`Copy ID: ${createdBy}`}
                 >
                   {copied ? (
                     <CheckIcon className="h-4 w-4 text-green-500" />

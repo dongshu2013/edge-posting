@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react';
 import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import ReplyCard from '@/components/ReplyCard';
-import { useAccount } from 'wagmi';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { fetchApi } from '@/lib/api';
 
 interface Reply {
   id: string;
@@ -23,26 +24,23 @@ export default function HistoryPage() {
   const [replies, setReplies] = useState<Reply[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { isConnected, address } = useAccount();
+  const { user, loading } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isConnected) {
-      router.push('/');
-      return;
-    }
+    if (loading) return;
 
     const fetchReplies = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
-        const response = await fetch(`/api/reply/my?address=${address}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch replies');
+        if (!user) {
+          router.push('/buzz');
+          return;
         }
 
-        const data = await response.json();
+        const data = await fetchApi('/api/reply/my');
         setReplies(data);
       } catch (err) {
         console.error('Error fetching replies:', err);
@@ -52,12 +50,10 @@ export default function HistoryPage() {
       }
     };
 
-    if (address) {
-      fetchReplies();
-    }
-  }, [isConnected, address, router]);
+    fetchReplies();
+  }, [user, loading, router]);
 
-  if (!isConnected) {
+  if (!user) {
     return null;
   }
 

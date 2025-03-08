@@ -17,11 +17,14 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
   const setUserInfo = useUserStore((state) => state.setUserInfo);
 
   const saveUserToDatabase = useCallback(
     async (user: User) => {
+      if (isSyncing) return;
       try {
+        setIsSyncing(true);
         const saveUser = await fetchApi("/api/user", {
           method: "POST",
           body: JSON.stringify({
@@ -35,13 +38,17 @@ export function useAuth() {
         setUserInfo(saveUser);
       } catch (error) {
         console.error("Failed to save user to database:", error);
+      } finally {
+        setIsSyncing(false);
       }
     },
-    [setUserInfo]
+    [setUserInfo] // 移除 isSyncing 依赖
   );
 
   useEffect(() => {
     if (!auth) return;
+    let isInitialSync = true;
+    let syncTimeout: NodeJS.Timeout;
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
@@ -50,14 +57,24 @@ export function useAuth() {
       if (user) {
         const token = await getIdToken(user);
         localStorage.setItem("authToken", token);
-        await saveUserToDatabase(user);
+        if (isInitialSync) {
+          // 添加延迟避免快速重复调用
+          clearTimeout(syncTimeout);
+          syncTimeout = setTimeout(() => {
+            saveUserToDatabase(user);
+            isInitialSync = false;
+          }, 1000);
+        }
       } else {
         localStorage.removeItem("authToken");
         setUserInfo(null);
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      clearTimeout(syncTimeout);
+    };
   }, [saveUserToDatabase, setUserInfo]);
 
   const signInWithGoogle = async () => {

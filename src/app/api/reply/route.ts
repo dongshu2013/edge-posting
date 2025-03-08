@@ -1,15 +1,12 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { getAuthUser } from '@/lib/auth-helpers';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth-helpers";
 
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -17,15 +14,17 @@ export async function POST(request: Request) {
 
     if (!buzzId || !replyLink || !text) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
     // Validate the reply link format (basic check)
-    if (!replyLink.match(/^https?:\/\/(twitter\.com|x\.com)\/.+\/status\/.+$/)) {
+    if (
+      !replyLink.match(/^https?:\/\/(twitter\.com|x\.com)\/.+\/status\/.+$/)
+    ) {
       return NextResponse.json(
-        { error: 'Invalid reply link format' },
+        { error: "Invalid reply link format" },
         { status: 400 }
       );
     }
@@ -46,10 +45,7 @@ export async function POST(request: Request) {
     });
 
     if (!buzz) {
-      return NextResponse.json(
-        { error: 'Buzz not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Buzz not found" }, { status: 404 });
     }
 
     // Check if the buzz is still active
@@ -58,7 +54,7 @@ export async function POST(request: Request) {
     // Check if the buzz has reached its reply limit
     if (!isExpired && buzz.replyCount >= buzz.totalReplies) {
       return NextResponse.json(
-        { error: 'This buzz has reached its maximum number of replies' },
+        { error: "This buzz has reached its maximum number of replies" },
         { status: 400 }
       );
     }
@@ -66,7 +62,7 @@ export async function POST(request: Request) {
     // Check if the buzz is already settled
     if (buzz.isSettled) {
       return NextResponse.json(
-        { error: 'This buzz has already been settled' },
+        { error: "This buzz has already been settled" },
         { status: 400 }
       );
     }
@@ -81,7 +77,7 @@ export async function POST(request: Request) {
 
     if (existingReply) {
       return NextResponse.json(
-        { error: 'You have already replied to this buzz' },
+        { error: "You have already replied to this buzz" },
         { status: 400 }
       );
     }
@@ -89,13 +85,11 @@ export async function POST(request: Request) {
     // Create the reply with PENDING status
     const reply = await prisma.reply.create({
       data: {
+        buzzId,
         replyLink,
         text,
         createdBy: user.uid,
-        status: 'PENDING',
-        buzz: {
-          connect: { id: buzzId },
-        },
+        status: "PENDING",
       },
     });
 
@@ -111,10 +105,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(reply);
   } catch (error) {
-    console.error('Error in reply API:', error);
+    console.error("Error in reply API:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

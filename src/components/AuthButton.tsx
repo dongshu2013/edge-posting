@@ -1,15 +1,15 @@
-import { useState, Fragment } from "react";
+'use client';
+
+import { useState, Fragment, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Dialog, Transition } from "@headlessui/react";
 import { Menu } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
-import { useUserStore } from "@/store/userStore";
 
-export function AuthButton({ buttonText }: { buttonText?: string }) {
-  const userInfo = useUserStore((state) => state.userInfo);
-  const { signInWithGoogle, sendMagicLink, signOut } = useAuth();
+export function AuthButton({ buttonText, onSuccess }: { buttonText?: string, onSuccess?: () => void }) {
+  const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -17,9 +17,31 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Close modal when user is authenticated
+  useEffect(() => {
+    if (user && isOpen) {
+      setIsOpen(false);
+      if (onSuccess) {
+        onSuccess();
+      }
+    }
+  }, [user, isOpen, onSuccess]);
+
   const handleSignOut = async () => {
     await signOut();
     router.push("/buzz");
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError(null);
+    try {
+      await signInWithGoogle();
+      // Auth state change will trigger the useEffect above
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to sign in with Google"
+      );
+    }
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -40,7 +62,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
     }
   };
 
-  if (!userInfo) {
+  if (!user) {
     return (
       <>
         <button
@@ -96,7 +118,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
                     ) : (
                       <>
                         <button
-                          onClick={signInWithGoogle}
+                          onClick={handleGoogleSignIn}
                           className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 mb-4"
                         >
                           <Image
@@ -164,12 +186,10 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
     );
   }
 
-  console.log("userInfo", userInfo);
-
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 transition-all duration-200">
-        <span className="text-gray-900">{userInfo?.nickname}</span>
+        <span className="text-gray-900">{user.displayName}</span>
         <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
       </Menu.Button>
 
@@ -187,7 +207,7 @@ export function AuthButton({ buttonText }: { buttonText?: string }) {
             <Menu.Item>
               {({ active }) => (
                 <button
-                  onClick={() => router.push(`/profile/${userInfo?.uid}`)}
+                  onClick={() => router.push(`/profile/${user.uid}`)}
                   className={`${
                     active ? "bg-gray-50 text-gray-900" : "text-gray-700"
                   } block w-full text-left px-4 py-2 text-sm`}

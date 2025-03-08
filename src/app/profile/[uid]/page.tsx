@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   DocumentDuplicateIcon,
   CheckIcon,
@@ -22,6 +22,7 @@ interface UserProfile {
   totalEarned: number;
   reputation: number;
   balance: number;
+  nickname?: string;
 }
 
 interface Transaction {
@@ -59,6 +60,55 @@ export default function ProfilePage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Define fetchData with useCallback to prevent it from changing on every render
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Fetch profile data
+      console.log("Fetching profile data for:", params?.uid);
+      const profileResponse = await fetchApi(`/api/user/${params?.uid}`, {
+        auth: true
+      });
+      console.log("Profile response:", profileResponse);
+      
+      if (profileResponse) {
+        setProfile(profileResponse);
+        setNickname(profileResponse.nickname || profileResponse.username || "");
+      }
+
+      try {
+        // Fetch transactions
+        const transactionsResponse = await fetchApi(
+          `/api/user/${params.uid}/transactions`,
+          { auth: true }
+        );
+        setTransactions(transactionsResponse.transactions || []);
+      } catch (txError) {
+        console.error("Error fetching transactions:", txError);
+        // Don't fail the entire profile load if transactions fail
+      }
+
+      try {
+        // Fetch withdrawals
+        const withdrawalsResponse = await fetchApi(
+          `/api/user/${params.uid}/withdrawals`,
+          { auth: true }
+        );
+        setWithdrawals(withdrawalsResponse.withdrawals || []);
+      } catch (wdError) {
+        console.error("Error fetching withdrawals:", wdError);
+        // Don't fail the entire profile load if withdrawals fail
+      }
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+      setError("Failed to load profile data");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [params.uid]);
+
   useEffect(() => {
     if (loading) return;
 
@@ -73,39 +123,8 @@ export default function ProfilePage() {
       setWithdrawAddress(cachedAddress);
     }
 
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        // Fetch profile data
-        const profileResponse = await fetchApi(`/api/user/${params?.uid}`);
-        setProfile(profileResponse);
-        setNickname(profileResponse.nickname);
-
-        // Fetch transactions
-        const transactionsResponse = await fetchApi(
-          `/api/user/${params.uid}/transactions`
-        );
-        const transactionsData = await transactionsResponse.json();
-        setTransactions(transactionsData.transactions ?? []);
-
-        // Fetch withdrawals
-        const withdrawalsResponse = await fetchApi(
-          `/api/user/${params.uid}/withdrawals`
-        );
-        const withdrawalsData = await withdrawalsResponse.json();
-        setWithdrawals(withdrawalsData.withdrawals ?? []);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError("Failed to load profile data");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     fetchData();
-  }, [userInfo, loading, router, params.uid, user]);
+  }, [userInfo, loading, router, params.uid, user, fetchData]);
 
   const handleCopyAddress = async () => {
     try {
@@ -145,27 +164,64 @@ export default function ProfilePage() {
   };
 
   const handleUpdateNickname = async () => {
+    if (!nickname.trim()) {
+      setError("Nickname cannot be empty");
+      return;
+    }
+    
+    if (!user || !user.uid) {
+      setError("You must be logged in to update your nickname");
+      return;
+    }
+    
     try {
+      setError(null);
+      console.log("Updating nickname for user:", user.uid);
+      console.log("New nickname:", nickname);
+      
+      // First, ensure we have the latest profile data
+      await fetchData();
+      
       const response = await fetchApi(
-        `/api/user/${userInfo?.uid}/update-nickname`,
+        `/api/user/${user.uid}/update-nickname`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             nickname,
           }),
+          auth: true, // Explicitly set auth to true
         }
       );
 
-      if (!response.uid) {
-        throw new Error("Failed to update nickname");
+      console.log("Update nickname response:", response);
+      
+      if (response) {
+        // Update the user info in the store
+        if (userInfo) {
+          setUser({
+            ...userInfo,
+            nickname: nickname,
+          });
+        }
+        
+        // Update the profile state
+        if (profile) {
+          setProfile({
+            ...profile,
+            username: nickname,
+          });
+        }
+        
+        setShowNicknameModal(false);
+        setError(null);
+        
+        // Show success message
+        alert("Nickname updated successfully!");
+        
+        // Refresh the page
+        window.location.reload();
       }
-      setUser({
-        ...userInfo!,
-        username: nickname,
-      });
-      setShowNicknameModal(false);
-      router.refresh();
     } catch (error) {
       console.error("Error updating nickname:", error);
       setError(
@@ -243,7 +299,7 @@ export default function ProfilePage() {
           <div>
             <p className="text-sm text-gray-500">Nickname</p>
             <p className="text-lg font-medium text-gray-900">
-              {profile.username || "Not set"}
+              {profile.nickname || profile.username || "Not set"}
             </p>
           </div>
           <div>
@@ -483,42 +539,47 @@ export default function ProfilePage() {
         </div>
       )}
 
+      {/* Nickname Modal */}
       {showNicknameModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Update Nickname</h3>
-            <div className="space-y-4">
-              <div>
-                <label
-                  htmlFor="nickname"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Nickname
-                </label>
-                <input
-                  type="text"
-                  id="nickname"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  placeholder="Enter nickname"
-                />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md">
+            <h2 className="text-2xl font-semibold mb-4">Update Nickname</h2>
+            
+            <div className="mb-4">
+              <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
+                Nickname
+              </label>
+              <input
+                type="text"
+                id="nickname"
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            
+            {error && (
+              <div className="mb-4 text-red-600 text-sm">
+                {error}
               </div>
-              {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex gap-4">
-                <button
-                  onClick={handleUpdateNickname}
-                  className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
-                >
-                  Save
-                </button>
-                <button
-                  onClick={() => setShowNicknameModal(false)}
-                  className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
+            )}
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowNicknameModal(false);
+                  setError(null);
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateNickname}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

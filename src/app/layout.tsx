@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/providers/WalletProvider";
 import Navbar from "@/components/Navbar";
+import { AuthModal } from "@/components/AuthModal";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -35,6 +36,7 @@ export default function RootLayout({
                 {children}
               </div>
             </main>
+            <AuthModal />
           </div>
         </WalletProvider>
       </body>

@@ -34,7 +34,8 @@
     "react-dom": "^19.0.0",
     "siwe": "^3.0.0",
     "viem": "^2.23.6",
-    "wagmi": "^2.14.12"
+    "wagmi": "^2.14.12",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

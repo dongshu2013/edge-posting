@@ -12,15 +12,16 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { uid } = await params;
     // Only allow users to update their own username
-    if (user.uid !== params.uid) {
+    if (user.uid !== uid) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const body = await request.json();
-    const { username } = body;
+    const { nickname } = body;
 
-    if (!username) {
+    if (!nickname) {
       return NextResponse.json(
         { error: "Username is required" },
         { status: 400 }
@@ -30,7 +31,7 @@ export async function POST(
     // Check if username is already taken by another user
     const existingUser = await prisma.user.findFirst({
       where: {
-        username,
+        nickname,
         NOT: {
           uid: user.uid,
         },
@@ -47,13 +48,7 @@ export async function POST(
     // Update username
     const updatedUser = await prisma.user.update({
       where: { uid: user.uid },
-      data: { username },
-      select: {
-        uid: true,
-        email: true,
-        username: true,
-        totalEarned: true,
-      },
+      data: { nickname },
     });
 
     return NextResponse.json(updatedUser);

@@ -8,37 +8,12 @@ import {
   PencilIcon,
 } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchApi } from "@/lib/api";
+import { useUserStore } from "@/store/userStore";
 
 const serviceAddress =
   process.env.NEXT_PUBLIC_SERVICE_ADDRESS ||
   "0x000000000000000000000000000000000000dEaD";
-
-const ADJECTIVES = [
-  "Happy",
-  "Lucky",
-  "Clever",
-  "Bright",
-  "Swift",
-  "Witty",
-  "Brave",
-  "Kind",
-];
-const NOUNS = [
-  "Bee",
-  "Buzz",
-  "Honey",
-  "Hive",
-  "Worker",
-  "Queen",
-  "Garden",
-  "Flower",
-];
-
-function generateRandomNickname(): string {
-  const adjective = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `${adjective}${noun}${Math.floor(Math.random() * 1000)}`;
-}
 
 interface UserProfile {
   email: string | null;
@@ -66,6 +41,8 @@ interface Withdrawal {
 }
 
 export default function ProfilePage() {
+  const userInfo = useUserStore((state) => state.userInfo);
+  const setUser = useUserStore((state) => state.setUserInfo);
   const params = useParams();
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -102,21 +79,20 @@ export default function ProfilePage() {
         setError(null);
 
         // Fetch profile data
-        const profileResponse = await fetch(`/api/user/${params.address}`);
-        const profileData = await profileResponse.json();
-        setProfile(profileData);
-        setNickname(profileData.username || "");
+        const profileResponse = await fetchApi(`/api/user/${params?.uid}`);
+        setProfile(profileResponse);
+        setNickname(profileResponse.nickname);
 
         // Fetch transactions
-        const transactionsResponse = await fetch(
-          `/api/user/${params.address}/transactions`
+        const transactionsResponse = await fetchApi(
+          `/api/user/${params.uid}/transactions`
         );
         const transactionsData = await transactionsResponse.json();
         setTransactions(transactionsData.transactions ?? []);
 
         // Fetch withdrawals
-        const withdrawalsResponse = await fetch(
-          `/api/user/${params.address}/withdrawals`
+        const withdrawalsResponse = await fetchApi(
+          `/api/user/${params.uid}/withdrawals`
         );
         const withdrawalsData = await withdrawalsResponse.json();
         setWithdrawals(withdrawalsData.withdrawals ?? []);
@@ -129,7 +105,7 @@ export default function ProfilePage() {
     };
 
     fetchData();
-  }, [params.address, user, loading, router]);
+  }, [userInfo, loading, router, params.uid, user]);
 
   const handleCopyAddress = async () => {
     try {
@@ -146,7 +122,7 @@ export default function ProfilePage() {
 
     try {
       localStorage.setItem("lastWithdrawAddress", withdrawAddress);
-      const response = await fetch("/api/withdraw", {
+      const response = await fetchApi("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,19 +146,24 @@ export default function ProfilePage() {
 
   const handleUpdateNickname = async () => {
     try {
-      const response = await fetch(`/api/user/${user?.uid}/update-nikename`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: nickname || generateRandomNickname(),
-        }),
-      });
+      const response = await fetchApi(
+        `/api/user/${userInfo?.uid}/update-nickname`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nickname,
+          }),
+        }
+      );
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to update nickname");
+      if (!response.uid) {
+        throw new Error("Failed to update nickname");
       }
-
+      setUser({
+        ...userInfo!,
+        username: nickname,
+      });
       setShowNicknameModal(false);
       router.refresh();
     } catch (error) {

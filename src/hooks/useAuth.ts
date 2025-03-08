@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   signInWithPopup,
   signOut,
@@ -11,31 +11,34 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
-import { UserInfo } from "./useUserInfo";
+import { useUserStore } from "@/store/userStore";
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null); // firebase auth user
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null); // New state for saving user to database
+  const setUserInfo = useUserStore((state) => state.setUserInfo);
 
-  const saveUserToDatabase = async (user: User) => {
-    try {
-      const saveUser = await fetchApi("/api/user", {
-        method: "POST",
-        body: JSON.stringify({
-          uid: user.uid,
-          email: user.email,
-          username: user.displayName || `user_${user.uid.slice(0, 6)}`,
-          nikename: user.displayName,
-          avatar: user.photoURL,
-        }),
-      });
-      setUserInfo(saveUser);
-    } catch (error) {
-      console.error("Failed to save user to database:", error);
-    }
-  };
+  const saveUserToDatabase = useCallback(
+    async (user: User) => {
+      try {
+        const saveUser = await fetchApi("/api/user", {
+          method: "POST",
+          body: JSON.stringify({
+            uid: user.uid,
+            email: user.email,
+            username: user.displayName,
+            nikename: user.displayName,
+            avatar: user.photoURL,
+          }),
+        });
+        setUserInfo(saveUser);
+      } catch (error) {
+        console.error("Failed to save user to database:", error);
+      }
+    },
+    [setUserInfo]
+  );
 
   useEffect(() => {
     if (!auth) return;
@@ -50,11 +53,12 @@ export function useAuth() {
         await saveUserToDatabase(user);
       } else {
         localStorage.removeItem("authToken");
+        setUserInfo(null);
       }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [saveUserToDatabase, setUserInfo]);
 
   const signInWithGoogle = async () => {
     try {
@@ -145,6 +149,5 @@ export function useAuth() {
     verifyMagicLink,
     signOut: signOutUser,
     getAuthToken,
-    userInfo,
   };
 }

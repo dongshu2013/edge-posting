@@ -21,7 +21,7 @@ export async function GET(
         uid: true,
         email: true,
         username: true,
-        nikename: true,
+        nickname: true,
         avatar: true,
         bio: true,
         totalEarned: true,

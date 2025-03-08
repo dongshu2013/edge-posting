@@ -5,7 +5,6 @@ import { jwtVerify, SignJWT } from "jose";
 export interface JWTSub {
   userId: string;
   userKey: string;
-  userKeyType: string;
 }
 
 export const getJWT = async (user: JWTSub) => {
@@ -15,7 +14,6 @@ export const getJWT = async (user: JWTSub) => {
   const jwtSub = {
     userId: user.userId,
     userKey: user.userKey,
-    userKeyType: user.userKeyType,
   };
 
   const jwt = await new SignJWT({

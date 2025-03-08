@@ -5,13 +5,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import { PlusIcon } from "@heroicons/react/24/outline";
-import { useUser } from "@/hooks/useUser";
-import { ConnectButton } from "@/components/ConnectButton";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthButton } from "@/components/AuthButton";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isConnected } = useUser();
+  const { user } = useAuth();
 
   return (
     <nav className="bg-white shadow">
@@ -44,7 +44,7 @@ export default function Navbar() {
               >
                 All Buzzes
               </Link>
-              {isConnected && (
+              {user && (
                 <>
                   <Link
                     href="/history"
@@ -71,7 +71,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-            {isConnected && (
+            {user && (
               <Link
                 href="/buzz/new"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
@@ -80,7 +80,7 @@ export default function Navbar() {
                 Create Buzz
               </Link>
             )}
-            <ConnectButton />
+            <AuthButton />
           </div>
           <div className="flex items-center sm:hidden">
             <button
@@ -141,7 +141,7 @@ export default function Navbar() {
           >
             All Buzzes
           </Link>
-          {isConnected && (
+          {user && (
             <>
               <Link
                 href="/history"
@@ -180,7 +180,7 @@ export default function Navbar() {
         </div>
         <div className="pt-4 pb-3 border-t border-gray-200">
           <div className="flex items-center px-4">
-            <ConnectButton />
+            <AuthButton />
           </div>
         </div>
       </div>

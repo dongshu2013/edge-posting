@@ -4,18 +4,18 @@ const prisma = new PrismaClient({
   log: ["query", "info", "warn", "error"],
 });
 
-const MY_ADDRESS = "0xA6Bf022bc8761937bEe6A435Fc12087760EC2196";
-const OTHER_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
-
+// Mock Firebase UIDs
 const MOCK_USERS = [
   {
-    address: MY_ADDRESS,
+    uid: "user1", // Mock Firebase UID for first user
+    email: "alice@example.com",
     username: "Alice",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
     bio: "Web3 Developer & AI Enthusiast",
   },
   {
-    address: OTHER_ADDRESS,
+    uid: "user2", // Mock Firebase UID for second user
+    email: "bob@example.com",
     username: "Bob",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
     bio: "Blockchain Researcher",
@@ -34,7 +34,7 @@ async function seedUsers() {
   const users = await Promise.all(
     MOCK_USERS.map((user) =>
       prisma.user.upsert({
-        where: { address: user.address },
+        where: { uid: user.uid },
         update: user,
         create: user,
       })
@@ -46,7 +46,7 @@ async function seedUsers() {
 
 async function seedBuzzes() {
   const buzzes = await Promise.all([
-    // 已结束的活动
+    // Expired buzz
     prisma.buzz.create({
       data: {
         tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
@@ -55,29 +55,33 @@ async function seedBuzzes() {
         context:
           "Vitalik discusses new developments in Ethereum scaling solutions.",
         credit: 0.05,
-        createdBy: MY_ADDRESS,
+        createdBy: MOCK_USERS[0].uid,
         deadline: new Date("2024-03-01"),
         createdAt: new Date("2024-02-28"),
         totalReplies: 100,
         replyCount: 0,
         isActive: false,
-        user: { connect: { address: MY_ADDRESS } },
+        user: {
+          connect: { uid: MOCK_USERS[0].uid }
+        },
       },
     }),
-    // 进行中的活动
+    // Active buzz
     prisma.buzz.create({
       data: {
         tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
         instructions: "Share your perspective on web3 social networks.",
         context: "Discussion about decentralized platforms.",
         credit: 0.1,
-        createdBy: OTHER_ADDRESS,
+        createdBy: MOCK_USERS[1].uid,
         deadline: new Date("2035-04-01"),
         createdAt: new Date(),
         totalReplies: 150,
         replyCount: 0,
         isActive: true,
-        user: { connect: { address: OTHER_ADDRESS } },
+        user: {
+          connect: { uid: MOCK_USERS[1].uid }
+        },
       },
     }),
   ]);
@@ -91,21 +95,21 @@ const MOCK_REPLIES = [
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "This is a fascinating approach to blockchain integration. The potential impact on scalability is significant.",
     status: "PENDING",
-    createdBy: MY_ADDRESS,
+    createdBy: MOCK_USERS[0].uid,
     createdAt: new Date(),
   },
   {
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "Great analysis! I particularly appreciate how this could improve user experience while maintaining decentralization.",
     status: "APPROVED",
-    createdBy: OTHER_ADDRESS,
+    createdBy: MOCK_USERS[1].uid,
     createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
   },
   {
     replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
     text: "Interesting perspective on DeFi adoption. Have you considered the regulatory implications?",
     status: "REJECTED",
-    createdBy: MY_ADDRESS,
+    createdBy: MOCK_USERS[0].uid,
     createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
   },
 ];
@@ -118,11 +122,6 @@ async function seedReplies(buzzes: { id: string }[]) {
       replies.push({
         ...replyData,
         buzzId: buzz.id,
-        user: {
-          connect: {
-            address: replyData.createdBy,
-          },
-        },
       });
     }
   }
@@ -137,7 +136,7 @@ async function seedReplies(buzzes: { id: string }[]) {
           createdBy: reply.createdBy,
           createdAt: reply.createdAt,
           buzz: { connect: { id: reply.buzzId } },
-          user: reply.user,
+          user: { connect: { uid: reply.createdBy } },
         },
       })
     )

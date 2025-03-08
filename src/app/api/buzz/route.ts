@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getAuthUser } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -61,11 +62,19 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
-    const { tweetLink, instructions, context, credit, createdBy, deadline } = body;
+    const { tweetLink, instructions, context, credit, deadline } = body;
 
     // Validate required fields
-    if (!tweetLink || !instructions || !context || !credit || !createdBy || !deadline) {
+    if (!tweetLink || !instructions || !context || !credit || !deadline) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -79,7 +88,7 @@ export async function POST(request: Request) {
         instructions,
         context,
         credit: parseFloat(credit),
-        createdBy,
+        createdBy: user.uid,
         deadline: new Date(deadline),
         totalReplies: body.numberOfReplies || 100, // Default to 100 if not specified
       },

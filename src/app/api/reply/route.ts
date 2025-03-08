@@ -1,19 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-helpers';
 
 export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
-    const { buzzId, replyLink, replier, text } = body;
+    const { buzzId, replyLink, text } = body;
 
-    if (!buzzId || !replyLink || !replier || !text) {
+    if (!buzzId || !replyLink || !text) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -73,7 +75,7 @@ export async function POST(request: Request) {
     const existingReply = await prisma.reply.findFirst({
       where: {
         buzzId,
-        createdBy: replier,
+        createdBy: user.uid,
       },
     });
 
@@ -88,9 +90,9 @@ export async function POST(request: Request) {
     const reply = await prisma.reply.create({
       data: {
         replyLink,
-        createdBy: replier,
+        text,
+        createdBy: user.uid,
         status: 'PENDING',
-        text: text,
         buzz: {
           connect: { id: buzzId },
         },

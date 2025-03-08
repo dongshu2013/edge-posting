@@ -16,6 +16,7 @@
     "seed": "ts-node -T --experimental-specifier-resolution=node prisma/seed.ts"
   },
   "dependencies": {
+    "@firebase/auth": "^1.9.1",
     "@headlessui/react": "^2.2.0",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.4.1",
@@ -23,6 +24,8 @@
     "@tanstack/react-query": "^5.67.1",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "firebase": "^11.4.0",
+    "firebase-admin": "^13.2.0",
     "jose": "^6.0.8",
     "next": "15.2.1",
     "next-auth": "^4.24.11",

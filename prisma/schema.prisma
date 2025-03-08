@@ -14,10 +14,8 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(cuid())
-  address     String    @unique
-  nonce       String    @default(uuid())
-  lastLoginAt DateTime?
+  uid         String    @id // Firebase UID as primary key
+  email       String?   @unique
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   username    String?
@@ -28,7 +26,6 @@ model User {
   buzzes      Buzz[]
   replies     Reply[]
 
-  @@index([address])
   @@index([reputation])
 }
 
@@ -39,7 +36,7 @@ model Buzz {
   context      String        @db.Text
   credit       Float
   createdAt    DateTime      @default(now())
-  createdBy    String // wallet address
+  createdBy    String // Firebase UID
   deadline     DateTime
   replyCount   Int          @default(0)
   totalReplies Int          @default(0)
@@ -47,8 +44,7 @@ model Buzz {
   isSettled    Boolean       @default(false)
   replies      Reply[]
   transactions Transaction[]
-  userId       String?
-  user         User?         @relation(fields: [userId], references: [id])
+  user         User          @relation(fields: [createdBy], references: [uid])
 
   @@index([createdBy])
   @@index([createdAt])
@@ -60,13 +56,12 @@ model Reply {
   replyLink   String
   text        String       @db.Text
   createdAt   DateTime     @default(now())
-  createdBy   String // wallet address
+  createdBy   String // Firebase UID
   status      ReplyStatus @default(PENDING)
   buzz        Buzz        @relation(fields: [buzzId], references: [id])
   buzzId      String
   transaction Transaction?
-  userId      String?
-  user        User?       @relation(fields: [userId], references: [id])
+  user        User        @relation(fields: [createdBy], references: [uid])
 
   @@index([buzzId])
   @@index([createdBy])

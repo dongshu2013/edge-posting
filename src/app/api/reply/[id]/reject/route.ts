@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-helpers';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
-    const replyId = (await params).id;
+    const replyId = params.id;
 
     // Get the reply and associated buzz
     const reply = await prisma.reply.findUnique({
@@ -36,7 +38,7 @@ export async function POST(
     }
 
     // Check if the user is the buzz owner
-    if (session.address?.toLowerCase() !== reply.buzz.createdBy.toLowerCase()) {
+    if (user.uid !== reply.buzz.createdBy) {
       return NextResponse.json(
         { error: 'Only the buzz owner can reject replies' },
         { status: 403 }

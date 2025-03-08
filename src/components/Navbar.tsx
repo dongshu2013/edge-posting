@@ -1,17 +1,17 @@
-'use client';
+"use client";
 
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useState } from 'react';
-import Image from 'next/image';
-import { useAccount } from 'wagmi';
-import { PlusIcon } from '@heroicons/react/24/outline';
+import { ConnectButton } from "@rainbow-me/rainbowkit";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
+import Image from "next/image";
+import { PlusIcon } from "@heroicons/react/24/outline";
+import { useUser } from "@/hooks/useUser";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { isConnected } = useAccount();
+  const { isConnected } = useUser();
 
   return (
     <nav className="bg-white shadow">
@@ -34,9 +34,12 @@ export default function Navbar() {
               <Link
                 href="/"
                 className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                  pathname === '/' || pathname === '/buzz' || pathname.startsWith('/buzz/') && !pathname.startsWith('/buzz/my')
-                    ? 'border-indigo-500 text-gray-900'
-                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                  pathname === "/" ||
+                  pathname === "/buzz" ||
+                  (pathname.startsWith("/buzz/") &&
+                    !pathname.startsWith("/buzz/my"))
+                    ? "border-indigo-500 text-gray-900"
+                    : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                 }`}
               >
                 All Buzzes
@@ -46,9 +49,9 @@ export default function Navbar() {
                   <Link
                     href="/history"
                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      pathname === '/history'
-                        ? 'border-indigo-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      pathname === "/history"
+                        ? "border-indigo-500 text-gray-900"
+                        : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                     }`}
                   >
                     My Replies
@@ -56,9 +59,9 @@ export default function Navbar() {
                   <Link
                     href="/buzz/my"
                     className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
-                      pathname === '/buzz/my'
-                        ? 'border-indigo-500 text-gray-900'
-                        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                      pathname === "/buzz/my"
+                        ? "border-indigo-500 text-gray-900"
+                        : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700"
                     }`}
                   >
                     My Buzzes
@@ -87,7 +90,7 @@ export default function Navbar() {
             >
               <span className="sr-only">Open main menu</span>
               <svg
-                className={`${mobileMenuOpen ? 'hidden' : 'block'} h-6 w-6`}
+                className={`${mobileMenuOpen ? "hidden" : "block"} h-6 w-6`}
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -102,7 +105,7 @@ export default function Navbar() {
                 />
               </svg>
               <svg
-                className={`${mobileMenuOpen ? 'block' : 'hidden'} h-6 w-6`}
+                className={`${mobileMenuOpen ? "block" : "hidden"} h-6 w-6`}
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
                 viewBox="0 0 24 24"
@@ -122,14 +125,17 @@ export default function Navbar() {
       </div>
 
       {/* Mobile menu */}
-      <div className={`${mobileMenuOpen ? 'block' : 'hidden'} sm:hidden`}>
+      <div className={`${mobileMenuOpen ? "block" : "hidden"} sm:hidden`}>
         <div className="pt-2 pb-3 space-y-1">
           <Link
             href="/"
             className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-              pathname === '/' || pathname === '/buzz' || pathname.startsWith('/buzz/') && !pathname.startsWith('/buzz/my')
-                ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+              pathname === "/" ||
+              pathname === "/buzz" ||
+              (pathname.startsWith("/buzz/") &&
+                !pathname.startsWith("/buzz/my"))
+                ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
             }`}
             onClick={() => setMobileMenuOpen(false)}
           >
@@ -140,9 +146,9 @@ export default function Navbar() {
               <Link
                 href="/history"
                 className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                  pathname === '/history'
-                    ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+                  pathname === "/history"
+                    ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -151,9 +157,9 @@ export default function Navbar() {
               <Link
                 href="/buzz/my"
                 className={`block pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
-                  pathname === '/buzz/my'
-                    ? 'bg-indigo-50 border-indigo-500 text-indigo-700'
-                    : 'border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800'
+                  pathname === "/buzz/my"
+                    ? "bg-indigo-50 border-indigo-500 text-indigo-700"
+                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800"
                 }`}
                 onClick={() => setMobileMenuOpen(false)}
               >
@@ -180,4 +186,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-} 
+}

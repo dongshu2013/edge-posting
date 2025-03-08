@@ -1,190 +1,36 @@
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  log: ["query", "info", "warn", "error"],
+});
 
 const MY_ADDRESS = "0xA6Bf022bc8761937bEe6A435Fc12087760EC2196";
 const OTHER_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
 
-const PAST_DATE = new Date("2024-03-01T23:59:59Z");
-const FUTURE_DATE = new Date("2035-04-01T23:59:59Z");
-
 const MOCK_USERS = [
   {
-    address: "0xA6Bf022bc8761937bEe6A435Fc12087760EC2196",
+    address: MY_ADDRESS,
     username: "Alice",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
     bio: "Web3 Developer & AI Enthusiast",
   },
   {
-    address: "0x742d35Cc6634C0532925a3b844Bc454e4438f44e",
+    address: OTHER_ADDRESS,
     username: "Bob",
     avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
     bio: "Blockchain Researcher",
   },
 ];
 
-const MOCK_BUZZES = [
-  {
-    tweetLink: "https://twitter.com/user1/status/123456789",
-    instructions:
-      "Reply with your thoughts on the paper and mention one key takeaway",
-    context: "New AI research paper discussion",
-    credit: 0.05,
-    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
-    totalReplies: 100,
-    pricePerReply: 0.01,
-  },
-  {
-    tweetLink: "https://twitter.com/user2/status/987654321",
-    instructions:
-      "Share your excitement about the game and ask a question about gameplay",
-    context: "Web3 gaming announcement",
-    credit: 0.1,
-    deadline: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // 5 days from now
-    totalReplies: 50,
-    pricePerReply: 0.02,
-  },
-];
-
-async function main() {
-  // Clean up existing data
-  await prisma.buzz.deleteMany();
-
-  // 1. Ended campaigns by MY_ADDRESS
-  await prisma.buzz.createMany({
-    data: [
-      {
-        tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
-        instructions:
-          "Share your thoughts on how this could impact Ethereum scaling.",
-        context:
-          "Vitalik discusses new developments in Ethereum scaling solutions.",
-        credit: 0.05,
-        createdBy: MY_ADDRESS,
-        deadline: PAST_DATE,
-        createdAt: new Date("2024-02-28"),
-        replyCount: 75,
-        totalReplies: 100,
-        isActive: false,
-      },
-      {
-        tweetLink: "https://x.com/TheMoonCarl/status/1897566145458180332",
-        instructions:
-          "Discuss how AI could be integrated with web3 technologies.",
-        context: "Interesting thread about AI and web3 intersection.",
-        credit: 0.08,
-        createdBy: MY_ADDRESS,
-        deadline: PAST_DATE,
-        createdAt: new Date("2024-02-27"),
-        replyCount: 120,
-        totalReplies: 150,
-        isActive: false,
-      },
-    ],
-  });
-
-  // 2. Ongoing campaigns by MY_ADDRESS
-  await prisma.buzz.createMany({
-    data: [
-      {
-        tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
-        instructions:
-          "Share your perspective on the future of decentralized social networks.",
-        context: "Discussion about decentralized social media platforms.",
-        credit: 0.1,
-        createdBy: MY_ADDRESS,
-        deadline: FUTURE_DATE,
-        createdAt: new Date("2024-03-05"),
-        replyCount: 25,
-        totalReplies: 200,
-        isActive: true,
-      },
-      {
-        tweetLink: "https://x.com/AvalancheFDN/status/1898038071901274349",
-        instructions:
-          "Provide insights on how this could affect blockchain gaming.",
-        context: "Thread about the future of gaming and blockchain.",
-        credit: 0.15,
-        createdBy: MY_ADDRESS,
-        deadline: FUTURE_DATE,
-        createdAt: new Date("2024-03-06"),
-        replyCount: 15,
-        totalReplies: 150,
-        isActive: true,
-      },
-    ],
-  });
-
-  // 3. Ended campaigns by others
-  await prisma.buzz.createMany({
-    data: [
-      {
-        tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
-        instructions:
-          "Share your experience with similar blockchain applications.",
-        context: "Discussion about practical blockchain applications.",
-        credit: 0.07,
-        createdBy: OTHER_ADDRESS,
-        deadline: PAST_DATE,
-        createdAt: new Date("2024-02-25"),
-        replyCount: 90,
-        totalReplies: 100,
-        isActive: false,
-      },
-      {
-        tweetLink: "https://x.com/TheMoonCarl/status/1897566145458180332",
-        instructions:
-          "Discuss potential improvements to the proposed solution.",
-        context: "Thread about blockchain scalability solutions.",
-        credit: 0.06,
-        createdBy: OTHER_ADDRESS,
-        deadline: PAST_DATE,
-        createdAt: new Date("2024-02-26"),
-        replyCount: 85,
-        totalReplies: 100,
-        isActive: false,
-      },
-    ],
-  });
-
-  // 4. Ongoing campaigns by others
-  await prisma.buzz.createMany({
-    data: [
-      {
-        tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
-        instructions:
-          "Share your thoughts on the intersection of DeFi and traditional finance.",
-        context: "Discussion about DeFi adoption and traditional finance.",
-        credit: 0.12,
-        createdBy: OTHER_ADDRESS,
-        deadline: FUTURE_DATE,
-        createdAt: new Date("2024-03-04"),
-        replyCount: 45,
-        totalReplies: 200,
-        isActive: true,
-      },
-      {
-        tweetLink: "https://x.com/AvalancheFDN/status/1898038071901274349",
-        instructions: "Provide insights on potential privacy implications.",
-        context: "Thread about privacy in blockchain networks.",
-        credit: 0.09,
-        createdBy: OTHER_ADDRESS,
-        deadline: FUTURE_DATE,
-        createdAt: new Date("2024-03-05"),
-        replyCount: 30,
-        totalReplies: 150,
-        isActive: true,
-      },
-    ],
-  });
-
-  // 清理现有数据
+async function cleanDatabase() {
   await prisma.transaction.deleteMany();
   await prisma.reply.deleteMany();
   await prisma.buzz.deleteMany();
   await prisma.user.deleteMany();
+  console.log("Database cleaned");
+}
 
-  // 创建用户
+async function seedUsers() {
   const users = await Promise.all(
     MOCK_USERS.map((user) =>
       prisma.user.upsert({
@@ -194,25 +40,133 @@ async function main() {
       })
     )
   );
+  console.log(`Created ${users.length} users`);
+  return users;
+}
 
-  // 创建 Buzzes
-  const buzzes = await Promise.all(
-    MOCK_BUZZES.map((buzz, index) =>
-      prisma.buzz.create({
-        data: {
-          ...buzz,
-          createdBy: users[index % users.length].address,
-          user: {
-            connect: {
-              address: users[index % users.length].address,
-            },
+async function seedBuzzes() {
+  const buzzes = await Promise.all([
+    // 已结束的活动
+    prisma.buzz.create({
+      data: {
+        tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
+        instructions:
+          "Share your thoughts on how this could impact Ethereum scaling.",
+        context:
+          "Vitalik discusses new developments in Ethereum scaling solutions.",
+        credit: 0.05,
+        createdBy: MY_ADDRESS,
+        deadline: new Date("2024-03-01"),
+        createdAt: new Date("2024-02-28"),
+        totalReplies: 100,
+        replyCount: 0,
+        isActive: false,
+        user: { connect: { address: MY_ADDRESS } },
+      },
+    }),
+    // 进行中的活动
+    prisma.buzz.create({
+      data: {
+        tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
+        instructions: "Share your perspective on web3 social networks.",
+        context: "Discussion about decentralized platforms.",
+        credit: 0.1,
+        createdBy: OTHER_ADDRESS,
+        deadline: new Date("2035-04-01"),
+        createdAt: new Date(),
+        totalReplies: 150,
+        replyCount: 0,
+        isActive: true,
+        user: { connect: { address: OTHER_ADDRESS } },
+      },
+    }),
+  ]);
+
+  console.log(`Created ${buzzes.length} buzzes`);
+  return buzzes;
+}
+
+const MOCK_REPLIES = [
+  {
+    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
+    text: "This is a fascinating approach to blockchain integration. The potential impact on scalability is significant.",
+    status: "PENDING",
+    createdBy: MY_ADDRESS,
+    createdAt: new Date(),
+  },
+  {
+    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
+    text: "Great analysis! I particularly appreciate how this could improve user experience while maintaining decentralization.",
+    status: "APPROVED",
+    createdBy: OTHER_ADDRESS,
+    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
+  },
+  {
+    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
+    text: "Interesting perspective on DeFi adoption. Have you considered the regulatory implications?",
+    status: "REJECTED",
+    createdBy: MY_ADDRESS,
+    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
+  },
+];
+
+async function seedReplies(buzzes: { id: string }[]) {
+  const replies = [];
+
+  for (const buzz of buzzes) {
+    for (const replyData of MOCK_REPLIES) {
+      replies.push({
+        ...replyData,
+        buzzId: buzz.id,
+        user: {
+          connect: {
+            address: replyData.createdBy,
           },
+        },
+      });
+    }
+  }
+
+  const createdReplies = await Promise.all(
+    replies.map((reply) =>
+      prisma.reply.create({
+        data: {
+          replyLink: reply.replyLink,
+          text: reply.text,
+          status: reply.status as "PENDING" | "APPROVED" | "REJECTED",
+          createdBy: reply.createdBy,
+          createdAt: reply.createdAt,
+          buzz: { connect: { id: reply.buzzId } },
+          user: reply.user,
         },
       })
     )
   );
-  console.log(`Created ${users.length} users`);
-  console.log(`Created ${buzzes.length} buzzes`);
+
+  // Update buzz reply counts
+  for (const buzz of buzzes) {
+    const replyCount = await prisma.reply.count({
+      where: {
+        buzzId: buzz.id,
+        status: "PENDING",
+      },
+    });
+
+    await prisma.buzz.update({
+      where: { id: buzz.id },
+      data: { replyCount },
+    });
+  }
+
+  console.log(`Created ${createdReplies.length} replies`);
+  return createdReplies;
+}
+
+async function main() {
+  await cleanDatabase();
+  await seedUsers();
+  const buzzes = await seedBuzzes();
+  await seedReplies(buzzes);
 }
 
 main()

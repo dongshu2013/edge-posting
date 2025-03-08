@@ -1,12 +1,12 @@
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import Image from "next/image";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { useUser } from "@/hooks/useUser";
+import { ConnectButton } from "@/components/ConnectButton";
 
 export default function Navbar() {
   const pathname = usePathname();

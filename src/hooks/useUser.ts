@@ -1,5 +1,5 @@
 import { useAccount, useSignMessage } from "wagmi";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { SiweMessage } from "siwe";
 
 export function useUser() {
@@ -7,7 +7,7 @@ export function useUser() {
   const { signMessageAsync } = useSignMessage();
   const [loading, setLoading] = useState(false);
 
-  const signIn = async () => {
+  const signIn = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -28,7 +28,7 @@ export function useUser() {
         message: message.prepareMessage(),
       });
 
-      // 4. 验证签名并创建会话
+      // 4. Verify signature and create session
       const verifyRes = await fetch("/api/auth/verify", {
         method: "POST",
         headers: {
@@ -53,13 +53,13 @@ export function useUser() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [address, signMessageAsync]);
 
   useEffect(() => {
     if (isConnected && address) {
       signIn();
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, signIn]);
 
   return { address, isConnected, loading };
 }

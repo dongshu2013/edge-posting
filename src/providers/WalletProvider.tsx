@@ -3,7 +3,7 @@
 import { RainbowKitProvider, getDefaultConfig } from '@rainbow-me/rainbowkit';
 import '@rainbow-me/rainbowkit/styles.css';
 import { WagmiProvider } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { sepolia } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState } from 'react';
 
@@ -16,7 +16,7 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '3a8170812
 const config = getDefaultConfig({
   appName: 'Edge Posting App',
   projectId,
-  chains: [mainnet, sepolia],
+  chains: [sepolia],
   ssr: true,
 });
 

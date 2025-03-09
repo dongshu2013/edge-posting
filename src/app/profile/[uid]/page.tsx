@@ -20,7 +20,6 @@ interface UserProfile {
   displayName: string | null;
   username: string | null;
   totalEarned: number;
-  reputation: number;
   balance: number;
   nickname?: string;
 }
@@ -312,12 +311,6 @@ export default function ProfilePage() {
             <p className="text-sm text-gray-500">Total Earned</p>
             <p className="text-lg font-medium text-gray-900">
               {profile.totalEarned} BUZZ
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Reputation</p>
-            <p className="text-lg font-medium text-gray-900">
-              {profile.reputation} points
             </p>
           </div>
         </div>

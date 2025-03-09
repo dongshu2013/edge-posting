@@ -46,7 +46,7 @@ export default function NewBuzzPage() {
         body: JSON.stringify({
           tweetLink: formData.tweetLink,
           instructions: formData.instructions,
-          credit: formData.pricePerReply,
+          price: formData.pricePerReply,
           createdBy: userInfo?.uid,
           deadline: deadline.toISOString(),
           numberOfReplies: formData.numberOfReplies,

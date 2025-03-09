@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "check-data": "ts-node scripts/check-data.ts",
-    "seed:replies": "ts-node --project prisma/tsconfig.json prisma/seed.ts",
+    "seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

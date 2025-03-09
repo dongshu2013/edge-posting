@@ -59,6 +59,7 @@ export default function BuzzesPage() {
     setIsLoadingMore(true);
     try {
       const data = await fetchBuzzes(nextCursor);
+      console.log("🍷", data);
       setBuzzes((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore);
       setNextCursor(data.nextCursor);

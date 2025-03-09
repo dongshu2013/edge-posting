@@ -1,20 +1,24 @@
+import { isProtectedRoute } from "@/lib/routes";
+
 interface FetchOptions extends RequestInit {
   auth?: boolean;
 }
 
 export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
-  const { auth = true, ...fetchOptions } = options;
+  const { auth, ...fetchOptions } = options;
   const headers = new Headers(fetchOptions.headers);
 
-  if (auth) {
+  const requiresAuth = auth ?? isProtectedRoute(endpoint, "api");
+
+  if (requiresAuth) {
     const token = localStorage.getItem("authToken");
-    if (token) {
-      headers.set("authorization", `Bearer ${token}`);
-    } else {
-      console.warn("Auth token not found but required for", endpoint);
+    if (!token) {
       throw new Error("Authentication required. Please sign in.");
     }
+    headers.set("authorization", `Bearer ${token}`);
   }
+
+  console.log(`Fetching ${endpoint} with auth: ${requiresAuth}`);
 
   const response = await fetch(endpoint, {
     ...fetchOptions,

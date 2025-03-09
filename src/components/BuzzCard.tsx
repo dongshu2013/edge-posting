@@ -176,7 +176,7 @@ export default function BuzzCard({
                     </button>
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between text-sm">
+                <div className="mt-4 flex items-center gap-2">
                   <span className="text-gray-500">Total Deposit</span>
                   <span className="font-medium">
                     {(price * totalReplies).toFixed(2)} BUZZ

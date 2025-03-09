@@ -1,17 +1,14 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const { id } = params;
-  
+  const { id } = await params;
+
   if (!id) {
-    return NextResponse.json(
-      { error: 'Missing buzz ID' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Missing buzz ID" }, { status: 400 });
   }
 
   try {
@@ -20,25 +17,22 @@ export async function GET(
       include: {
         replies: {
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         },
       },
     });
 
     if (!buzz) {
-      return NextResponse.json(
-        { error: 'Buzz not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Buzz not found" }, { status: 404 });
     }
 
     return NextResponse.json(buzz);
   } catch (error) {
-    console.error('Error fetching buzz:', error);
+    console.error("Error fetching buzz:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

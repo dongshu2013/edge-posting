@@ -10,6 +10,10 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
+import { PaymentModal } from "@/components/PaymentModal";
+import { paymentServiceApplicationId } from "@/config";
+import { useQuery } from "@tanstack/react-query";
+import { paymentServiceUrl } from "@/config";
 
 const serviceAddress =
   process.env.NEXT_PUBLIC_SERVICE_ADDRESS ||
@@ -58,6 +62,18 @@ export default function ProfilePage() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const userOrdersQuery = useQuery({
+    queryKey: ["payment-user-orders", user?.uid],
+    enabled: !!user?.uid,
+    queryFn: async () => {
+      const resJson = await fetch(
+        `${paymentServiceUrl}/user-orders?payerId=${user?.uid}&applicationId=${paymentServiceApplicationId}`
+      ).then((res) => res.json());
+
+      return resJson?.data?.orders || [];
+    },
+  });
 
   // Define fetchData with useCallback to prevent it from changing on every render
   const fetchData = useCallback(async () => {
@@ -308,57 +324,23 @@ export default function ProfilePage() {
           Payment History
         </h2>
         <div className="space-y-6">
+          <div className="flex items-center">
+            <div className="flex-1">OrderId</div>
+            <div className="flex-1">Amount</div>
+            <div className="flex-1">Status</div>
+          </div>
           {/* Transactions */}
-          {transactions?.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {transactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {tx.type}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                        {tx.amount} BUZZ
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            tx.status === "COMPLETED"
-                              ? "bg-green-100 text-green-800"
-                              : tx.status === "PENDING"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {tx.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {userOrdersQuery.data?.map((order: any) => (
+            <div key={order.id} className="flex items-center">
+              <div className="flex-1">{order.id}</div>
+              <div className="flex-1">
+                {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
+              </div>
+              <div className="flex-1">
+                {order.status === 0 ? "Ongoing" : "Completed"}
+              </div>
             </div>
-          )}
+          ))}
 
           {/* Withdrawals */}
           {withdrawals?.length > 0 && (
@@ -428,36 +410,13 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Modals */}
-      {showDepositModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Deposit BUZZ Tokens</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Send BUZZ tokens to the following address:
-            </p>
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
-              <code className="text-sm flex-1 break-all">{serviceAddress}</code>
-              <button
-                onClick={handleCopyAddress}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                {copied ? (
-                  <CheckIcon className="h-5 w-5 text-green-500" />
-                ) : (
-                  <DocumentDuplicateIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-            </div>
-            <button
-              onClick={() => setShowDepositModal(false)}
-              className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <PaymentModal
+        isOpen={showDepositModal}
+        onClose={() => {
+          setShowDepositModal(false);
+          fetchData();
+        }}
+      />
 
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

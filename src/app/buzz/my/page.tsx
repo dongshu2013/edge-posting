@@ -18,6 +18,9 @@ interface Buzz {
   deadline: string;
   createdAt: Date;
   isActive: boolean;
+  user: {
+    username: string;
+  };
 }
 
 export default function MyBuzzesPage() {
@@ -26,26 +29,31 @@ export default function MyBuzzesPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
-  const [sortBy, setSortBy] = useState<"newest" | "price" | "engagement">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "price" | "engagement">(
+    "newest"
+  );
   const [onlyActive, setOnlyActive] = useState(true);
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  const fetchUserBuzzes = useCallback(async (cursor?: string) => {
-    if (!user) return null;
-    
-    try {
-      const url = new URL(`/api/buzz`, window.location.origin);
-      url.searchParams.append("createdBy", user.uid);
-      if (cursor) {
-        url.searchParams.append("cursor", cursor);
+  const fetchUserBuzzes = useCallback(
+    async (cursor?: string) => {
+      if (!user) return null;
+
+      try {
+        const url = new URL(`/api/buzz`, window.location.origin);
+        url.searchParams.append("createdBy", user.uid);
+        if (cursor) {
+          url.searchParams.append("cursor", cursor);
+        }
+
+        return await fetchApi(url.toString());
+      } catch (err) {
+        throw err;
       }
-      
-      return await fetchApi(url.toString());
-    } catch (err) {
-      throw err;
-    }
-  }, [user]);
+    },
+    [user]
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -195,6 +203,7 @@ export default function MyBuzzesPage() {
                   deadline={buzz.deadline}
                   createdAt={buzz.createdAt}
                   isActive={buzz.isActive}
+                  username={buzz?.user?.username}
                 />
               ))}
               {hasMore && (

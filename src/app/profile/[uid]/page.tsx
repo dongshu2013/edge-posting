@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
+import { PaymentModal } from "@/components/PaymentModal";
 
 const serviceAddress =
   process.env.NEXT_PUBLIC_SERVICE_ADDRESS ||
@@ -107,6 +108,8 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }, [params.uid]);
+
+  
 
   useEffect(() => {
     if (loading) return;
@@ -428,36 +431,14 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* Modals */}
-      {showDepositModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Deposit BUZZ Tokens</h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Send BUZZ tokens to the following address:
-            </p>
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl">
-              <code className="text-sm flex-1 break-all">{serviceAddress}</code>
-              <button
-                onClick={handleCopyAddress}
-                className="p-2 hover:bg-gray-100 rounded-lg"
-              >
-                {copied ? (
-                  <CheckIcon className="h-5 w-5 text-green-500" />
-                ) : (
-                  <DocumentDuplicateIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-            </div>
-            <button
-              onClick={() => setShowDepositModal(false)}
-              className="mt-4 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
+      <PaymentModal
+        isOpen={showDepositModal}
+        buzzAmount={2}
+        onClose={() => {
+          setShowDepositModal(false);
+          fetchData();
+        }}
+      />
 
       {showWithdrawModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">

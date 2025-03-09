@@ -1,59 +1,45 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { useAccount } from "wagmi";
 import { paymentServiceApplicationId, paymentServiceUrl } from "@/config";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (amount: number) => Promise<void>;
   buzzAmount?: number;
 }
 
 export const PaymentModal = ({
   isOpen,
   onClose,
-  onSubmit,
   buzzAmount = 0,
 }: PaymentModalProps) => {
+  const { user } = useAuth();
   const [amount, setAmount] = useState<number>(buzzAmount);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { address } = useAccount();
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || amount <= 0) {
-      setError("Please enter a valid amount");
-      return;
-    }
-
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await onSubmit(amount);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const ongoingOrderQuery = useQuery({
-    queryKey: ["payment-user-ongoing-order", address],
+    queryKey: ["payment-user-ongoing-order", user?.uid],
+    staleTime: Infinity, // Prevent automatic refetching
+    refetchOnWindowFocus: false, // Prevent refetching when window regains focus
     queryFn: async () => {
       const resJson = await fetch(
-        `${paymentServiceUrl}/user-ongoing-order?payerId=${address}&applicationId=${paymentServiceApplicationId}`
+        `${paymentServiceUrl}/user-ongoing-order?payerId=${user?.uid}&applicationId=${paymentServiceApplicationId}`
       ).then((res) => res.json());
 
       return resJson?.data?.order;
     },
   });
+
+  useEffect(() => {
+    if (isOpen) {
+      ongoingOrderQuery.refetch();
+    }
+  }, [isOpen]);
 
   const createOrder = async () => {
     const resJson = await fetch(`${paymentServiceUrl}/create-order`, {
@@ -64,12 +50,13 @@ export const PaymentModal = ({
       body: JSON.stringify({
         chainId: 84532,
         amount: buzzAmount,
-        payerId: address,
+        payerId: user?.uid,
         applicationId: paymentServiceApplicationId,
       }),
     }).then((res) => res.json());
 
     ongoingOrderQuery.refetch();
+    setError(null);
   };
 
   const checkOrder = async (orderId: string) => {
@@ -80,6 +67,7 @@ export const PaymentModal = ({
     console.log(resJson);
 
     if (resJson?.data?.order?.status === 1) {
+      setError(null);
       onClose();
     } else {
       setError("Order is not paid");

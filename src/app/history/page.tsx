@@ -20,6 +20,7 @@ interface Reply {
   };
   user: {
     username: string;
+    uid: string;
   };
 }
 
@@ -102,7 +103,7 @@ export default function HistoryPage() {
                 status={reply.status}
                 showOriginalBuzzButton={true}
                 showRejectButton={false}
-                username={reply.user.username}
+                username={reply?.user?.username}
               />
             ))
           ) : (

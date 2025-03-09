@@ -20,6 +20,12 @@ export async function GET() {
             createdBy: true,
           },
         },
+        user: {
+          select: {
+            username: true,
+            uid: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

@@ -25,6 +25,7 @@ interface BuzzCardProps {
   createdAt?: Date;
   showViewReplies?: boolean;
   isActive?: boolean;
+  hasReplied?: boolean;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -39,6 +40,14 @@ const getEmbedUrl = (tweetUrl: string) => {
   }
 };
 
+const replyTemplates = [
+  "Great point! 🎯 {{instructions}}",
+  "Interesting perspective! 💡 {{instructions}}",
+  "Love this! ✨ {{instructions}}",
+  "Absolutely agree! 💯 {{instructions}}",
+  "This is fascinating! 🌟 {{instructions}}",
+];
+
 export default function BuzzCard({
   id,
   tweetLink,
@@ -51,10 +60,12 @@ export default function BuzzCard({
   createdAt,
   showViewReplies = true,
   isActive = true,
+  hasReplied = false,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [generatedReplyText, setGeneratedReplyText] = useState("");
 
   // Parse dates and ensure proper comparison
   const deadlineTime = new Date(deadline).getTime();
@@ -99,11 +110,17 @@ export default function BuzzCard({
     }
   };
 
+  const getRandomReplyText = () => {
+    const template =
+      replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+    return template.replace("{{instructions}}", instructions);
+  };
+
   const handleReplyClick = () => {
-    // Open Twitter reply intent in a new window
-    window.open(getReplyIntentUrl(tweetLink), "_blank");
-    // Show the reply modal
+    const replyText = getRandomReplyText();
+    window.open(getReplyIntentUrl(tweetLink, replyText), "_blank");
     setIsReplyModalOpen(true);
+    setGeneratedReplyText(replyText); // 保存生成的文案
   };
 
   const renderReplyButton = () => {
@@ -120,12 +137,16 @@ export default function BuzzCard({
     }
 
     return (
-      <button
-        onClick={handleReplyClick}
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
-      >
-        Reply & Earn {price} BUZZ
-      </button>
+      <>
+        {!hasReplied && (
+          <button
+            onClick={handleReplyClick}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
+          >
+            Reply & Earn {price} BUZZ
+          </button>
+        )}
+      </>
     );
   };
 
@@ -268,6 +289,7 @@ export default function BuzzCard({
         onClose={() => setIsReplyModalOpen(false)}
         onSubmit={handleReplySubmit}
         buzzAmount={price}
+        initialReplyText={generatedReplyText} // 传入生成的文案
       />
     </div>
   );

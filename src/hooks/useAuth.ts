@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import {
@@ -13,74 +13,76 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
-import { UserInfo } from "@/types/user";
+import { useUserStore } from "@/store/userStore";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(auth?.currentUser || null);
-  const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
+  const { setUserInfo, userInfo } = useUserStore((state) => state);
+
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
   const authStateInitialized = useRef(false);
 
   // Save user to database only if they don't exist
-  const saveUserToDatabase = useCallback(async (user: User) => {
-    if (isSyncing || !user) return;
-    
-    try {
-      setIsSyncing(true);
-      console.log("Fetching user info from database...");
-      
-      const response = await fetchApi(`/api/user/${user.uid}`, {
-        method: 'GET',
-        auth: true,
-      }).catch(() => null);
+  const saveUserToDatabase = useCallback(
+    async (user: User) => {
+      if (isSyncing || !user) return;
 
-      // Only create user if they don't exist
-      if (!response) {
-        console.log("User not found in database, creating...");
-        await fetchApi('/api/user', {
-          method: 'POST',
+      try {
+        setIsSyncing(true);
+        console.log("Fetching user info from database...");
+
+        const response = await fetchApi(`/api/user/${user.uid}`, {
+          method: "GET",
           auth: true,
-          body: JSON.stringify({
+        });
+
+        // Only create user if they don't exist
+        if (!response) {
+          console.log("User not found in database, creating...");
+          await fetchApi("/api/user", {
+            method: "POST",
+            auth: true,
+            body: JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              username: user.displayName,
+              nickname: user.displayName,
+              avatar: user.photoURL,
+            }),
+          });
+        }
+
+        setUserInfo(
+          response || {
             uid: user.uid,
             email: user.email,
             username: user.displayName,
             nickname: user.displayName,
             avatar: user.photoURL,
-          }),
-        });
-      } else {
-        console.log("User found in database");
+            bio: null,
+            totalEarned: 0,
+            balance: 0,
+            createdAt: new Date(),
+          }
+        );
+      } catch (error) {
+        console.error("Failed to save user to database:", error);
+      } finally {
+        setIsSyncing(false);
       }
-
-      setUserInfo(response || {
-        uid: user.uid,
-        email: user.email,
-        username: user.displayName,
-        nickname: user.displayName,
-        avatar: user.photoURL,
-        bio: null,
-        totalEarned: 0,
-        balance: 0,
-        createdAt: new Date(),
-      });
-    } catch (error) {
-      console.error('Failed to save user to database:', error);
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isSyncing]);
+    },
+    [isSyncing, setUserInfo]
+  );
 
   useEffect(() => {
     if (!auth) return;
 
-    // Set initial loading state based on whether we have a token
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem("authToken");
     if (!token) {
       setLoading(false);
     }
 
-    console.log("Setting up auth state listener");
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state changed:", user ? `User ${user.uid}` : "No user");
       setUser(user);
@@ -90,24 +92,24 @@ export function useAuth() {
         try {
           console.log("Getting ID token");
           const token = await getIdToken(user, true); // Force refresh token
-          
+
           // Store token in localStorage and cookies
-          localStorage.setItem('authToken', token);
-          
+          localStorage.setItem("authToken", token);
+
           // Set cookie with SameSite=Strict for security
           document.cookie = `authToken=${token}; path=/; max-age=3600; SameSite=Strict`;
-          
+
           if (!isSyncing && !userInfo) {
             console.log("Syncing user to database");
             await saveUserToDatabase(user);
           }
         } catch (error) {
-          console.error('Error during auth state change:', error);
+          console.error("Error during auth state change:", error);
         }
       } else {
         // Clear token from localStorage and cookies
-        localStorage.removeItem('authToken');
-        document.cookie = 'authToken=; path=/; max-age=0; SameSite=Strict';
+        localStorage.removeItem("authToken");
+        document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
         setUserInfo(null);
       }
 
@@ -128,7 +130,7 @@ export function useAuth() {
       console.log("Google sign-in successful");
       return result.user;
     } catch (error) {
-      console.error('Error signing in with Google:', error);
+      console.error("Error signing in with Google:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -140,7 +142,7 @@ export function useAuth() {
       console.log("Sending magic link to", email);
       setLoading(true);
       if (!auth) throw new Error("Auth is not initialized");
-      
+
       const actionCodeSettings = {
         url: window.location.origin + "/auth/verify",
         handleCodeInApp: true,
@@ -152,7 +154,7 @@ export function useAuth() {
       console.log("Magic link sent successfully");
       return true;
     } catch (error) {
-      console.error('Error sending magic link:', error);
+      console.error("Error sending magic link:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -164,7 +166,7 @@ export function useAuth() {
       console.log("Verifying magic link");
       setLoading(true);
       if (!auth) throw new Error("Auth is not initialized");
-      
+
       if (isSignInWithEmailLink(auth, window.location.href)) {
         const email = window.localStorage.getItem("emailForSignIn");
         if (!email) {
@@ -181,7 +183,7 @@ export function useAuth() {
         return result.user;
       }
     } catch (error) {
-      console.error('Error verifying magic link:', error);
+      console.error("Error verifying magic link:", error);
       throw error;
     } finally {
       setLoading(false);
@@ -192,12 +194,12 @@ export function useAuth() {
     try {
       console.log("Signing out");
       await signOut(auth!);
-      localStorage.removeItem('authToken');
-      document.cookie = 'authToken=; path=/; max-age=0; SameSite=Strict';
+      localStorage.removeItem("authToken");
+      document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
       setUserInfo(null);
       console.log("Sign out successful");
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
       throw error;
     }
   };

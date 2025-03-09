@@ -9,7 +9,7 @@ export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
   if (auth) {
     const token = localStorage.getItem("authToken");
     if (token) {
-      headers.set("authorization", `Bearer ${token}`);
+      headers.set("Authorization", `Bearer ${token}`);
     }
   }
 

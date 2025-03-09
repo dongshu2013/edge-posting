@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 import { BoltIcon, SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
+import { useUserStore } from "@/store/userStore";
 
 export default function NewBuzzPage() {
-  const { isConnected, address } = useAccount();
   const router = useRouter();
+  const userInfo = useUserStore((state) => state.userInfo);
   const [formData, setFormData] = useState({
     tweetLink: "",
     instructions: "",
@@ -37,11 +37,6 @@ export default function NewBuzzPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isConnected) {
-      alert("Please connect your wallet first");
-      return;
-    }
-
     const deadline = new Date();
     deadline.setHours(deadline.getHours() + Number(formData.deadline));
 
@@ -52,7 +47,7 @@ export default function NewBuzzPage() {
           tweetLink: formData.tweetLink,
           instructions: formData.instructions,
           credit: formData.pricePerReply,
-          createdBy: address, // from useAccount
+          createdBy: userInfo?.uid,
           deadline: deadline.toISOString(),
           numberOfReplies: formData.numberOfReplies,
         }),
@@ -264,13 +259,8 @@ export default function NewBuzzPage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={!isConnected}
                   className={`px-6 py-3 rounded-xl text-sm font-medium text-white shadow-xl
-                    ${
-                      isConnected
-                        ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
-                        : "bg-gray-300 cursor-not-allowed"
-                    } transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                    ${"bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"} transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
                 >
                   Create Buzz 🚀
                 </button>

@@ -63,15 +63,16 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   try {
     const user = await getAuthUser();
+    console.log(user);
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { tweetLink, instructions, context, credit, deadline } = body;
+    const { tweetLink, instructions, credit, deadline } = body;
 
     // Validate required fields
-    if (!tweetLink || !instructions || !context || !credit || !deadline) {
+    if (!tweetLink || !instructions || !credit || !deadline) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       data: {
         tweetLink,
         instructions,
-        context,
+        context: "",
         credit: parseFloat(credit),
         createdBy: user.uid,
         deadline: new Date(deadline),

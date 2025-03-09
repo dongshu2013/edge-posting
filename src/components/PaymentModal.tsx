@@ -2,7 +2,6 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Fragment, useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
 import { paymentServiceApplicationId, paymentServiceUrl } from "@/config";
 import { useAuth } from "@/hooks/useAuth";
 

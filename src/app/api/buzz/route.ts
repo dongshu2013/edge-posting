@@ -29,6 +29,11 @@ export async function GET(request: NextRequest) {
         replyCount: true,
         totalReplies: true,
         isActive: true,
+        user: {
+          select: {
+            username: true,
+          },
+        },
       },
       ...(cursor && {
         cursor: {

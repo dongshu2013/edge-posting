@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Buzz } from '@prisma/client';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes
@@ -9,13 +10,9 @@ interface Reply {
   createdBy: string;
 }
 
-interface BuzzWithReplies {
-  id: string;
-  credit: number;
-  createdBy: string;
-  totalReplies: number;
+type BuzzWithReplies = Buzz & {
   replies: Reply[];
-}
+};
 
 export async function POST(request: Request) {
   try {
@@ -62,7 +59,7 @@ export async function POST(request: Request) {
 
           // Create reward transactions for approved replies
           const rewardTransactions = eligibleReplies.map((reply: Reply) => ({
-            amount: buzz.credit,
+            amount: buzz.price,
             type: 'REWARD' as const,
             status: 'PENDING' as const,
             fromAddress: buzz.createdBy,
@@ -81,7 +78,7 @@ export async function POST(request: Request) {
           if (remainingSlots > 0) {
             await tx.transaction.create({
               data: {
-                amount: buzz.credit * remainingSlots,
+                amount: buzz.price * remainingSlots,
                 type: 'BURN',
                 status: 'PENDING',
                 fromAddress: buzz.createdBy,

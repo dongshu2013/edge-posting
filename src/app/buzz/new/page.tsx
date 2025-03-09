@@ -142,7 +142,7 @@ export default function NewBuzzPage() {
                     htmlFor="pricePerReply"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Price per Reply 💰
+                    BUZZ per Reply 💰
                   </label>
                   <div className="mt-1 relative rounded-xl shadow-sm">
                     <input

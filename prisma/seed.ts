@@ -1,33 +1,84 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, ReplyStatus } from "@prisma/client";
+import { randomUUID } from "crypto";
 
-const prisma = new PrismaClient({
-  log: ["query", "info", "warn", "error"],
-});
+const prisma = new PrismaClient();
 
-const MY_UID = "user_01";
-const OTHER_UID = "user_02";
+// User IDs
+const userIds = [
+  "0vfCtg69CQOaigET62k2Tlt0e4r2", // Real Firebase user
+  "user_01",                       // Seed user
+  "user_02",                       // Seed user
+];
 
-const MOCK_USERS = [
+// Sample users data
+const users = [
   {
-    uid: MY_UID,
-    email: "alice@example.com",
-    username: "alice",
-    nickname: "Alice",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Alice",
-    bio: "Web3 Developer & AI Enthusiast",
-    totalEarned: 0,
-    balance: 0,
+    uid: userIds[0],
+    email: "real.user@example.com",
+    username: "Real User",
+    nickname: "RealUser",
+    avatar: "https://www.google.com/favicon.ico",
+    bio: "I am a real user with a Firebase account",
+    totalEarned: 100,
+    balance: 50,
+    createdAt: new Date("2024-01-01"),
   },
   {
-    uid: OTHER_UID,
-    email: "bob@example.com",
-    username: "bob",
-    nickname: "Bob",
-    avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=Bob",
-    bio: "Blockchain Researcher",
-    totalEarned: 0,
-    balance: 0,
+    uid: userIds[1],
+    email: "user1@example.com",
+    username: "User One",
+    nickname: "User1",
+    avatar: "https://www.google.com/favicon.ico",
+    bio: "I am the first seed user",
+    totalEarned: 200,
+    balance: 100,
+    createdAt: new Date("2024-01-02"),
   },
+  {
+    uid: userIds[2],
+    email: "user2@example.com",
+    username: "User Two",
+    nickname: "User2",
+    avatar: "https://www.google.com/favicon.ico",
+    bio: "I am the second seed user",
+    totalEarned: 300,
+    balance: 150,
+    createdAt: new Date("2024-01-03"),
+  },
+];
+
+// Sample tweet links
+const tweetLinks = [
+  "https://x.com/elonmusk/status/1897898972041117883",
+  "https://x.com/naval/status/1002103360646823936",
+  "https://x.com/sama/status/1589661435104284672",
+  "https://x.com/paulg/status/1589661435104284672",
+  "https://x.com/balajis/status/1589661435104284672",
+  "https://x.com/jack/status/1589661435104284672",
+];
+
+// Sample instructions
+const instructions = [
+  "Share your thoughts on AI safety.",
+  "Provide a thoughtful response about decentralization.",
+  "Comment on the future of technology.",
+  "Discuss the implications of this tweet for startups.",
+  "Give your perspective on blockchain technology.",
+  "Respond with insights about social media's impact.",
+];
+
+// Sample reply texts
+const replyTexts = [
+  "I think this is a fascinating perspective. The intersection of AI and human creativity will define our future.",
+  "Decentralization is key to building resilient systems. This tweet highlights important considerations.",
+  "The pace of technological change is accelerating. We need thoughtful approaches to governance.",
+  "Startups should focus on solving real problems. This tweet points to an underserved market.",
+  "Blockchain technology enables new forms of coordination. The implications are profound.",
+  "Social media has transformed how we communicate. We need to be mindful of both benefits and drawbacks.",
+  "This is a thought-provoking take. I appreciate the nuanced perspective on complex issues.",
+  "Innovation happens at the edges. This tweet captures the essence of breakthrough thinking.",
+  "The future is already here, just unevenly distributed. This tweet shows where to look.",
+  "Building in public creates accountability and community. This approach has clear advantages.",
 ];
 
 async function cleanDatabase() {
@@ -40,147 +91,176 @@ async function cleanDatabase() {
 }
 
 async function seedUsers() {
-  const users = await Promise.all(
-    MOCK_USERS.map((user) =>
+  const createdUsers = await Promise.all(
+    users.map((user) =>
       prisma.user.upsert({
         where: { uid: user.uid },
-        update: user,
+        update: {
+          email: user.email,
+          username: user.username,
+          nickname: user.nickname,
+          avatar: user.avatar,
+          bio: user.bio,
+          totalEarned: user.totalEarned,
+          balance: user.balance,
+        },
         create: user,
       })
     )
   );
-  console.log(`Created ${users.length} users`);
-  return users;
+  console.log("Created", createdUsers.length, "users");
 }
 
 async function seedBuzzes() {
-  const buzzes = await Promise.all([
-    // 已结束的活动
-    prisma.buzz.create({
-      data: {
-        tweetLink: "https://x.com/XDevelopers/status/1861111969639481848",
-        instructions:
-          "Share your thoughts on how this could impact Ethereum scaling.",
-        context:
-          "Vitalik discusses new developments in Ethereum scaling solutions.",
-        credit: 0.05,
-        createdBy: MY_UID,
-        deadline: new Date("2024-03-01"),
-        createdAt: new Date("2024-02-28"),
-        totalReplies: 100,
-        replyCount: 0,
-        isActive: false,
-        isSettled: true,
-      },
-    }),
-    // 进行中的活动
-    prisma.buzz.create({
-      data: {
-        tweetLink: "https://x.com/elonmusk/status/1897898972041117883",
-        instructions: "Share your perspective on web3 social networks.",
-        context: "Discussion about decentralized platforms.",
-        credit: 0.1,
-        createdBy: OTHER_UID,
-        deadline: new Date("2035-04-01"),
-        createdAt: new Date(),
-        totalReplies: 150,
-        replyCount: 0,
-        isActive: true,
-        isSettled: false,
-      },
-    }),
-  ]);
+  const buzzes = [];
 
-  console.log(`Created ${buzzes.length} buzzes`);
-  return buzzes;
+  // Create 2 buzzes for each user (1 expired, 1 active)
+  for (const userId of userIds) {
+    // Expired buzz
+    buzzes.push(
+      prisma.buzz.create({
+        data: {
+          tweetLink: tweetLinks[Math.floor(Math.random() * tweetLinks.length)],
+          instructions: instructions[Math.floor(Math.random() * instructions.length)],
+          price: 0.1,
+          createdBy: userId,
+          deadline: new Date("2023-12-31"), // Expired
+          createdAt: new Date("2023-11-01"),
+          totalReplies: 50,
+          replyCount: Math.floor(Math.random() * 50),
+          isActive: false,
+        },
+      })
+    );
+
+    // Active buzz
+    buzzes.push(
+      prisma.buzz.create({
+        data: {
+          tweetLink: tweetLinks[Math.floor(Math.random() * tweetLinks.length)],
+          instructions: instructions[Math.floor(Math.random() * instructions.length)],
+          price: 0.2,
+          createdBy: userId,
+          deadline: new Date("2035-12-31"), // Far in the future
+          createdAt: new Date(),
+          totalReplies: 100,
+          replyCount: Math.floor(Math.random() * 30),
+          isActive: true,
+        },
+      })
+    );
+  }
+
+  const createdBuzzes = await Promise.all(buzzes);
+  console.log("Created", createdBuzzes.length, "buzzes");
+  return createdBuzzes;
 }
-
-const MOCK_REPLIES = [
-  {
-    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
-    text: "This is a fascinating approach to blockchain integration. The potential impact on scalability is significant.",
-    status: "PENDING",
-    createdBy: MY_UID,
-    createdAt: new Date(),
-  },
-  {
-    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
-    text: "Great analysis! I particularly appreciate how this could improve user experience while maintaining decentralization.",
-    status: "APPROVED",
-    createdBy: OTHER_UID,
-    createdAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-  },
-  {
-    replyLink: "https://x.com/sjpwa1/status/1897818839767040409",
-    text: "Interesting perspective on DeFi adoption. Have you considered the regulatory implications?",
-    status: "REJECTED",
-    createdBy: MY_UID,
-    createdAt: new Date(Date.now() - 48 * 60 * 60 * 1000),
-  },
-];
 
 async function seedReplies(buzzes: { id: string }[]) {
   const replies = [];
 
+  // Create 5-10 replies for each buzz
   for (const buzz of buzzes) {
-    for (const replyData of MOCK_REPLIES) {
-      replies.push({
-        ...replyData,
-        buzzId: buzz.id,
-        user: {
-          connect: {
-            uid: replyData.createdBy,
-          },
-        },
+    const replyCount = 5 + Math.floor(Math.random() * 6); // 5-10 replies
+    
+    for (let i = 0; i < replyCount; i++) {
+      // Randomly select a user who didn't create the buzz
+      const buzzCreator = await prisma.buzz.findUnique({
+        where: { id: buzz.id },
+        select: { createdBy: true },
       });
+      
+      const availableUsers = userIds.filter(id => id !== buzzCreator?.createdBy);
+      const replyCreator = availableUsers[Math.floor(Math.random() * availableUsers.length)];
+      
+      // Random status with higher probability for APPROVED
+      const statusOptions: ReplyStatus[] = ["PENDING", "APPROVED", "APPROVED", "APPROVED", "REJECTED"] as ReplyStatus[];
+      const status = statusOptions[Math.floor(Math.random() * statusOptions.length)];
+      
+      replies.push(
+        prisma.reply.create({
+          data: {
+            buzzId: buzz.id,
+            text: replyTexts[Math.floor(Math.random() * replyTexts.length)],
+            replyLink: `https://x.com/user/status/${randomUUID()}`,
+            createdBy: replyCreator,
+            status: status,
+            createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)), // Random date in the last 30 days
+          },
+        })
+      );
     }
   }
 
-  const createdReplies = await Promise.all(
-    replies.map((reply) =>
-      prisma.reply.create({
+  const createdReplies = await Promise.all(replies);
+  console.log("Created", createdReplies.length, "replies");
+}
+
+async function seedTransactions(buzzes: { id: string }[]) {
+  const transactions = [];
+
+  // Create transactions for each buzz
+  for (const buzz of buzzes) {
+    const buzzDetails = await prisma.buzz.findUnique({
+      where: { id: buzz.id },
+      include: { replies: true },
+    });
+
+    if (!buzzDetails) continue;
+
+    // Create a BURN transaction for the buzz creator
+    transactions.push(
+      prisma.transaction.create({
         data: {
-          replyLink: reply.replyLink,
-          text: reply.text,
-          createdBy: reply.createdBy,
-          createdAt: reply.createdAt,
-          buzzId: reply.buzzId,
+          amount: -buzzDetails.price * buzzDetails.totalReplies,
+          type: "BURN",
+          status: "COMPLETED",
+          createdAt: buzzDetails.createdAt,
+          fromAddress: buzzDetails.createdBy,
+          toAddress: "0x0000000000000000000000000000000000000000", // Burn address
+          buzzId: buzz.id,
         },
       })
-    )
-  );
+    );
 
-  // Update buzz reply counts
-  for (const buzz of buzzes) {
-    const replyCount = await prisma.reply.count({
-      where: {
-        buzzId: buzz.id,
-        status: "PENDING",
-      },
-    });
-
-    await prisma.buzz.update({
-      where: { id: buzz.id },
-      data: { replyCount },
-    });
+    // Create REWARD transactions for approved replies
+    for (const reply of buzzDetails.replies) {
+      if (reply.status === "APPROVED") {
+        transactions.push(
+          prisma.transaction.create({
+            data: {
+              amount: buzzDetails.price,
+              type: "REWARD",
+              status: "COMPLETED",
+              createdAt: reply.createdAt,
+              fromAddress: "0x0000000000000000000000000000000000000000", // System address
+              toAddress: reply.createdBy,
+              buzzId: buzz.id,
+              replyId: reply.id,
+            },
+          })
+        );
+      }
+    }
   }
 
-  console.log(`Created ${createdReplies.length} replies`);
-  return createdReplies;
+  const createdTransactions = await Promise.all(transactions);
+  console.log("Created", createdTransactions.length, "transactions");
 }
 
 async function main() {
-  await cleanDatabase();
-  await seedUsers();
-  const buzzes = await seedBuzzes();
-  await seedReplies(buzzes);
+  try {
+    await cleanDatabase();
+    await seedUsers();
+    const buzzes = await seedBuzzes();
+    await seedReplies(buzzes);
+    await seedTransactions(buzzes);
+  } catch (error) {
+    console.error("Error seeding database:", error);
+    process.exit(1);
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
-main()
-  .catch((e) => {
-    console.error("Error seeding data:", e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+main();

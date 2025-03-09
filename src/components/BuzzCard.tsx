@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  SparklesIcon,
   ChatBubbleLeftRightIcon,
   DocumentDuplicateIcon,
   CheckIcon,
@@ -19,8 +18,7 @@ interface BuzzCardProps {
   id: string;
   tweetLink: string;
   instructions: string;
-  context: string;
-  credit: number;
+  price: number;
   replyCount: number;
   totalReplies: number;
   createdBy: string;
@@ -46,8 +44,7 @@ export default function BuzzCard({
   id,
   tweetLink,
   instructions,
-  context,
-  credit,
+  price,
   replyCount,
   totalReplies,
   createdBy,
@@ -107,18 +104,15 @@ export default function BuzzCard({
 
   const renderReplyButton = () => {
     if (!isActive) {
-      return (
-        <button
-          disabled
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl bg-gray-100 text-gray-400 cursor-not-allowed"
-        >
-          Expired
-        </button>
-      );
+      return <span className="text-gray-500">Expired</span>;
+    }
+
+    if (replyCount >= totalReplies) {
+      return <span className="text-gray-500">Full</span>;
     }
 
     if (!user) {
-      return <AuthButton buttonText={`Reply & Earn ${credit} BUZZ`} />;
+      return <AuthButton buttonText={`Reply & Earn ${price} BUZZ`} />;
     }
 
     return (
@@ -126,7 +120,7 @@ export default function BuzzCard({
         onClick={handleReplyClick}
         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
       >
-        Reply & Earn {credit} BUZZ
+        Reply & Earn {price} BUZZ
       </button>
     );
   };
@@ -182,22 +176,11 @@ export default function BuzzCard({
                     </button>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-500">Total deposit</div>
-                  <div className="flex items-center gap-2">
-                    <SparklesIcon
-                      className={`h-5 w-5 ${
-                        isExpired ? "text-gray-400" : "text-amber-500"
-                      }`}
-                    />
-                    <span
-                      className={`text-lg font-semibold ${
-                        isExpired ? "text-gray-500" : "text-gray-900"
-                      }`}
-                    >
-                      {(credit * totalReplies).toFixed(2)} BUZZ
-                    </span>
-                  </div>
+                <div className="mt-4 flex items-center justify-between text-sm">
+                  <span className="text-gray-500">Total Deposit</span>
+                  <span className="font-medium">
+                    {(price * totalReplies).toFixed(2)} BUZZ
+                  </span>
                 </div>
                 {createdAt && (
                   <div className="flex items-center gap-2">
@@ -245,30 +228,6 @@ export default function BuzzCard({
                     isExpired ? "text-gray-400" : "text-blue-500"
                   }`}
                 />
-                Context
-              </h4>
-              <p
-                className={`text-sm break-words ${
-                  isExpired ? "text-gray-500" : "text-gray-600"
-                }`}
-              >
-                {context || "No context provided"}
-              </p>
-            </div>
-
-            <div
-              className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
-                isExpired
-                  ? "bg-gray-100"
-                  : "bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50"
-              }`}
-            >
-              <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                <SparklesIcon
-                  className={`h-5 w-5 mr-2 ${
-                    isExpired ? "text-gray-400" : "text-indigo-500"
-                  }`}
-                />
                 Instructions
               </h4>
               <p
@@ -304,7 +263,7 @@ export default function BuzzCard({
         isOpen={isReplyModalOpen}
         onClose={() => setIsReplyModalOpen(false)}
         onSubmit={handleReplySubmit}
-        buzzAmount={credit}
+        buzzAmount={price}
       />
     </div>
   );

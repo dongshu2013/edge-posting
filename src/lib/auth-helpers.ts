@@ -7,11 +7,17 @@ export interface AuthUser {
 
 export async function getAuthUser(): Promise<AuthUser | null> {
   try {
+    // Get headers from the request
     const headersList = await headers();
+    
+    // Extract user ID and email
     const userId = headersList.get("x-user-id");
     const userEmail = headersList.get("x-user-email");
 
-    if (!userId) return null;
+    if (!userId) {
+      console.warn("No user ID found in headers");
+      return null;
+    }
 
     return {
       uid: userId,

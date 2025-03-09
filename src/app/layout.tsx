@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import "./globals.css";
 import { WalletProvider } from "@/providers/WalletProvider";
 import Navbar from "@/components/Navbar";
+import { AuthModal } from "@/components/AuthModal";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -10,8 +11,8 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "BUZZ",
-  description: "Engage with tweets and earn credits using AI",
+  title: "Edge Posting",
+  description: "Engage with tweets and earn BUZZ tokens using AI",
   icons: {
     icon: [
       { url: "/favicon.svg", type: "image/svg+xml" },
@@ -35,6 +36,7 @@ export default function RootLayout({
                 {children}
               </div>
             </main>
+            <AuthModal />
           </div>
         </WalletProvider>
       </body>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import BuzzCard from "@/components/BuzzCard";
@@ -11,13 +11,12 @@ interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
-  context: string;
-  credit: number;
-  createdAt: Date;
-  createdBy: string;
-  deadline: string;
+  price: number;
   replyCount: number;
   totalReplies: number;
+  createdBy: string;
+  deadline: string;
+  createdAt: Date;
   isActive: boolean;
 }
 
@@ -27,8 +26,26 @@ export default function MyBuzzesPage() {
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const [sortBy, setSortBy] = useState<"newest" | "price" | "engagement">("newest");
+  const [onlyActive, setOnlyActive] = useState(true);
   const { user, loading } = useAuth();
   const router = useRouter();
+
+  const fetchUserBuzzes = useCallback(async (cursor?: string) => {
+    if (!user) return null;
+    
+    try {
+      const url = new URL(`/api/buzz`, window.location.origin);
+      url.searchParams.append("createdBy", user.uid);
+      if (cursor) {
+        url.searchParams.append("cursor", cursor);
+      }
+      
+      return await fetchApi(url.toString());
+    } catch (err) {
+      throw err;
+    }
+  }, [user]);
 
   useEffect(() => {
     if (loading) return;
@@ -43,10 +60,12 @@ export default function MyBuzzesPage() {
           return;
         }
 
-        const data = await fetchApi(`/api/buzz?createdBy=${user.uid}`);
-        setBuzzes(data.items);
-        setNextCursor(data.nextCursor);
-        setHasMore(data.hasMore);
+        const data = await fetchUserBuzzes();
+        if (data) {
+          setBuzzes(data.items);
+          setNextCursor(data.nextCursor);
+          setHasMore(data.hasMore);
+        }
       } catch (err) {
         console.error("Error fetching buzzes:", err);
         setError(err instanceof Error ? err.message : "Failed to fetch buzzes");
@@ -56,18 +75,18 @@ export default function MyBuzzesPage() {
     };
 
     initialFetch();
-  }, [user, loading, router]);
+  }, [user, loading, router, fetchUserBuzzes]);
 
   const loadMore = async () => {
     if (!nextCursor || !hasMore || !user) return;
 
     try {
-      const data = await fetchApi(
-        `/api/buzz?createdBy=${user.uid}&cursor=${nextCursor}`
-      );
-      setBuzzes((prev) => [...prev, ...data.items]);
-      setNextCursor(data.nextCursor);
-      setHasMore(data.hasMore);
+      const data = await fetchUserBuzzes(nextCursor);
+      if (data) {
+        setBuzzes((prev) => [...prev, ...data.items]);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
+      }
     } catch (err) {
       console.error("Error fetching more buzzes:", err);
       setError(
@@ -75,6 +94,23 @@ export default function MyBuzzesPage() {
       );
     }
   };
+
+  // Sort and filter buzzes
+  const sortedBuzzes = [...buzzes]
+    .filter((buzz) => (onlyActive ? buzz.isActive : true))
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "price":
+          return b.price - a.price;
+        case "engagement":
+          return b.replyCount - a.replyCount;
+        case "newest":
+        default:
+          return (
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+      }
+    });
 
   if (!user) {
     return null;
@@ -105,22 +141,59 @@ export default function MyBuzzesPage() {
   return (
     <div className="py-8">
       <div className="flex-1">
+        {buzzes.length > 0 && (
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(e.target.value as "newest" | "price" | "engagement")
+              }
+              className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
+            >
+              <option value="newest">✨ Newest First</option>
+              <option value="price">💰 Highest Price</option>
+              <option value="engagement">🔥 Highest Engagement</option>
+            </select>
+
+            <div className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto">
+              <span className="text-base sm:text-lg text-gray-700 font-medium">
+                Only active buzzes
+              </span>
+              <button
+                role="switch"
+                id="onlyActive"
+                aria-checked={onlyActive}
+                onClick={() => setOnlyActive(!onlyActive)}
+                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                  onlyActive ? "bg-indigo-600" : "bg-gray-200"
+                }`}
+              >
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
+                    onlyActive ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
-          {buzzes.length > 0 ? (
+          {sortedBuzzes.length > 0 ? (
             <>
-              {buzzes.map((buzz) => (
+              {sortedBuzzes.map((buzz) => (
                 <BuzzCard
                   key={buzz.id}
                   id={buzz.id}
                   tweetLink={buzz.tweetLink}
                   instructions={buzz.instructions}
-                  context={buzz.context}
-                  credit={buzz.credit}
+                  price={buzz.price}
                   replyCount={buzz.replyCount}
                   totalReplies={buzz.totalReplies}
                   createdBy={buzz.createdBy}
                   deadline={buzz.deadline}
-                  createdAt={new Date(buzz.createdAt)}
+                  createdAt={buzz.createdAt}
                   isActive={buzz.isActive}
                 />
               ))}

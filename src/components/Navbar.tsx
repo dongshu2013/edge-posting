@@ -11,7 +11,7 @@ import { AuthButton } from "@/components/AuthButton";
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
 
   return (
     <nav className="bg-white shadow">
@@ -44,7 +44,7 @@ export default function Navbar() {
               >
                 All Buzzes
               </Link>
-              {user && (
+              {isAuthenticated && (
                 <>
                   <Link
                     href="/history"
@@ -71,7 +71,7 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
-            {user && (
+            {isAuthenticated && (
               <Link
                 href="/buzz/new"
                 className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 transform hover:scale-105"
@@ -141,7 +141,7 @@ export default function Navbar() {
           >
             All Buzzes
           </Link>
-          {user && (
+          {isAuthenticated && (
             <>
               <Link
                 href="/history"

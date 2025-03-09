@@ -21,13 +21,12 @@ interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
-  context: string;
-  credit: number;
-  createdAt: Date;
-  createdBy: string;
-  deadline: string;
+  price: number;
   replyCount: number;
   totalReplies: number;
+  createdBy: string;
+  deadline: string;
+  createdAt: Date;
   isActive: boolean;
   replies: Reply[];
 }
@@ -114,14 +113,12 @@ export default function BuzzDetailPage() {
           id={buzz.id}
           tweetLink={buzz.tweetLink}
           instructions={buzz.instructions}
-          context={buzz.context}
-          credit={buzz.credit}
+          price={buzz.price}
           replyCount={buzz.replyCount}
           totalReplies={buzz.totalReplies}
-          showViewReplies={false}
           createdBy={buzz.createdBy}
           deadline={buzz.deadline}
-          createdAt={new Date(buzz.createdAt)}
+          createdAt={buzz.createdAt}
           isActive={buzz.isActive}
         />
       </div>

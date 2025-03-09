@@ -41,7 +41,7 @@ export default function NewBuzzPage() {
     deadline.setHours(deadline.getHours() + Number(formData.deadline));
 
     try {
-      const buzz = await fetchApi("/api/buzz", {
+      const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
         body: JSON.stringify({
           tweetLink: formData.tweetLink,
@@ -54,7 +54,7 @@ export default function NewBuzzPage() {
       });
 
       if (!buzz) {
-        throw new Error("Failed to create buzz");
+        throw new Error(buzz.error || "Failed to create buzz");
       }
 
       // Show success message

@@ -1,6 +1,7 @@
 // 新建一个统一的路由配置文件
 export const protectedRoutes = {
   api: [
+    "/api/buzz/create",
     "/api/reply",
     "/api/reply/*",
     "/api/user",
@@ -15,7 +16,7 @@ export function isProtectedRoute(path: string, type: "api" | "pages"): boolean {
   return protectedRoutes[type].some((route) => {
     // 处理通配符路由
     if (route.includes("*")) {
-      const baseRoute = route.split("*")[0]; // 获取通配符前的基础路径
+      const baseRoute = route.split("*")[0];
       const pattern = route.replace("*", ".*");
       // API 路由使用正则匹配，页面路由只匹配基础路径
       return type === "api"

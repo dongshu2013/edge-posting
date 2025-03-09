@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getAuthUser } from "@/lib/auth-helpers";
 import { Prisma } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -55,47 +54,6 @@ export async function GET(request: NextRequest) {
     console.error("Failed to fetch buzzes:", error);
     return NextResponse.json(
       { error: "Failed to fetch buzzes" },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const user = await getAuthUser();
-    console.log(user);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { tweetLink, instructions, price, deadline } = body;
-
-    // Validate required fields
-    if (!tweetLink || !instructions || !price || !deadline) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // Create new buzz
-    const buzz = await prisma.buzz.create({
-      data: {
-        tweetLink,
-        instructions,
-        price: parseFloat(price),
-        createdBy: user.uid,
-        deadline: new Date(deadline),
-        totalReplies: body.numberOfReplies || 100, // Default to 100 if not specified
-      },
-    });
-
-    return NextResponse.json(buzz);
-  } catch (error) {
-    console.error("Failed to create buzz:", error);
-    return NextResponse.json(
-      { error: "Failed to create buzz" },
       { status: 500 }
     );
   }

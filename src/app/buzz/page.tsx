@@ -16,6 +16,9 @@ interface Buzz {
   deadline: string;
   createdAt: Date;
   isActive: boolean;
+  user: {
+    username: string;
+  };
 }
 
 interface BuzzResponse {
@@ -235,6 +238,7 @@ export default function BuzzesPage() {
                 deadline={buzz.deadline}
                 createdAt={buzz.createdAt}
                 isActive={buzz.isActive}
+                username={buzz?.user?.username}
               />
             </div>
           ))}

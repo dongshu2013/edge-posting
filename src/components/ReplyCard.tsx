@@ -20,6 +20,7 @@ interface ReplyCardProps {
   status: "PENDING" | "APPROVED" | "REJECTED";
   showOriginalBuzzButton?: boolean;
   showRejectButton?: boolean;
+  username: string;
 }
 
 // Get embed URL from tweet URL
@@ -45,6 +46,7 @@ export default function ReplyCard({
   status = "PENDING",
   showOriginalBuzzButton = false,
   showRejectButton = true,
+  username,
 }: ReplyCardProps) {
   const { address } = useAccount();
   const isOwner =
@@ -135,7 +137,7 @@ export default function ReplyCard({
             <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  {createdBy}
+                  {username}
                 </span>
                 <button
                   onClick={handleCopyAddress}

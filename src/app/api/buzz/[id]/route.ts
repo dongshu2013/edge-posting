@@ -16,8 +16,27 @@ export async function GET(
       where: { id },
       include: {
         replies: {
+          select: {
+            id: true,
+            replyLink: true,
+            text: true,
+            createdBy: true,
+            buzzId: true,
+            status: true,
+            createdAt: true,
+            user: {
+              select: {
+                username: true,
+              },
+            },
+          },
           orderBy: {
             createdAt: "desc",
+          },
+        },
+        user: {
+          select: {
+            username: true,
           },
         },
       },

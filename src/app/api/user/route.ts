@@ -16,7 +16,6 @@ export async function POST(request: Request) {
       where: { uid },
       update: {
         email,
-        username,
         avatar:
           avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
       },

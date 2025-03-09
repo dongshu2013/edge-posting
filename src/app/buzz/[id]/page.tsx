@@ -16,6 +16,9 @@ interface Reply {
   createdAt: Date;
   createdBy: string;
   status: "PENDING" | "APPROVED" | "REJECTED";
+  user: {
+    username: string;
+  };
 }
 
 interface Buzz {
@@ -31,6 +34,9 @@ interface Buzz {
   isActive: boolean;
   replies: Reply[];
   hasReplied?: boolean;
+  user: {
+    username: string;
+  };
 }
 
 export default function BuzzDetailPage() {
@@ -72,7 +78,7 @@ export default function BuzzDetailPage() {
     if (params.id) {
       fetchBuzzDetails();
     }
-  }, [params.id, userInfo?.uid]);
+  }, [params.id, userInfo]);
 
   if (isLoading) {
     return (
@@ -134,6 +140,7 @@ export default function BuzzDetailPage() {
           isActive={buzz.isActive}
           showViewReplies={false}
           hasReplied={hasReplied}
+          username={buzz?.user?.username}
         />
       </div>
 
@@ -159,6 +166,7 @@ export default function BuzzDetailPage() {
               buzzCreator={buzz.createdBy}
               buzzId={buzz.id}
               status={reply.status}
+              username={reply?.user?.username}
             />
           ))}
 

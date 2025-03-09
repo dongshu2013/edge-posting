@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthButton } from "@/components/AuthButton";
 import { fetchApi } from "@/lib/api";
 
-interface BuzzCardProps {
+export interface BuzzCardProps {
   id: string;
   tweetLink: string;
   instructions: string;
@@ -26,6 +26,7 @@ interface BuzzCardProps {
   showViewReplies?: boolean;
   isActive?: boolean;
   hasReplied?: boolean;
+  username: string;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -61,6 +62,7 @@ export default function BuzzCard({
   showViewReplies = true,
   isActive = true,
   hasReplied = false,
+  username,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -186,7 +188,7 @@ export default function BuzzCard({
                   <div className="text-sm text-gray-500">Created by</div>
                   <div className="flex items-center gap-2 flex-1">
                     <div className="text-sm font-medium text-gray-900">
-                      {createdBy}
+                      {username || createdBy}
                     </div>
                     <button
                       onClick={handleCopyAddress}

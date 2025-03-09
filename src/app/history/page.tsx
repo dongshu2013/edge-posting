@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
-import ReplyCard from '@/components/ReplyCard';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
-import { fetchApi } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
+import ReplyCard from "@/components/ReplyCard";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchApi } from "@/lib/api";
 
 interface Reply {
   id: string;
@@ -13,10 +13,13 @@ interface Reply {
   text: string;
   createdAt: Date;
   createdBy: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status: "PENDING" | "APPROVED" | "REJECTED";
   buzz: {
     id: string;
     createdBy: string;
+  };
+  user: {
+    username: string;
   };
 }
 
@@ -36,15 +39,17 @@ export default function HistoryPage() {
         setError(null);
 
         if (!user) {
-          router.push('/buzz');
+          router.push("/buzz");
           return;
         }
 
-        const data = await fetchApi('/api/reply/my');
+        const data = await fetchApi("/api/reply/my");
         setReplies(data);
       } catch (err) {
-        console.error('Error fetching replies:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch replies');
+        console.error("Error fetching replies:", err);
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch replies"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -97,12 +102,15 @@ export default function HistoryPage() {
                 status={reply.status}
                 showOriginalBuzzButton={true}
                 showRejectButton={false}
+                username={reply.user.username}
               />
             ))
           ) : (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No replies yet</h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
+                No replies yet
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Start engaging with buzzes to see your replies here! 🚀
               </p>
@@ -112,4 +120,4 @@ export default function HistoryPage() {
       </div>
     </div>
   );
-} 
+}

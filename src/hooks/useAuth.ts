@@ -120,7 +120,7 @@ export function useAuth() {
       console.log("Cleaning up auth state listener");
       unsubscribe();
     };
-  }, [saveUserToDatabase, isSyncing, userInfo]);
+  }, [saveUserToDatabase, isSyncing, userInfo, setUserInfo]);
 
   const signInWithGoogle = async () => {
     try {

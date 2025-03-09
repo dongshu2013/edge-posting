@@ -2,11 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
-import {
-  DocumentDuplicateIcon,
-  CheckIcon,
-  PencilIcon,
-} from "@heroicons/react/24/outline";
+import { PencilIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
@@ -14,10 +10,6 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { paymentServiceApplicationId } from "@/config";
 import { useQuery } from "@tanstack/react-query";
 import { paymentServiceUrl } from "@/config";
-
-const serviceAddress =
-  process.env.NEXT_PUBLIC_SERVICE_ADDRESS ||
-  "0x000000000000000000000000000000000000dEaD";
 
 interface UserProfile {
   email: string | null;
@@ -52,7 +44,6 @@ export default function ProfilePage() {
   const { user, loading } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [copied, setCopied] = useState(false);
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
@@ -140,16 +131,6 @@ export default function ProfilePage() {
 
     fetchData();
   }, [userInfo, loading, router, params.uid, user, fetchData]);
-
-  const handleCopyAddress = async () => {
-    try {
-      await navigator.clipboard.writeText(serviceAddress);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy address:", err);
-    }
-  };
 
   const handleWithdraw = async () => {
     if (!withdrawAddress || !withdrawAmount) return;
@@ -330,17 +311,23 @@ export default function ProfilePage() {
             <div className="flex-1">Status</div>
           </div>
           {/* Transactions */}
-          {userOrdersQuery.data?.map((order: any) => (
-            <div key={order.id} className="flex items-center">
-              <div className="flex-1">{order.id}</div>
-              <div className="flex-1">
-                {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
+          {userOrdersQuery.data?.map(
+            (order: {
+              id: string;
+              transfer_amount_on_chain: string;
+              status: number;
+            }) => (
+              <div key={order.id} className="flex items-center">
+                <div className="flex-1">{order.id}</div>
+                <div className="flex-1">
+                  {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
+                </div>
+                <div className="flex-1">
+                  {order.status === 0 ? "Ongoing" : "Completed"}
+                </div>
               </div>
-              <div className="flex-1">
-                {order.status === 0 ? "Ongoing" : "Completed"}
-              </div>
-            </div>
-          ))}
+            )
+          )}
 
           {/* Withdrawals */}
           {withdrawals?.length > 0 && (

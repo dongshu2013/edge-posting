@@ -11,6 +11,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
 import { PaymentModal } from "@/components/PaymentModal";
+import { paymentServiceApplicationId } from "@/config";
+import { useQuery } from "@tanstack/react-query";
+import { paymentServiceUrl } from "@/config";
 
 const serviceAddress =
   process.env.NEXT_PUBLIC_SERVICE_ADDRESS ||
@@ -60,6 +63,18 @@ export default function ProfilePage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const userOrdersQuery = useQuery({
+    queryKey: ["payment-user-orders", user?.uid],
+    enabled: !!user?.uid,
+    queryFn: async () => {
+      const resJson = await fetch(
+        `${paymentServiceUrl}/user-orders?payerId=${user?.uid}&applicationId=${paymentServiceApplicationId}`
+      ).then((res) => res.json());
+
+      return resJson?.data?.orders || [];
+    },
+  });
+
   // Define fetchData with useCallback to prevent it from changing on every render
   const fetchData = useCallback(async () => {
     try {
@@ -108,8 +123,6 @@ export default function ProfilePage() {
       setIsLoading(false);
     }
   }, [params.uid]);
-
-  
 
   useEffect(() => {
     if (loading) return;
@@ -311,57 +324,23 @@ export default function ProfilePage() {
           Payment History
         </h2>
         <div className="space-y-6">
+          <div className="flex items-center">
+            <div className="flex-1">OrderId</div>
+            <div className="flex-1">Amount</div>
+            <div className="flex-1">Status</div>
+          </div>
           {/* Transactions */}
-          {transactions?.length > 0 && (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead>
-                  <tr>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Type
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {transactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {tx.type}
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                        {tx.amount} BUZZ
-                      </td>
-                      <td className="px-4 py-3 text-sm">
-                        <span
-                          className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            tx.status === "COMPLETED"
-                              ? "bg-green-100 text-green-800"
-                              : tx.status === "PENDING"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {tx.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-gray-500">
-                        {new Date(tx.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {userOrdersQuery.data?.map((order: any) => (
+            <div key={order.id} className="flex items-center">
+              <div className="flex-1">{order.id}</div>
+              <div className="flex-1">
+                {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
+              </div>
+              <div className="flex-1">
+                {order.status === 0 ? "Ongoing" : "Completed"}
+              </div>
             </div>
-          )}
+          ))}
 
           {/* Withdrawals */}
           {withdrawals?.length > 0 && (

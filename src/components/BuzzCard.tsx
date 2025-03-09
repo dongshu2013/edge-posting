@@ -5,7 +5,6 @@ import {
   DocumentDuplicateIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
-import { useAccount } from "wagmi";
 import Link from "next/link";
 import { useState } from "react";
 import ReplyLinkModal from "./ReplyLinkModal";
@@ -53,7 +52,6 @@ export default function BuzzCard({
   showViewReplies = true,
   isActive = true,
 }: BuzzCardProps) {
-  const { address } = useAccount();
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -73,14 +71,20 @@ export default function BuzzCard({
     }
   };
 
-  const handleReplySubmit = async (replyLink: string) => {
+  const handleReplySubmit = async ({
+    replyLink,
+    replyText,
+  }: {
+    replyLink: string;
+    replyText: string;
+  }) => {
     try {
       const response = await fetchApi("/api/reply", {
         method: "POST",
         body: JSON.stringify({
           buzzId: id,
           replyLink,
-          replier: address,
+          text: replyText,
         }),
       });
 

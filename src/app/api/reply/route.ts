@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { Prisma } from "@prisma/client";
 
 export async function POST(request: Request) {
   try {
@@ -33,16 +32,6 @@ export async function POST(request: Request) {
     // Get the buzz to check if it exists and is active
     const buzz = await prisma.buzz.findUnique({
       where: { id: buzzId },
-      select: {
-        id: true,
-        isActive: true,
-        deadline: true,
-        totalReplies: true,
-        replyCount: true,
-        price: true,
-        createdBy: true,
-        isSettled: true,
-      } as Prisma.BuzzSelect,
     });
 
     if (!buzz) {

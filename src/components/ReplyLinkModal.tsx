@@ -1,23 +1,35 @@
-import { Fragment, useState } from 'react';
-import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { Fragment, useState } from "react";
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface ReplyLinkModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (replyLink: string) => Promise<void>;
+  onSubmit: ({
+    replyLink,
+    replyText,
+  }: {
+    replyLink: string;
+    replyText: string;
+  }) => Promise<void>;
   buzzAmount?: number;
 }
 
-export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }: ReplyLinkModalProps) {
-  const [replyLink, setReplyLink] = useState('');
+export default function ReplyLinkModal({
+  isOpen,
+  onClose,
+  onSubmit,
+  buzzAmount,
+}: ReplyLinkModalProps) {
+  const [replyLink, setReplyLink] = useState("");
+  const [replyText, setReplyText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyLink.trim()) {
-      setError('Please enter a reply link');
+      setError("Please enter a reply link");
       return;
     }
 
@@ -25,11 +37,11 @@ export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }
     setError(null);
 
     try {
-      await onSubmit(replyLink);
-      setReplyLink('');
+      await onSubmit({ replyLink, replyText });
+      setReplyLink("");
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit reply');
+      setError(err instanceof Error ? err.message : "Failed to submit reply");
     } finally {
       setIsSubmitting(false);
     }
@@ -75,19 +87,26 @@ export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }
 
                 <div className="sm:flex sm:items-start">
                   <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <Dialog.Title as="h3" className="text-lg font-semibold leading-6 text-gray-900">
+                    <Dialog.Title
+                      as="h3"
+                      className="text-lg font-semibold leading-6 text-gray-900"
+                    >
                       Submit Your Reply
                     </Dialog.Title>
-                    
+
                     <div className="mt-4">
                       <p className="text-sm text-gray-500 mb-4">
-                        After posting your reply on Twitter, copy the link to your reply and paste it here
-                        {buzzAmount ? ` to earn ${buzzAmount} BUZZ` : ''}.
+                        After posting your reply on Twitter, copy the link to
+                        your reply and paste it here
+                        {buzzAmount ? ` to earn ${buzzAmount} BUZZ` : ""}.
                       </p>
 
                       <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                          <label htmlFor="replyLink" className="block text-sm font-medium text-gray-700">
+                          <label
+                            htmlFor="replyLink"
+                            className="block text-sm font-medium text-gray-700"
+                          >
                             Reply Link
                           </label>
                           <input
@@ -98,6 +117,24 @@ export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }
                             placeholder="https://twitter.com/..."
                             value={replyLink}
                             onChange={(e) => setReplyLink(e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <label
+                            htmlFor="replyLink"
+                            className="block text-sm font-medium text-gray-700"
+                          >
+                            Reply Text
+                          </label>
+                          <input
+                            type="url"
+                            name="replyText"
+                            id="replyText"
+                            className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                            placeholder="Hey, check out this reply!"
+                            value={replyText}
+                            onChange={(e) => setReplyText(e.target.value)}
                             required
                           />
                         </div>
@@ -114,7 +151,7 @@ export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }
                             disabled={isSubmitting}
                             className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {isSubmitting ? 'Submitting...' : 'Submit Reply'}
+                            {isSubmitting ? "Submitting..." : "Submit Reply"}
                           </button>
                           <button
                             type="button"
@@ -135,4 +172,4 @@ export default function ReplyLinkModal({ isOpen, onClose, onSubmit, buzzAmount }
       </Dialog>
     </Transition.Root>
   );
-} 
+}

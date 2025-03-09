@@ -9,16 +9,11 @@ import { useAuth } from "@/hooks/useAuth";
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  buzzAmount?: number;
 }
 
-export const PaymentModal = ({
-  isOpen,
-  onClose,
-  buzzAmount = 0,
-}: PaymentModalProps) => {
+export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
   const { user } = useAuth();
-  const [amount, setAmount] = useState<number>(buzzAmount);
+  const [amount, setAmount] = useState<number>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,6 +37,11 @@ export const PaymentModal = ({
   }, [isOpen]);
 
   const createOrder = async () => {
+    if (!amount) {
+      setError("Please enter an amount");
+      return;
+    }
+
     const resJson = await fetch(`${paymentServiceUrl}/create-order`, {
       method: "POST",
       headers: {
@@ -49,7 +49,7 @@ export const PaymentModal = ({
       },
       body: JSON.stringify({
         chainId: 84532,
-        amount: buzzAmount,
+        amount: amount,
         payerId: user?.uid,
         applicationId: paymentServiceApplicationId,
       }),
@@ -136,7 +136,6 @@ export const PaymentModal = ({
                           </label>
                           <div className="mt-1 relative rounded-xl shadow-sm">
                             <input
-                              disabled
                               type="number"
                               name="amount"
                               id="amount"
@@ -196,7 +195,7 @@ export const PaymentModal = ({
                         ) : (
                           <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                             <button
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || !amount}
                               className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => {
                                 createOrder();

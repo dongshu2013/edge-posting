@@ -412,7 +412,6 @@ export default function ProfilePage() {
 
       <PaymentModal
         isOpen={showDepositModal}
-        buzzAmount={2}
         onClose={() => {
           setShowDepositModal(false);
           fetchData();

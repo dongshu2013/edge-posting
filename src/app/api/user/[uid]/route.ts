@@ -12,8 +12,6 @@ export async function GET(
       return NextResponse.json({ error: "Missing user ID" }, { status: 400 });
     }
 
-    // await adminAuth.getUser(uid);
-
     const user = await prisma.user.findUnique({
       where: { uid },
     });

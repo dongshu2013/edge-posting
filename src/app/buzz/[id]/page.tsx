@@ -7,6 +7,7 @@ import BuzzCard from "@/components/BuzzCard";
 import ReplyCard from "@/components/ReplyCard";
 import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
+import { useUserStore } from "@/store/userStore";
 
 interface Reply {
   id: string;
@@ -29,13 +30,16 @@ interface Buzz {
   createdAt: Date;
   isActive: boolean;
   replies: Reply[];
+  hasReplied?: boolean;
 }
 
 export default function BuzzDetailPage() {
   const params = useParams();
+  const userInfo = useUserStore((state) => state.userInfo);
   const [buzz, setBuzz] = useState<Buzz | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasReplied, setHasReplied] = useState(false);
 
   useEffect(() => {
     const fetchBuzzDetails = async () => {
@@ -45,7 +49,15 @@ export default function BuzzDetailPage() {
         if (!data) {
           throw new Error(data.error || "Failed to fetch buzz details");
         }
+        // Wv2EKBQsykgWxbUtsVMNGpRAMuw1
+        console.log("🍓 User:", userInfo);
+        const replied = data.replies.some(
+          (reply: Reply) => reply.createdBy === userInfo?.uid
+        );
 
+        console.log("🍓Has replied:", replied);
+
+        setHasReplied(replied);
         setBuzz(data);
       } catch (err) {
         setError(
@@ -60,7 +72,7 @@ export default function BuzzDetailPage() {
     if (params.id) {
       fetchBuzzDetails();
     }
-  }, [params.id]);
+  }, [params.id, userInfo?.uid]);
 
   if (isLoading) {
     return (
@@ -121,6 +133,7 @@ export default function BuzzDetailPage() {
           createdAt={buzz.createdAt}
           isActive={buzz.isActive}
           showViewReplies={false}
+          hasReplied={hasReplied}
         />
       </div>
 

@@ -25,6 +25,7 @@ interface BuzzCardProps {
   createdAt?: Date;
   showViewReplies?: boolean;
   isActive?: boolean;
+  hasReplied?: boolean;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -59,6 +60,7 @@ export default function BuzzCard({
   createdAt,
   showViewReplies = true,
   isActive = true,
+  hasReplied = false,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -135,12 +137,16 @@ export default function BuzzCard({
     }
 
     return (
-      <button
-        onClick={handleReplyClick}
-        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
-      >
-        Reply & Earn {price} BUZZ
-      </button>
+      <>
+        {!hasReplied && (
+          <button
+            onClick={handleReplyClick}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
+          >
+            Reply & Earn {price} BUZZ
+          </button>
+        )}
+      </>
     );
   };
 

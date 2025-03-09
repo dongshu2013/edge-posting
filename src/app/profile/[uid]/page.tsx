@@ -52,9 +52,9 @@ export default function ProfilePage() {
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [showNicknameModal, setShowNicknameModal] = useState(false);
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [username, setUserName] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +68,13 @@ export default function ProfilePage() {
       // Fetch profile data
       console.log("Fetching profile data for:", params?.uid);
       const profileResponse = await fetchApi(`/api/user/${params?.uid}`, {
-        auth: true
+        auth: true,
       });
       console.log("Profile response:", profileResponse);
-      
+
       if (profileResponse) {
         setProfile(profileResponse);
-        setNickname(profileResponse.nickname || profileResponse.username || "");
+        setUserName(profileResponse.username || "");
       }
 
       try {
@@ -162,69 +162,55 @@ export default function ProfilePage() {
     }
   };
 
-  const handleUpdateNickname = async () => {
-    if (!nickname.trim()) {
-      setError("Nickname cannot be empty");
+  const handleUpdateUsername = async () => {
+    if (!username.trim()) {
+      setError("Username cannot be empty");
       return;
     }
-    
+
     if (!user || !user.uid) {
-      setError("You must be logged in to update your nickname");
+      setError("You must be logged in to update your username");
       return;
     }
-    
+
     try {
       setError(null);
-      console.log("Updating nickname for user:", user.uid);
-      console.log("New nickname:", nickname);
-      
-      // First, ensure we have the latest profile data
-      await fetchData();
-      
-      const response = await fetchApi(
-        `/api/user/${user.uid}/update-nickname`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            nickname,
-          }),
-          auth: true, // Explicitly set auth to true
-        }
-      );
+      const response = await fetchApi(`/api/user/${user.uid}/update-username`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username,
+        }),
+        auth: true, // Explicitly set auth to true
+      });
 
-      console.log("Update nickname response:", response);
-      
+      console.log("Update username response:", response);
+
       if (response) {
         // Update the user info in the store
         if (userInfo) {
           setUser({
             ...userInfo,
-            nickname: nickname,
+            username,
           });
         }
-        
+
         // Update the profile state
         if (profile) {
           setProfile({
             ...profile,
-            username: nickname,
+            username,
           });
         }
-        
-        setShowNicknameModal(false);
+        setShowUsernameModal(false);
         setError(null);
-        
-        // Show success message
-        alert("Nickname updated successfully!");
-        
-        // Refresh the page
-        window.location.reload();
+        alert("Username updated successfully!");
+        // window.location.reload();
       }
     } catch (error) {
-      console.error("Error updating nickname:", error);
+      console.error("Error updating username:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to update nickname"
+        error instanceof Error ? error.message : "Failed to update username"
       );
     }
   };
@@ -287,18 +273,18 @@ export default function ProfilePage() {
             Profile Details
           </h1>
           <button
-            onClick={() => setShowNicknameModal(true)}
+            onClick={() => setShowUsernameModal(true)}
             className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
           >
             <PencilIcon className="h-4 w-4 mr-1.5" />
-            Edit Nickname
+            Edit Username
           </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-sm text-gray-500">Nickname</p>
+            <p className="text-sm text-gray-500">Username</p>
             <p className="text-lg font-medium text-gray-900">
-              {profile.nickname || profile.username || "Not set"}
+              {profile.username || "Not set"}
             </p>
           </div>
           <div>
@@ -533,34 +519,33 @@ export default function ProfilePage() {
       )}
 
       {/* Nickname Modal */}
-      {showNicknameModal && (
+      {showUsernameModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-2xl font-semibold mb-4">Update Nickname</h2>
-            
+            <h2 className="text-2xl font-semibold mb-4">Update Username</h2>
+
             <div className="mb-4">
-              <label htmlFor="nickname" className="block text-sm font-medium text-gray-700 mb-1">
-                Nickname
+              <label
+                htmlFor="username"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                Username
               </label>
               <input
                 type="text"
-                id="nickname"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
+                id="username"
+                value={username}
+                onChange={(e) => setUserName(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500"
               />
             </div>
-            
-            {error && (
-              <div className="mb-4 text-red-600 text-sm">
-                {error}
-              </div>
-            )}
-            
+
+            {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
+
             <div className="flex justify-end space-x-3">
               <button
                 onClick={() => {
-                  setShowNicknameModal(false);
+                  setShowUsernameModal(false);
                   setError(null);
                 }}
                 className="px-4 py-2 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
@@ -568,7 +553,7 @@ export default function ProfilePage() {
                 Cancel
               </button>
               <button
-                onClick={handleUpdateNickname}
+                onClick={handleUpdateUsername}
                 className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl hover:from-indigo-600 hover:to-purple-700"
               >
                 Save

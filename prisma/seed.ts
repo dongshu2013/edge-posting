@@ -6,8 +6,8 @@ const prisma = new PrismaClient();
 // User IDs
 const userIds = [
   "0vfCtg69CQOaigET62k2Tlt0e4r2", // Real Firebase user
-  "user_01",                       // Seed user
-  "user_02",                       // Seed user
+  "user_01", // Seed user
+  "user_02", // Seed user
 ];
 
 // Sample users data
@@ -121,7 +121,8 @@ async function seedBuzzes() {
       prisma.buzz.create({
         data: {
           tweetLink: tweetLinks[Math.floor(Math.random() * tweetLinks.length)],
-          instructions: instructions[Math.floor(Math.random() * instructions.length)],
+          instructions:
+            instructions[Math.floor(Math.random() * instructions.length)],
           price: 0.1,
           createdBy: userId,
           deadline: new Date("2023-12-31"), // Expired
@@ -138,7 +139,8 @@ async function seedBuzzes() {
       prisma.buzz.create({
         data: {
           tweetLink: tweetLinks[Math.floor(Math.random() * tweetLinks.length)],
-          instructions: instructions[Math.floor(Math.random() * instructions.length)],
+          instructions:
+            instructions[Math.floor(Math.random() * instructions.length)],
           price: 0.2,
           createdBy: userId,
           deadline: new Date("2035-12-31"), // Far in the future
@@ -162,21 +164,31 @@ async function seedReplies(buzzes: { id: string }[]) {
   // Create 5-10 replies for each buzz
   for (const buzz of buzzes) {
     const replyCount = 5 + Math.floor(Math.random() * 6); // 5-10 replies
-    
+
     for (let i = 0; i < replyCount; i++) {
       // Randomly select a user who didn't create the buzz
       const buzzCreator = await prisma.buzz.findUnique({
         where: { id: buzz.id },
         select: { createdBy: true },
       });
-      
-      const availableUsers = userIds.filter(id => id !== buzzCreator?.createdBy);
-      const replyCreator = availableUsers[Math.floor(Math.random() * availableUsers.length)];
-      
+
+      const availableUsers = userIds.filter(
+        (id) => id !== buzzCreator?.createdBy
+      );
+      const replyCreator =
+        availableUsers[Math.floor(Math.random() * availableUsers.length)];
+
       // Random status with higher probability for APPROVED
-      const statusOptions: ReplyStatus[] = ["PENDING", "APPROVED", "APPROVED", "APPROVED", "REJECTED"] as ReplyStatus[];
-      const status = statusOptions[Math.floor(Math.random() * statusOptions.length)];
-      
+      const statusOptions: ReplyStatus[] = [
+        "PENDING",
+        "APPROVED",
+        "APPROVED",
+        "APPROVED",
+        "REJECTED",
+      ] as ReplyStatus[];
+      const status =
+        statusOptions[Math.floor(Math.random() * statusOptions.length)];
+
       replies.push(
         prisma.reply.create({
           data: {
@@ -185,7 +197,9 @@ async function seedReplies(buzzes: { id: string }[]) {
             replyLink: `https://x.com/user/status/${randomUUID()}`,
             createdBy: replyCreator,
             status: status,
-            createdAt: new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)), // Random date in the last 30 days
+            createdAt: new Date(
+              Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)
+            ), // Random date in the last 30 days
           },
         })
       );

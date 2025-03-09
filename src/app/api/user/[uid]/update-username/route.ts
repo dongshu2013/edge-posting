@@ -6,8 +6,8 @@ export async function POST(
   { params }: { params: { uid: string } }
 ) {
   try {
-    console.log("Update nickname request received for user:", params.uid);
-    
+    console.log("Update username request received for user:", params.uid);
+
     // Get auth token from request headers
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
@@ -24,46 +24,52 @@ export async function POST(
 
     // Verify token by calling our verify-token endpoint
     try {
-      const verifyResponse = await fetch(new URL("/api/auth/verify-token", request.url), {
-        method: "POST",
-        headers: {
-          Authorization: authHeader,
-        },
-      });
+      const verifyResponse = await fetch(
+        new URL("/api/auth/verify-token", request.url),
+        {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+          },
+        }
+      );
 
       if (!verifyResponse.ok) {
-        console.error("Token verification failed:", await verifyResponse.text());
+        console.error(
+          "Token verification failed:",
+          await verifyResponse.text()
+        );
         return NextResponse.json({ error: "Invalid token" }, { status: 401 });
       }
 
       const userData = await verifyResponse.json();
       console.log("User data from token:", userData);
-      
+
       const { uid } = params;
 
-      // Only allow users to update their own nickname
+      // Only allow users to update their own username
       if (userData.uid !== uid) {
         console.error("User ID mismatch:", userData.uid, "vs", uid);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
       const body = await request.json();
-      const { nickname } = body;
+      const { username } = body;
 
-      if (!nickname) {
-        console.error("Nickname is required");
+      if (!username) {
+        console.error("username is required");
         return NextResponse.json(
-          { error: "Nickname is required" },
+          { error: "username is required" },
           { status: 400 }
         );
       }
 
-      console.log("Updating nickname for user:", uid, "to:", nickname);
+      console.log("Updating username for user:", uid, "to:", username);
 
-      // Check if nickname is already taken by another user
+      // Check if username is already taken by another user
       const existingUser = await prisma.user.findFirst({
         where: {
-          nickname,
+          username,
           NOT: {
             uid: userData.uid,
           },
@@ -71,9 +77,9 @@ export async function POST(
       });
 
       if (existingUser) {
-        console.error("Nickname already taken:", nickname);
+        console.error("Nickname already taken:", username);
         return NextResponse.json(
-          { error: "Nickname is already taken" },
+          { error: "username is already taken" },
           { status: 400 }
         );
       }
@@ -81,17 +87,20 @@ export async function POST(
       // Update nickname
       const updatedUser = await prisma.user.update({
         where: { uid: userData.uid },
-        data: { nickname },
+        data: { username },
       });
 
-      console.log("Nickname updated successfully:", updatedUser);
+      console.log("Username updated successfully:", updatedUser);
       return NextResponse.json(updatedUser);
     } catch (verifyError) {
       console.error("Error verifying token:", verifyError);
-      return NextResponse.json({ error: "Authentication failed" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication failed" },
+        { status: 401 }
+      );
     }
   } catch (error) {
-    console.error("Error updating nickname:", error);
+    console.error("Error updating username:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

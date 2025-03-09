@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// import { adminAuth } from "@/lib/firebase-admin";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
@@ -17,17 +16,6 @@ export async function GET(
 
     const user = await prisma.user.findUnique({
       where: { uid },
-      select: {
-        uid: true,
-        email: true,
-        username: true,
-        nickname: true,
-        avatar: true,
-        bio: true,
-        totalEarned: true,
-        balance: true,
-        createdAt: true,
-      },
     });
 
     if (!user) {

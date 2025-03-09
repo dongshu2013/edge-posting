@@ -24,7 +24,7 @@ export async function POST(request: Request) {
         uid,
         email,
         username,
-        nickname,
+        nickname: nickname || username,
         avatar:
           avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
         totalEarned: 0,

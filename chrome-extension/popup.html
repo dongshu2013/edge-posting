@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BUZZ Reply Helper</title>
+  <meta charset="utf-8">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      width: 320px;
+      padding: 16px;
+      background: linear-gradient(to right, #f5f7fa, #eef2f7);
+    }
+    .container {
+      background-color: white;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      font-size: 18px;
+      color: #4f46e5;
+      margin-top: 0;
+      margin-bottom: 16px;
+      text-align: center;
+    }
+    .status {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      text-align: center;
+      background-color: #dcfce7;
+      color: #166534;
+    }
+    .settings {
+      margin-top: 16px;
+    }
+    .settings h2 {
+      font-size: 14px;
+      color: #4b5563;
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+    .settings label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: #4b5563;
+    }
+    .settings input[type="checkbox"] {
+      margin-right: 8px;
+    }
+    .footer {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+    }
+    .buzz-count {
+      font-weight: bold;
+      color: #f59e0b;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    button {
+      background: linear-gradient(to right, #4f46e5, #7c3aed);
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-1px);
+    }
+    button:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+      transform: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>BUZZ Reply Helper</h1>
+    
+    <div class="status">
+      🐝 Automatically enhancing Edge Posting
+    </div>
+    
+    <div class="settings">
+      <h2>Reply Settings</h2>
+      <label>
+        <input type="checkbox" id="autoSubmitCheckbox" checked>
+        Auto-submit replies
+      </label>
+      <label>
+        <input type="checkbox" id="closeTabCheckbox" checked>
+        Auto-close Twitter window after reply
+      </label>
+    </div>
+    
+    <div class="button-container">
+      <button id="resetStatsBtn">Reset Stats</button>
+    </div>
+    
+    <div class="footer">
+      Total earned: <span id="buzzEarned" class="buzz-count">0</span> BUZZ
+    </div>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html> 

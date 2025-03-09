@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "BUZZ Reply Helper",
+  "version": "1.0",
+  "description": "Automates the reply process for Edge Posting platform to earn BUZZ tokens",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "tabs",
+    "storage",
+    "windows"
+  ],
+  "host_permissions": [
+    "https://twitter.com/*",
+    "https://x.com/*",
+    "http://localhost:*/*",
+    "https://edge-posting.vercel.app/*",
+    "https://*.vercel.app/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "images/icon16.svg",
+      "48": "images/icon48.svg",
+      "128": "images/icon128.svg"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://twitter.com/*", "https://x.com/*"],
+      "js": ["twitter-content.js"]
+    },
+    {
+      "matches": [
+        "http://localhost:*/*",
+        "https://edge-posting.vercel.app/*",
+        "https://*.vercel.app/*"
+      ],
+      "js": ["edge-posting-content.js"]
+    }
+  ],
+  "icons": {
+    "16": "images/icon16.svg",
+    "48": "images/icon48.svg",
+    "128": "images/icon128.svg"
+  }
+} 

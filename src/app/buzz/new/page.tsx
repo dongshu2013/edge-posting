@@ -12,7 +12,7 @@ export default function NewBuzzPage() {
   const [formData, setFormData] = useState({
     tweetLink: "",
     instructions: "",
-    pricePerReply: 0.01,
+    pricePerReply: 1,
     numberOfReplies: 100,
     deadline: 1,
   });

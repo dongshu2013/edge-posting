@@ -1,4 +1,4 @@
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 
@@ -13,6 +13,7 @@ interface ReplyLinkModalProps {
     replyText: string;
   }) => Promise<void>;
   buzzAmount?: number;
+  initialReplyText?: string; // 添加新的 prop
 }
 
 export default function ReplyLinkModal({
@@ -20,9 +21,16 @@ export default function ReplyLinkModal({
   onClose,
   onSubmit,
   buzzAmount,
+  initialReplyText = "", // 设置默认值
 }: ReplyLinkModalProps) {
   const [replyLink, setReplyLink] = useState("");
-  const [replyText, setReplyText] = useState("");
+  const [replyText, setReplyText] = useState(initialReplyText); // 使用初始值
+
+  // 当 initialReplyText 改变时更新 replyText
+  useEffect(() => {
+    setReplyText(initialReplyText);
+  }, [initialReplyText]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -128,7 +136,7 @@ export default function ReplyLinkModal({
                             Reply Text
                           </label>
                           <input
-                            type="url"
+                            type="text"
                             name="replyText"
                             id="replyText"
                             className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"

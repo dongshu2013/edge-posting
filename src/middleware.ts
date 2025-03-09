@@ -2,18 +2,19 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { protectedRoutes, isProtectedRoute } from "@/lib/routes";
 
-async function verifyAuthToken(token: string, requestUrl: string) {
+async function verifyAuthToken(token: string, requestUrl: URL) {
   const verifyResponse = await fetch(
     new URL("/api/auth/verify-token", requestUrl),
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
       },
     }
   );
 
   if (!verifyResponse.ok) {
+    console.log("Token verification failed:", await verifyResponse.text());
     return null;
   }
 
@@ -23,7 +24,9 @@ async function verifyAuthToken(token: string, requestUrl: string) {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
+  // API 路由处理
   if (path.startsWith("/api")) {
+    // 避免验证接口自身，防止循环调用
     if (path === "/api/auth/verify-token") {
       return NextResponse.next();
     }
@@ -32,15 +35,15 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const authHeader = request.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader) {
       return NextResponse.json(
-        { error: "Missing or invalid authorization header" },
+        { error: "Missing authorization header" },
         { status: 401 }
       );
     }
 
-    const userData = await verifyAuthToken(authHeader, request.url);
+    const userData = await verifyAuthToken(authHeader, request.nextUrl);
     if (!userData) {
       return NextResponse.json(
         { error: "Invalid or expired token" },

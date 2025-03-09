@@ -120,6 +120,7 @@ export default function BuzzDetailPage() {
           deadline={buzz.deadline}
           createdAt={buzz.createdAt}
           isActive={buzz.isActive}
+          showViewReplies={false}
         />
       </div>
 

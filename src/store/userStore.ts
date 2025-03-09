@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { UserInfo } from "@/hooks/useUserInfo";
+import { UserInfo } from "@/types/user";
 
 interface UserState {
   userInfo: UserInfo | null;

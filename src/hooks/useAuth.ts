@@ -13,18 +13,7 @@ import {
 } from "firebase/auth";
 import { auth, googleProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
-
-export interface UserInfo {
-  uid: string;
-  email: string | null;
-  username: string | null;
-  nickname: string | null;
-  avatar: string | null;
-  bio: string | null;
-  totalEarned: number;
-  balance: number;
-  createdAt: Date;
-}
+import { UserInfo } from "@/types/user";
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(auth?.currentUser || null);

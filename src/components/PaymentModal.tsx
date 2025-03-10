@@ -8,9 +8,14 @@ import { useAuth } from "@/hooks/useAuth";
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess: () => void;
 }
 
-export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
+export const PaymentModal = ({
+  isOpen,
+  onClose,
+  onSuccess,
+}: PaymentModalProps) => {
   const { user } = useAuth();
   const [amount, setAmount] = useState<number>();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,7 +72,7 @@ export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
 
     if (resJson?.data?.order?.status === 1) {
       setError(null);
-      onClose();
+      onSuccess();
     } else {
       setError("Order is not paid");
     }
@@ -146,7 +151,6 @@ export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
                               }
                               min="0.01"
                               step="0.01"
-                              required
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-r-xl">
                               <span className="text-sm font-medium">BUZZ</span>
@@ -183,7 +187,7 @@ export const PaymentModal = ({ isOpen, onClose }: PaymentModalProps) => {
 
                             <button
                               disabled={isSubmitting}
-                              className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => {
                                 checkOrder(ongoingOrderQuery.data.id);
                               }}

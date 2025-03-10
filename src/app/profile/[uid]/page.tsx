@@ -47,12 +47,14 @@ export default function ProfilePage() {
   const [withdrawAddress, setWithdrawAddress] = useState("");
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [username, setUserName] = useState("");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("deposits");
 
   const userOrdersQuery = useQuery({
     queryKey: ["payment-user-orders", user?.uid],
@@ -133,11 +135,12 @@ export default function ProfilePage() {
   }, [userInfo, loading, router, params.uid, user, fetchData]);
 
   const handleWithdraw = async () => {
-    if (!withdrawAddress || !withdrawAmount) return;
+    if (!withdrawAddress || !withdrawAmount||withdrawLoading) return;
 
     try {
+      setWithdrawLoading(true);
       localStorage.setItem("lastWithdrawAddress", withdrawAddress);
-      const response = await fetchApi("/api/withdraw", {
+      const resJson = await fetchApi("/api/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -146,16 +149,18 @@ export default function ProfilePage() {
         }),
       });
 
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to withdraw");
+      if (!resJson) {
+        setError("Failed to withdraw");
+        return;
       }
 
       setShowWithdrawModal(false);
-      router.refresh();
+      fetchData();
     } catch (error) {
       console.error("Error withdrawing:", error);
       setError(error instanceof Error ? error.message : "Failed to withdraw");
+    } finally {
+      setWithdrawLoading(false);
     }
   };
 
@@ -304,94 +309,152 @@ export default function ProfilePage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           Payment History
         </h2>
-        <div className="space-y-6">
-          <div className="flex items-center">
-            <div className="flex-1">OrderId</div>
-            <div className="flex-1">Amount</div>
-            <div className="flex-1">Status</div>
-          </div>
-          {/* Transactions */}
-          {userOrdersQuery.data?.map(
-            (order: {
-              id: string;
-              transfer_amount_on_chain: string;
-              status: number;
-            }) => (
-              <div key={order.id} className="flex items-center">
-                <div className="flex-1">{order.id}</div>
-                <div className="flex-1">
-                  {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
-                </div>
-                <div className="flex-1">
-                  {order.status === 0 ? "Ongoing" : "Completed"}
-                </div>
-              </div>
-            )
-          )}
+        
+        {/* Tabs */}
+        <div className="border-b border-gray-200 mb-6">
+          <nav className="-mb-px flex space-x-8">
+            <button
+              onClick={() => setActiveTab("deposits")}
+              className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "deposits"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Deposits
+            </button>
+            <button
+              onClick={() => setActiveTab("withdrawals")}
+              className={`whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === "withdrawals"
+                  ? "border-indigo-500 text-indigo-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              Withdrawals
+            </button>
+          </nav>
+        </div>
 
-          {/* Withdrawals */}
-          {withdrawals?.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Withdrawals
-              </h3>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead>
-                    <tr>
-                      <th className="px-4 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase">
-                        Amount
-                      </th>
-                      <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                        Address
-                      </th>
-                      <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
-                        Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {withdrawals.map((withdrawal) => (
-                      <tr key={withdrawal.id}>
-                        <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                          {withdrawal.amount} BUZZ
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {`${withdrawal.address.slice(
-                            0,
-                            6
-                          )}...${withdrawal.address.slice(-4)}`}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span
-                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                              withdrawal.status === "COMPLETED"
-                                ? "bg-green-100 text-green-800"
-                                : withdrawal.status === "PENDING"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {withdrawal.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {new Date(withdrawal.createdAt).toLocaleDateString()}
-                        </td>
+        <div className="space-y-6">
+          {/* Deposits Tab */}
+          {activeTab === "deposits" && (
+            <div>
+              {userOrdersQuery.data?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Order ID
+                        </th>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Amount
+                        </th>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Status
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {userOrdersQuery.data?.map(
+                        (order: {
+                          id: string;
+                          transfer_amount_on_chain: string;
+                          status: number;
+                        }) => (
+                          <tr key={order.id}>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {order.id}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)} BUZZ
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              <span
+                                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                  order.status === 0
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-green-100 text-green-800"
+                                }`}
+                              >
+                                {order.status === 0 ? "Ongoing" : "Completed"}
+                              </span>
+                            </td>
+                          </tr>
+                        )
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No deposit history yet
+                </div>
+              )}
             </div>
           )}
 
-          {transactions.length === 0 && withdrawals.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No payment history yet
+          {/* Withdrawals Tab */}
+          {activeTab === "withdrawals" && (
+            <div>
+              {withdrawals?.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead>
+                      <tr>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Amount
+                        </th>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Address
+                        </th>
+                        <th className="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 bg-gray-50 text-right text-xs font-medium text-gray-500 uppercase">
+                          Date
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {withdrawals.map((withdrawal) => (
+                        <tr key={withdrawal.id}>
+                          <td className="px-4 py-3 text-sm text-gray-900 text-left">
+                            {withdrawal.amount} BUZZ
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {`${withdrawal.address.slice(
+                              0,
+                              6
+                            )}...${withdrawal.address.slice(-4)}`}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <span
+                              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                withdrawal.status === "COMPLETED"
+                                  ? "bg-green-100 text-green-800"
+                                  : withdrawal.status === "PENDING"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                              }`}
+                            >
+                              {withdrawal.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-500">
+                            {new Date(withdrawal.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No withdrawal history yet
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -400,6 +463,9 @@ export default function ProfilePage() {
       <PaymentModal
         isOpen={showDepositModal}
         onClose={() => {
+          setShowDepositModal(false);
+        }}
+        onSuccess={() => {
           setShowDepositModal(false);
           fetchData();
         }}
@@ -447,10 +513,11 @@ export default function ProfilePage() {
               {error && <p className="text-sm text-red-600">{error}</p>}
               <div className="flex gap-4">
                 <button
+                  disabled={withdrawLoading}
                   onClick={handleWithdraw}
                   className="flex-1 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
                 >
-                  Withdraw
+                  {withdrawLoading ? "Withdrawing..." : "Withdraw"}
                 </button>
                 <button
                   onClick={() => setShowWithdrawModal(false)}

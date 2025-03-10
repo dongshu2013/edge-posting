@@ -106,11 +106,10 @@ export default function MyBuzzesPage() {
   // Sort and filter buzzes
   const sortedBuzzes = [...buzzes]
     .filter((buzz) => {
+      if (!onlyActive) return true;
+      const deadlineTime = new Date(buzz.deadline).getTime();
       const currentTime = Date.now();
-      if (onlyActive) {
-        return buzz.isActive && new Date(buzz.deadline).getTime() > currentTime;
-      }
-      return true;
+      return buzz.isActive && currentTime < deadlineTime;
     })
     .sort((a, b) => {
       switch (sortBy) {

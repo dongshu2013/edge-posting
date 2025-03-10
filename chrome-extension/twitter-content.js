@@ -205,7 +205,7 @@ async function autoClickReplyButton() {
           simulateRealClick(aiButton);
           
           // Check again after a short delay
-          setTimeout(() => {
+    setTimeout(() => {
             const tweetInputs = document.querySelectorAll('div[contenteditable="true"]');
             resolve(tweetInputs.length > 0);
           }, 1000);
@@ -414,7 +414,7 @@ async function findTweetButtonWithAI() {
             if (element) {
               console.log('Found element at coordinates:', element);
               resolve(element);
-              return;
+    return;
             }
           }
         }
@@ -678,9 +678,9 @@ function initTwitterContentScript() {
                       action: 'closeTwitterWindow'
                     });
                   }
-                });
-              }
-            });
+        });
+      }
+    });
           }
         }
       }
@@ -804,7 +804,7 @@ function handleTwitterIntent(badge) {
                   console.log('Window close response:', closeResponse);
                 });
               });
-            } else {
+    } else {
               console.warn('No reply URL found to capture');
               // Still close the window even if we don't have a URL
               chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
@@ -844,7 +844,7 @@ function handleTwitterIntent(badge) {
           // For textareas
           if (tweetInputs[0].tagName === 'TEXTAREA') {
             tweetInputs[0].value = replyText;
-          } else {
+    } else {
             // For contenteditable divs
             tweetInputs[0].textContent = replyText;
             tweetInputs[0].innerHTML = replyText;
@@ -905,7 +905,7 @@ function handleTwitterIntent(badge) {
                   if (result.lastReplyUrl) {
                     console.log('Using stored reply URL:', result.lastReplyUrl);
                     await handleTweetSuccess(result.lastReplyUrl);
-                  } else {
+  } else {
                     console.warn('No stored URL found after home redirect');
                     await requestWindowClose('No URL but redirected to home');
                   }
@@ -990,7 +990,7 @@ function requestWindowClose(reason) {
           console.error('Failed to close window:', e);
           resolve(false);
         }
-      } else {
+    } else {
         resolve(true);
       }
     });

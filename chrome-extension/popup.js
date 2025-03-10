@@ -249,17 +249,16 @@ document.addEventListener('DOMContentLoaded', function() {
         
         CRITICAL REQUIREMENTS:
         1. Each buzz card MUST have a unique and correct ID
-        2. Each buzz card MUST have a precise CSS selector that targets ONLY its specific "Reply & Earn X BUZZ" button
+        2. Each buzz card MUST have a precise CSS selector that targets ONLY its specific "Reply & Earn X BUZZ" or "Reply (No Reward)" button
         3. Each buzz card MUST have the correct tweet link
         
         For each buzz card, identify:
         - id: The exact unique identifier for this specific buzz card (string, often a UUID or data attribute)
-        - buttonSelector: A precise CSS selector that will target ONLY the "Reply & Earn X BUZZ" button for this specific buzz card
+        - buttonSelector: A precise CSS selector that will target ONLY the "Reply & Earn X BUZZ" or "Reply (No Reward)" button for this specific buzz card
         - tweetLink: The exact Twitter/X URL that users need to reply to (string)
         - instructions: The instructions for replying (string)
-        - price: The BUZZ token reward amount (number)
-        - replyCount: Current number of replies (number)
-        - totalReplies: Maximum number of replies allowed (number)
+        - replyCount: Current number of replies (number), every buzz cards is with "View X Replies" button where X is the total replies allowed
+        - totalDeposits: the total amount of BUZZ tokens deposited for this buzz card (number)
         - createdBy: Creator's address or username (string)
         - username: Display name of creator (string)
         
@@ -345,9 +344,7 @@ document.addEventListener('DOMContentLoaded', function() {
             buttonSelector: card.buttonSelector,
             tweetLink: card.tweetLink,
             instructions: card.instructions || 'No instructions provided',
-            price: card.price || 0,
             replyCount: card.replyCount || 0,
-            totalReplies: card.totalReplies || 0,
             createdBy: card.createdBy || 'Unknown',
             username: card.username || 'Unknown'
           };
@@ -389,8 +386,8 @@ document.addEventListener('DOMContentLoaded', function() {
         <h3>${truncateText(buzz.instructions, 50)}</h3>
         <p class="creator">Created by: ${buzz.username || 'Unknown'}</p>
         <p>Tweet: ${truncateText(buzz.tweetLink, 30)}</p>
-        <p class="price">Reward: ${buzz.price} BUZZ</p>
-        <p>Replies: ${buzz.replyCount || 0}/${buzz.totalReplies || '?'}</p>
+        <p class="Total Rewards">Total Rewards: ${buzz.totalDeposits} BUZZ</p>
+        <p>Replies: ${buzz.replyCount || 0}</p>
         <p class="buzz-id">ID: ${truncateText(buzz.id, 15)}</p>
         <div class="actions">
           <button class="reply-btn" data-buzz-id="${buzz.id}" data-button-selector="${buzz.buttonSelector || ''}" data-tweet-link="${buzz.tweetLink || ''}">Reply Now</button>

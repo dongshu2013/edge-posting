@@ -112,55 +112,45 @@ export default function BuzzCard({
     }
   };
 
-  const getRandomReplyText = async () => {
-    try {
-      const response = await fetchApi("/api/generate-reply", {
-        method: "POST",
-        body: JSON.stringify({
-          instructions,
-        }),
-      });
-
-      if (response.error) {
-        // 如果 AI 生成失败，回退到模板
-        const template =
-          replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
-        return template.replace("{{instructions}}", instructions);
-      }
-
-      return response.text;
-    } catch (error) {
-      console.error("Failed to generate reply:", error);
-      // 发生错误时回退到模板
-      const template =
-        replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
-      return template.replace("{{instructions}}", instructions);
-    }
+  const getRandomReplyText = () => {
+    const template =
+      replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+    return template;
   };
 
-  const handleReplyClick = async () => {
-    const replyText = await getRandomReplyText();
-
+  const handleReplyClick = () => {
+    const replyText = getRandomReplyText();
+    
     // Configure popup window dimensions
     const width = 600;
     const height = 700;
     const left = (window.screen.width - width) / 2;
     const top = (window.screen.height - height) / 2;
-
+    
     // Open Twitter in a popup window instead of a new tab
     window.open(
       getReplyIntentUrl(tweetLink, replyText),
       "twitter_popup",
       `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
     );
-
+    
     setIsReplyModalOpen(true);
-    setGeneratedReplyText(replyText);
+    setGeneratedReplyText(replyText); // 保存生成的文案
   };
 
   const renderReplyButton = () => {
-    if (!isActive) {
-      return <span className="text-gray-500">Expired</span>;
+    if (!isActive || isExpired) {
+      if (!user) {
+        return <AuthButton buttonText="Reply (No Reward)" />;
+      }
+      return (
+        <button
+          onClick={handleReplyClick}
+          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+        >
+          Reply (No Reward)
+        </button>
+      );
     }
 
     if (replyCount >= totalReplies) {

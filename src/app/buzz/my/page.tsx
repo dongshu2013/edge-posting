@@ -105,7 +105,13 @@ export default function MyBuzzesPage() {
 
   // Sort and filter buzzes
   const sortedBuzzes = [...buzzes]
-    .filter((buzz) => (onlyActive ? buzz.isActive : true))
+    .filter((buzz) => {
+      const currentTime = Date.now();
+      if (onlyActive) {
+        return buzz.isActive && new Date(buzz.deadline).getTime() > currentTime;
+      }
+      return true;
+    })
     .sort((a, b) => {
       switch (sortBy) {
         case "price":

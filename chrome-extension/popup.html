@@ -6,7 +6,7 @@
   <style>
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      width: 320px;
+      width: 400px;
       padding: 16px;
       background: linear-gradient(to right, #f5f7fa, #eef2f7);
     }
@@ -32,8 +32,28 @@
       background-color: #dcfce7;
       color: #166534;
     }
+    .status button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      margin-left: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .status button:hover {
+      background: #059669;
+      transform: translateY(-1px);
+    }
     .settings {
       margin-top: 16px;
+      margin-bottom: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      background-color: #f3f4f6;
     }
     .settings h2 {
       font-size: 14px;
@@ -50,29 +70,81 @@
     .settings input[type="checkbox"] {
       margin-right: 8px;
     }
-    .footer {
+    .settings input[type="text"], .settings input[type="password"], .settings select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      margin-bottom: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    .settings .api-key-container {
+      position: relative;
+    }
+    .settings .toggle-visibility {
+      position: absolute;
+      right: 10px;
+      top: 35px;
+      cursor: pointer;
+      color: #6b7280;
+    }
+    .buzz-list {
+      max-height: 400px;
+      overflow-y: auto;
       margin-top: 16px;
+    }
+    .buzz-card {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      transition: all 0.2s;
+    }
+    .buzz-card:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+      transform: translateY(-2px);
+    }
+    .buzz-card h3 {
+      font-size: 14px;
+      margin: 0 0 8px 0;
+      color: #1f2937;
+    }
+    .buzz-card p {
+      font-size: 12px;
+      margin: 4px 0;
+      color: #4b5563;
+    }
+    .buzz-card .creator {
       font-size: 12px;
       color: #6b7280;
-      text-align: center;
+      margin-bottom: 8px;
     }
-    .buzz-count {
+    .buzz-card .price {
       font-weight: bold;
       color: #f59e0b;
     }
-    .button-container {
+    .buzz-card .buzz-id {
+      font-size: 10px;
+      color: #9ca3af;
+      margin-top: 4px;
+      font-family: monospace;
+    }
+    .buzz-card .actions {
       display: flex;
-      justify-content: center;
-      margin-top: 16px;
+      justify-content: flex-end;
+      margin-top: 8px;
     }
     button {
       background: linear-gradient(to right, #4f46e5, #7c3aed);
       color: white;
       border: none;
-      padding: 10px 16px;
-      border-radius: 8px;
+      padding: 8px 12px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: 500;
+      font-size: 12px;
       transition: all 0.2s;
     }
     button:hover {
@@ -84,6 +156,60 @@
       cursor: not-allowed;
       transform: none;
     }
+    .empty-state {
+      text-align: center;
+      padding: 24px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .refresh-button {
+      display: block;
+      margin: 16px auto;
+    }
+    .footer {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #6b7280;
+      text-align: center;
+    }
+    .loading {
+      text-align: center;
+      padding: 24px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    .error {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      text-align: center;
+      background-color: #fee2e2;
+      color: #b91c1c;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 16px;
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      color: #6b7280;
+    }
+    .tab.active {
+      border-bottom: 2px solid #4f46e5;
+      color: #4f46e5;
+      font-weight: 500;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -91,27 +217,59 @@
     <h1>BUZZ Reply Helper</h1>
     
     <div class="status">
-      🐝 Automatically enhancing Edge Posting
+      🐝 AI-powered Reply & Earn button finder
     </div>
     
-    <div class="settings">
-      <h2>Reply Settings</h2>
-      <label>
-        <input type="checkbox" id="autoSubmitCheckbox" checked>
-        Auto-submit replies
-      </label>
-      <label>
-        <input type="checkbox" id="closeTabCheckbox" checked>
-        Auto-close Twitter window after reply
-      </label>
+    <div class="tabs">
+      <div class="tab active" data-tab="buzz-list">Buzz List</div>
+      <div class="tab" data-tab="settings">Settings</div>
     </div>
     
-    <div class="button-container">
-      <button id="resetStatsBtn">Reset Stats</button>
+    <div id="buzz-list-tab" class="tab-content active">
+      <button id="refreshButton" class="refresh-button">Refresh Buzz List</button>
+      
+      <div id="buzzList" class="buzz-list">
+        <div class="loading">
+          Loading buzz cards...
+        </div>
+      </div>
+    </div>
+    
+    <div id="settings-tab" class="tab-content">
+      <div class="settings">
+        <h2>AI Settings</h2>
+        <label>
+          OpenRouter API Key:
+          <div class="api-key-container">
+            <input type="password" id="apiKeyInput" placeholder="Enter your OpenRouter API key">
+            <span class="toggle-visibility" id="toggleApiKey">👁️</span>
+          </div>
+        </label>
+        <label>
+          AI Model:
+          <select id="modelSelect">
+            <option value="google/gemini-2.0-flash-001">Gemini 2.0 Flash</option>
+            <option value="openai/gpt-4-turbo">GPT-4 Turbo</option>
+            <option value="anthropic/claude-3-opus">Claude 3 Opus</option>
+            <option value="anthropic/claude-3-sonnet">Claude 3 Sonnet</option>
+            <option value="meta-llama/llama-3-70b-instruct">Llama 3 70B</option>
+          </select>
+        </label>
+        
+        <h2>Twitter Settings</h2>
+        <label>
+          <input type="checkbox" id="autoSubmitCheckbox" checked>
+          Auto-submit replies
+        </label>
+        <label>
+          <input type="checkbox" id="closeTabCheckbox" checked>
+          Auto-close Twitter window after reply
+        </label>
+      </div>
     </div>
     
     <div class="footer">
-      Total earned: <span id="buzzEarned" class="buzz-count">0</span> BUZZ
+      Made with ❤️ for Edge Posting
     </div>
   </div>
   

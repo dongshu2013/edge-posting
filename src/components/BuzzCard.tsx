@@ -42,11 +42,11 @@ const getEmbedUrl = (tweetUrl: string) => {
 };
 
 const replyTemplates = [
-  "Great point! 🎯 {{instructions}}",
-  "Interesting perspective! 💡 {{instructions}}",
-  "Love this! ✨ {{instructions}}",
-  "Absolutely agree! 💯 {{instructions}}",
-  "This is fascinating! 🌟 {{instructions}}",
+  "[Test] Great point! 🎯 ",
+  "[Test] Interesting perspective! 💡",
+  "[Test] Love this! ✨",
+  "[Test] Absolutely agree! 💯",
+  "[Test] This is fascinating! 🌟",
 ];
 
 export default function BuzzCard({
@@ -140,7 +140,20 @@ export default function BuzzCard({
 
   const handleReplyClick = async () => {
     const replyText = await getRandomReplyText();
-    window.open(getReplyIntentUrl(tweetLink, replyText), "_blank");
+
+    // Configure popup window dimensions
+    const width = 600;
+    const height = 700;
+    const left = (window.screen.width - width) / 2;
+    const top = (window.screen.height - height) / 2;
+
+    // Open Twitter in a popup window instead of a new tab
+    window.open(
+      getReplyIntentUrl(tweetLink, replyText),
+      "twitter_popup",
+      `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+    );
+
     setIsReplyModalOpen(true);
     setGeneratedReplyText(replyText);
   };

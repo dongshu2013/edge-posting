@@ -1,336 +1,410 @@
-// Initialize default settings
-chrome.runtime.onInstalled.addListener(() => {
+// Initialize default settings when extension is installed
+chrome.runtime.onInstalled.addListener(function() {
   chrome.storage.local.set({
     autoSubmit: true,
     closeTab: true,
-    buzzEarned: 0,
-    pendingReply: null
+    model: 'google/gemini-2.0-flash-001',
+    openedWindows: {} // Track windows with their creation timestamps
   });
+  console.log('BUZZ Reply Helper: Extension installed with default settings');
 });
 
-// Listen for messages from popup or content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+// Listen for messages from Twitter content script
+chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
   console.log('Background script received message:', message);
   
-  if (message.action === 'openTwitter') {
-    // Open Twitter with the tweet to reply to
-    openTwitterWithReply(message.tweetUrl, message.replyText, message.buzzId, message.price);
-    sendResponse({ success: true });
-    return false;
-  }
-  
-  if (message.action === 'replySubmitted') {
-    // Handle the reply submission
-    handleReplySubmission(message.replyUrl, message.buzzId);
-    sendResponse({ success: true });
-    return false;
-  }
-  
-  if (message.action === 'replyUrlCaptured') {
-    // Store the captured reply URL
-    console.log('Reply URL captured:', message.replyUrl);
-    chrome.storage.local.get(['pendingReply'], (result) => {
-      if (result.pendingReply) {
-        // Store the reply URL with the pending reply
-        const updatedPendingReply = {
-          ...result.pendingReply,
-          replyUrl: message.replyUrl
-        };
-        chrome.storage.local.set({ pendingReply: updatedPendingReply });
-      }
+  if (message.action === 'closeTwitterWindow') {
+    console.log('Received close window request:', {
+      reason: message.reason,
+      sender: sender,
+      tabId: sender.tab?.id,
+      windowId: sender.tab?.windowId
     });
-    return false;
-  }
-});
-
-// Listen for tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Check if the tab has completed loading
-  if (changeInfo.status === 'complete') {
-    // If it's a Twitter tab and we have a pending reply
-    if ((tab.url.includes('twitter.com') || tab.url.includes('x.com')) && tab.url.includes('/status/')) {
-      chrome.storage.local.get(['pendingReply'], (result) => {
-        if (result.pendingReply) {
-          // Inject the script to handle the reply
-          chrome.scripting.executeScript({
-            target: { tabId: tabId },
-            function: injectReplyHandler,
-            args: [result.pendingReply]
-          }).catch(err => {
-            console.error('Error injecting reply handler:', err);
-          });
-        }
-      });
-    }
-  }
-});
-
-// Function to check if a URL is an Edge Posting URL
-function isEdgePostingUrl(url) {
-  if (!url) return false;
-  
-  return url.includes('edge-posting') || 
-         url.includes('localhost') || 
-         url.includes('vercel.app');
-}
-
-// Function to find an Edge Posting tab
-async function findEdgePostingTab() {
-  return new Promise(resolve => {
-    chrome.tabs.query({}, tabs => {
-      const edgePostingTab = tabs.find(tab => isEdgePostingUrl(tab.url));
-      resolve(edgePostingTab);
-    });
-  });
-}
-
-// Function to open Twitter with the tweet to reply to
-function openTwitterWithReply(tweetUrl, replyText, buzzId, price) {
-  // Store the pending reply information
-  const pendingReply = {
-    tweetUrl,
-    replyText,
-    buzzId,
-    price,
-    timestamp: Date.now()
-  };
-  
-  chrome.storage.local.set({ pendingReply }, () => {
-    // Always use a popup window for better user experience
-    const popupWidth = 600;
-    const popupHeight = 700;
-    const left = (screen.width - popupWidth) / 2;
-    const top = (screen.height - popupHeight) / 2;
     
-    chrome.windows.create({
-      url: tweetUrl,
-      type: 'popup',
-      width: popupWidth,
-      height: popupHeight,
-      left: left,
-      top: top
-    }, (window) => {
-      console.log(`Opened Twitter popup window with ID: ${window.id}`);
+    // Get the list of windows we've opened
+    chrome.storage.local.get(['openedWindows', 'closeTab'], function(result) {
+      console.log('Current opened windows:', result.openedWindows);
+      console.log('Close tab setting:', result.closeTab);
       
-      // Store the window ID for tracking
-      chrome.storage.local.set({ 
-        twitterWindowId: window.id,
-        twitterWindowBuzzId: buzzId
-      });
-    });
-  });
-}
-
-// Function to handle the reply submission
-function handleReplySubmission(replyUrl, buzzId) {
-  chrome.storage.local.get(['pendingReply', 'closeTab'], (result) => {
-    if (result.pendingReply && result.pendingReply.buzzId === buzzId) {
-      // Get the tab that was used for the reply
-      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const twitterTabId = tabs[0].id;
+      if (!result.closeTab) {
+        console.log('Window closing is disabled in settings');
+        sendResponse({ success: false, reason: 'Window closing disabled' });
+        return;
+      }
+      
+      const openedWindows = result.openedWindows || {};
+      const windowId = sender.tab?.windowId;
+      
+      if (windowId && openedWindows[windowId]) {
+        console.log('Found matching window:', windowId);
+        // Remove this window from tracking
+        delete openedWindows[windowId];
         
-        // Clear the pending reply
-        chrome.storage.local.set({ pendingReply: null }, () => {
-          // Update the BUZZ earned
-          const earnedAmount = result.pendingReply.price;
-          chrome.storage.local.get(['buzzEarned'], (earnedResult) => {
-            const currentAmount = earnedResult.buzzEarned || 0;
-            const newAmount = currentAmount + earnedAmount;
-            
-            chrome.storage.local.set({ buzzEarned: newAmount }, () => {
-              console.log(`Updated BUZZ earned: ${newAmount}`);
-              
-              // Notify the popup to update the display
-              chrome.runtime.sendMessage({
-                action: 'updateBuzzEarned',
-                amount: earnedAmount
-              });
-            });
-          });
-          
-          // Close the Twitter tab if auto-close is enabled
-          if (result.closeTab) {
-            // Get the window ID
-            chrome.storage.local.get(['twitterWindowId'], (windowResult) => {
-              if (windowResult.twitterWindowId) {
-                // Close the window
-                chrome.windows.remove(windowResult.twitterWindowId, () => {
-                  console.log(`Closed Twitter window: ${windowResult.twitterWindowId}`);
-                });
-              } else {
-                // Fall back to closing the tab
-                chrome.tabs.remove(twitterTabId, () => {
-                  console.log(`Closed Twitter tab: ${twitterTabId}`);
-                });
-              }
-            });
-          }
-          
-          // Send the reply URL back to the Edge Posting tab
-          findEdgePostingTab().then(edgePostingTab => {
-            if (edgePostingTab) {
-              chrome.tabs.sendMessage(edgePostingTab.id, {
-                action: 'submitReply',
-                replyUrl,
-                buzzId
-              }, response => {
-                if (chrome.runtime.lastError) {
-                  console.error('Error submitting reply to Edge Posting:', chrome.runtime.lastError);
-                } else {
-                  console.log('Submitted reply to Edge Posting');
-                }
-              });
+        // Update storage and close window
+        chrome.storage.local.set({ openedWindows }, function() {
+          chrome.windows.remove(windowId, function() {
+            if (chrome.runtime.lastError) {
+              console.error('Error closing window:', chrome.runtime.lastError);
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
             } else {
-              console.error('No Edge Posting tab found to submit reply');
+              console.log('Window closed successfully');
+              sendResponse({ success: true });
             }
           });
         });
-      });
-    }
-  });
-}
-
-// Listen for window removal
-chrome.windows.onRemoved.addListener((windowId) => {
-  // Check if this is our Twitter window
-  chrome.storage.local.get(['twitterWindowId', 'twitterWindowBuzzId', 'pendingReply'], (result) => {
-    if (result.twitterWindowId === windowId) {
-      console.log(`Twitter window ${windowId} was closed`);
-      
-      // Try to get the reply URL from the pending reply
-      if (result.pendingReply) {
-        const replyUrl = result.pendingReply.replyUrl;
-        
-        if (replyUrl) {
-          // We have a captured reply URL, use it
-          console.log('Using captured reply URL:', replyUrl);
-          
-          // Find the Edge Posting tab to send the message to
-          findEdgePostingTab().then(edgePostingTab => {
-            if (edgePostingTab) {
-              // Send a message to the Edge Posting tab to submit the reply
-              chrome.tabs.sendMessage(edgePostingTab.id, {
-                action: 'submitReply',
-                replyUrl: replyUrl,
-                buzzId: result.twitterWindowBuzzId
-              }, response => {
-                if (chrome.runtime.lastError) {
-                  console.error('Error submitting reply:', chrome.runtime.lastError);
-                } else {
-                  console.log('Submitted reply with URL:', replyUrl);
-                }
-              });
+      } else {
+        console.log('Window was not opened by our extension or tab info missing');
+        // Try closing the window directly as a fallback
+        if (windowId) {
+          chrome.windows.remove(windowId, function() {
+            if (chrome.runtime.lastError) {
+              console.error('Error in fallback close:', chrome.runtime.lastError);
+              sendResponse({ success: false, error: chrome.runtime.lastError.message });
             } else {
-              console.error('No Edge Posting tab found to submit reply');
+              console.log('Window closed via fallback');
+              sendResponse({ success: true });
             }
           });
-          
-          // Update BUZZ earned
-          if (result.pendingReply.price) {
-            const earnedAmount = result.pendingReply.price;
-            chrome.storage.local.get(['buzzEarned'], (earnedResult) => {
-              const currentAmount = earnedResult.buzzEarned || 0;
-              const newAmount = currentAmount + earnedAmount;
-              
-              chrome.storage.local.set({ buzzEarned: newAmount }, () => {
-                console.log(`Updated BUZZ earned: ${newAmount}`);
-                
-                // Notify the popup to update the display
-                chrome.runtime.sendMessage({
-                  action: 'updateBuzzEarned',
-                  amount: earnedAmount
-                });
-              });
-            });
-          }
         } else {
-          // No captured URL, open the reply modal without a URL
-          findEdgePostingTab().then(edgePostingTab => {
-            if (edgePostingTab) {
-              // Send a message to the Edge Posting tab to open the reply modal
-              chrome.tabs.sendMessage(edgePostingTab.id, {
-                action: 'openReplyModal',
-                buzzId: result.twitterWindowBuzzId
-              }, response => {
-                if (chrome.runtime.lastError) {
-                  console.error('Error opening reply modal:', chrome.runtime.lastError);
-                } else {
-                  console.log('Opened reply modal');
-                }
-              });
-            } else {
-              console.error('No Edge Posting tab found to open reply modal');
-            }
-          });
+          sendResponse({ success: false, reason: 'No window ID found' });
         }
       }
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'captureReplyUrl') {
+    console.log('Captured reply URL:', message.replyUrl);
+    
+    // Store the reply URL
+    chrome.storage.local.set({ lastReplyUrl: message.replyUrl });
+    
+    // If auto-close is enabled, close the Twitter window
+    chrome.storage.local.get(['closeTab', 'openedWindows'], function(result) {
+      if (result.closeTab && sender.tab) {
+        // Check if this tab's window was opened by our extension
+        const openedWindows = result.openedWindows || {};
+        if (openedWindows[sender.tab.windowId]) {
+          console.log('Closing window that was opened by our extension:', sender.tab.windowId);
+          
+          // Remove this window from tracking
+          delete openedWindows[sender.tab.windowId];
+          chrome.storage.local.set({ openedWindows });
+        }
+      }
+    });
+  }
+  
+  if (message.action === 'openTwitterWithReply') {
+    console.log('Opening Twitter with auto-reply:', message.tweetLink, message.replyText);
+    
+    // Store the reply text for the Twitter content script to use
+    chrome.storage.local.set({ autoReplyText: message.replyText });
+    
+    // Configure popup window dimensions
+    const width = 600;
+    const height = 700;
+    const left = Math.max((screen.width - width) / 2, 0);
+    const top = Math.max((screen.height - height) / 2, 0);
+    
+    // Open Twitter in a popup window
+    chrome.windows.create({
+      url: message.tweetLink,
+      type: 'popup',
+      width: width,
+      height: height,
+      left: Math.round(left),
+      top: Math.round(top)
+    }, function(window) {
+      console.log('Opened Twitter popup window:', window.id);
       
-      // Clear the window tracking data
-      chrome.storage.local.remove(['twitterWindowId', 'twitterWindowBuzzId']);
-    }
-  });
+      // Track this window with timestamp
+      chrome.storage.local.get(['openedWindows'], function(result) {
+        const openedWindows = result.openedWindows || {};
+        openedWindows[window.id] = {
+          timestamp: Date.now(),
+          url: message.tweetLink
+        };
+        chrome.storage.local.set({ openedWindows });
+        console.log('Updated opened windows list:', openedWindows);
+      });
+      
+      // Set up an auto-close timeout (5 minutes)
+      setTimeout(() => {
+        chrome.storage.local.get(['openedWindows'], function(result) {
+          const windows = result.openedWindows || {};
+          if (windows[window.id]) {
+            console.log('Auto-closing window after timeout:', window.id);
+            chrome.windows.remove(window.id, function() {
+              delete windows[window.id];
+              chrome.storage.local.set({ openedWindows: windows });
+            });
+          }
+        });
+      }, 5 * 60 * 1000); // 5 minutes
+    });
+    
+    sendResponse({ success: true });
+    return true;
+  }
+  
+  if (message.action === 'submitReplyUrl') {
+    console.log('Submitting reply URL to Edge Posting:', message.replyUrl);
+    
+    // Get the tab that sent the message to submit the reply URL
+    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
+      if (tabs.length === 0) {
+        console.error('No active tab found');
+        sendResponse({ success: false, error: 'No active tab found' });
+        return;
+      }
+      
+      // Execute script to submit the reply URL
+      chrome.scripting.executeScript({
+        target: { tabId: tabs[0].id },
+        func: (replyUrl) => {
+          // Find the reply URL input field
+          const replyUrlInputs = document.querySelectorAll('input[placeholder*="reply" i]');
+          
+          if (replyUrlInputs.length > 0) {
+            // Set the value
+            replyUrlInputs[0].value = replyUrl;
+            
+            // Dispatch input event to trigger validation
+            replyUrlInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+            
+            // Find the submit button
+            const submitButtons = Array.from(document.querySelectorAll('button')).filter(button => 
+              button.textContent.toLowerCase().includes('submit')
+            );
+            
+            if (submitButtons.length > 0) {
+              // Click the submit button
+              submitButtons[0].click();
+              return true;
+            }
+          }
+          
+          return false;
+        },
+        args: [message.replyUrl]
+      }).then(results => {
+        sendResponse({ success: results[0].result });
+      }).catch(error => {
+        console.error('Error executing script:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'analyzeTwitterPage') {
+    console.log('Analyzing Twitter page with AI...');
+    
+    // Get the API key and model
+    chrome.storage.local.get(['apiKey', 'model'], async function(settings) {
+      if (!settings.apiKey) {
+        console.error('No API key found for AI analysis');
+        sendResponse({ success: false, error: 'No API key found' });
+        return;
+      }
+      
+      try {
+        // Prepare the prompt for the AI
+        const prompt = `
+          You are an AI specialized in analyzing HTML to find specific elements.
+          
+          I need you to analyze this Twitter page HTML and identify the REPLY button.
+          
+          Please provide:
+          1. A CSS selector that will uniquely identify the reply button
+          2. An XPath expression that will uniquely identify the reply button
+          3. The approximate coordinates (x, y) of the reply button if visible
+          
+          The reply button is typically:
+          - A button or div with role="button"
+          - Contains text like "Reply" or an icon for replying
+          - Often has data-testid="reply" or aria-label containing "Reply"
+          
+          Return your answer as a JSON object with these properties:
+          {
+            "selector": "CSS selector string",
+            "xpath": "XPath expression string",
+            "coordinates": {"x": number, "y": number},
+            "explanation": "Brief explanation of how you identified the button"
+          }
+          
+          HTML: ${message.html.substring(0, 15000)}...
+        `;
+        
+        // Make the API request to OpenRouter
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiKey}`,
+            'HTTP-Referer': 'chrome-extension://buzz-reply-helper',
+            'X-Title': 'BUZZ Reply Helper'
+          },
+          body: JSON.stringify({
+            model: settings.model || 'google/gemini-2.0-flash-001',
+            messages: [
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        
+        // Parse the JSON from the content
+        try {
+          const parsedContent = JSON.parse(content);
+          console.log('AI analysis result:', parsedContent);
+          
+          sendResponse({
+            success: true,
+            selector: parsedContent.selector,
+            xpath: parsedContent.xpath,
+            coordinates: parsedContent.coordinates,
+            explanation: parsedContent.explanation
+          });
+        } catch (parseError) {
+          console.error('Error parsing AI response:', parseError);
+          sendResponse({ success: false, error: 'Failed to parse AI response' });
+        }
+      } catch (error) {
+        console.error('Error calling AI API:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  if (message.action === 'analyzeTweetButton') {
+    console.log('Analyzing Twitter page for tweet button with AI...');
+    
+    // Get the API key and model
+    chrome.storage.local.get(['apiKey', 'model'], async function(settings) {
+      if (!settings.apiKey) {
+        console.error('No API key found for AI analysis');
+        sendResponse({ success: false, error: 'No API key found' });
+        return;
+      }
+      
+      try {
+        // Prepare the prompt for the AI
+        const prompt = `
+          You are an AI specialized in analyzing HTML to find specific elements.
+          
+          I need you to analyze this Twitter page HTML and identify the TWEET or REPLY button that would submit a tweet or reply.
+          
+          Please provide:
+          1. A CSS selector that will uniquely identify the tweet/reply submit button
+          2. An XPath expression that will uniquely identify the tweet/reply submit button
+          3. The approximate coordinates (x, y) of the tweet/reply submit button if visible
+          
+          The tweet/reply submit button is typically:
+          - A button or div with role="button"
+          - Contains text like "Tweet", "Reply", or "Post"
+          - Often has data-testid="tweetButton" or data-testid="tweetButtonInline"
+          - Usually blue in color and positioned at the bottom right of a compose box
+          
+          Return your answer as a JSON object with these properties:
+          {
+            "selector": "CSS selector string",
+            "xpath": "XPath expression string",
+            "coordinates": {"x": number, "y": number},
+            "explanation": "Brief explanation of how you identified the button"
+          }
+          
+          HTML: ${message.html.substring(0, 15000)}...
+        `;
+        
+        // Make the API request to OpenRouter
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiKey}`,
+            'HTTP-Referer': 'chrome-extension://buzz-reply-helper',
+            'X-Title': 'BUZZ Reply Helper'
+          },
+          body: JSON.stringify({
+            model: settings.model || 'google/gemini-2.0-flash-001',
+            messages: [
+              {
+                role: "user",
+                content: prompt
+              }
+            ],
+            response_format: { type: "json_object" }
+          })
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`API error (${response.status}): ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        const content = data.choices[0].message.content;
+        
+        // Parse the JSON from the content
+        try {
+          const parsedContent = JSON.parse(content);
+          console.log('AI analysis result for tweet button:', parsedContent);
+          
+          sendResponse({
+            success: true,
+            selector: parsedContent.selector,
+            xpath: parsedContent.xpath,
+            coordinates: parsedContent.coordinates,
+            explanation: parsedContent.explanation
+          });
+        } catch (parseError) {
+          console.error('Error parsing AI response:', parseError);
+          sendResponse({ success: false, error: 'Failed to parse AI response' });
+        }
+      } catch (error) {
+        console.error('Error calling AI API:', error);
+        sendResponse({ success: false, error: error.message });
+      }
+    });
+    
+    return true; // Keep the message channel open for async response
+  }
+  
+  // Default response
+  sendResponse({ success: false, error: 'Unknown action' });
+  return true;
 });
 
-// This function will be injected into the Twitter page
-function injectReplyHandler(pendingReply) {
-  console.log('Injecting reply handler for tweet:', pendingReply.tweetUrl);
+// Listen for tab updates to detect Twitter pages
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  // Only proceed if the tab has completed loading
+  if (changeInfo.status !== 'complete') return;
   
-  // Wait for the page to fully load
-  setTimeout(() => {
-    // Find the reply button and click it
-    const replyButtons = Array.from(document.querySelectorAll('div[aria-label="Reply"], div[data-testid="reply"]'));
-    const replyButton = replyButtons[0];
-    
-    if (replyButton) {
-      replyButton.click();
-      console.log('Clicked reply button');
-      
-      // Wait for the reply box to appear
-      setTimeout(() => {
-        // Find the tweet input area
-        const tweetInputs = document.querySelectorAll('div[data-testid="tweetTextarea_0"]');
-        const tweetInput = tweetInputs[0];
-        
-        if (tweetInput) {
-          // Fill in the reply text
-          tweetInput.textContent = pendingReply.replyText;
-          tweetInput.dispatchEvent(new Event('input', { bubbles: true }));
-          console.log('Filled in reply text');
-          
-          // Wait for the tweet button to become enabled
-          setTimeout(() => {
-            // Find and click the tweet button
-            const tweetButtons = document.querySelectorAll('div[data-testid="tweetButton"]');
-            const tweetButton = tweetButtons[0];
-            
-            if (tweetButton) {
-              tweetButton.click();
-              console.log('Clicked tweet button');
-              
-              // Wait for the tweet to be posted
-              setTimeout(() => {
-                // Get the URL of the reply
-                const replyUrl = window.location.href;
-                console.log('Reply posted at:', replyUrl);
-                
-                // Store the reply URL in session storage
-                try {
-                  sessionStorage.setItem('lastTwitterReplyUrl', replyUrl);
-                } catch (e) {
-                  console.error('Failed to store reply URL in session storage:', e);
-                }
-                
-                // Send the reply URL back to the background script
-                chrome.runtime.sendMessage({
-                  action: 'replySubmitted',
-                  replyUrl,
-                  buzzId: pendingReply.buzzId
-                });
-              }, 3000);
-            }
-          }, 1000);
-        }
-      }, 1000);
-    }
-  }, 2000);
-} 
+  // Check if this is a Twitter page
+  if (tab.url && (tab.url.includes('twitter.com') || tab.url.includes('x.com'))) {
+    // Inject the Twitter content script
+    chrome.scripting.executeScript({
+      target: { tabId: tabId },
+      files: ['twitter-content.js']
+    }).catch(err => {
+      console.error('Error injecting Twitter content script:', err);
+    });
+  }
+}); 

@@ -1,6 +1,6 @@
 {
   "cron": {
-    "schedule": "0 1 * * *",
+    "schedule": "*/5 * * * *",
     "command": "curl -X POST /api/cron/settle-rewards -H 'Authorization: Bearer ${CRON_SECRET}'"
   }
 }

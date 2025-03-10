@@ -19,6 +19,7 @@ export const PaymentModal = ({
   const { user } = useAuth();
   const [amount, setAmount] = useState<number>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const ongoingOrderQuery = useQuery({
@@ -75,6 +76,32 @@ export const PaymentModal = ({
       onSuccess();
     } else {
       setError("Order is not paid");
+    }
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    try {
+      setIsCancelling(true);
+      const resJson = await fetch(`${paymentServiceUrl}/cancel-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+        }),
+      }).then((res) => res.json());
+
+      console.log(resJson);
+      if (resJson.status === 0) {
+        onClose();
+      } else {
+        setError(resJson.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      setError("Failed to cancel order");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -185,15 +212,28 @@ export const PaymentModal = ({
                               ) / Math.pow(10, 6)}
                             </div>
 
-                            <button
-                              disabled={isSubmitting}
-                              className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() => {
-                                checkOrder(ongoingOrderQuery.data.id);
-                              }}
-                            >
-                              I have paid
-                            </button>
+                            <div className="mt-5 sm:mt-4">
+                              <button
+                                disabled={isSubmitting || isCancelling}
+                                className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => {
+                                  checkOrder(ongoingOrderQuery.data.id);
+                                }}
+                              >
+                                I have paid
+                              </button>
+
+                              <button
+                                type="button"
+                                className="mt-3 ml-3 inline-flex justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
+                                onClick={() => {
+                                  cancelOrder(ongoingOrderQuery.data.id);
+                                }}
+                                disabled={isCancelling || isSubmitting}
+                              >
+                                {isCancelling ? "Cancelling..." : "Cancel"}
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">

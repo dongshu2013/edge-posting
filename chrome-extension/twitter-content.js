@@ -88,6 +88,14 @@ function updateBadgeStatus(badge, status) {
       badge.textContent = '🚀';
       badge.style.background = '#8b5cf6';
       break;
+    case 'passive':
+      badge.textContent = '🤔';
+      badge.style.background = '#6b7280';
+      break;
+    case 'success':
+      badge.textContent = '✅';
+      badge.style.background = '#10b981';
+      break;
     default:
       badge.textContent = '🐝';
       badge.style.background = 'linear-gradient(to right, #4f46e5, #7c3aed)';
@@ -519,52 +527,131 @@ function waitForTweetSuccess(timeout) {
 function initTwitterContentScript() {
   console.log('BUZZ Reply Helper: Twitter content script initialized');
   
-  // Add the extension badge
+  // Add a badge to indicate the extension is active
   const badge = addExtensionBadge();
   
-  // Track the current URL
+  // Track the last URL to detect changes
   let lastUrl = window.location.href;
+  console.log('Initial URL:', lastUrl);
   
-  // Special handling for Twitter intent URLs
-  if (window.location.href.includes('/intent/post') || 
-      window.location.href.includes('/intent/tweet') || 
-      window.location.href.includes('/intent/reply')) {
-    console.log('Detected Twitter intent URL, using direct handling');
-    handleTwitterIntent(badge);
-    return; // Exit early as we're handling this specially
+  // Debug: Log all storage values
+  chrome.storage.local.get(null, (allData) => {
+    console.log('All storage data at initialization:', allData);
+  });
+  
+  // Check if this is an intent URL with a text parameter
+  const url = new URL(window.location.href);
+  const isIntentUrl = url.pathname.includes('/intent/tweet') || 
+                     url.pathname.includes('/intent/post') || 
+                     url.pathname.includes('/intent/reply');
+  const textParam = url.searchParams.get('text');
+  
+  if (isIntentUrl && textParam) {
+    console.log('Found intent URL with text parameter:', textParam);
+    // This is an intent URL with a text parameter, handle it directly
+    handleTwitterIntent(badge, textParam);
+    return;
   }
   
-  // Check if we should auto-reply
-  chrome.storage.local.get(['autoReplyText', 'autoSubmit'], function(result) {
-    if (result.autoReplyText) {
-      console.log('Auto-reply text found:', result.autoReplyText);
-      updateBadgeStatus(badge, 'replying');
+  // Check if auto-reply should be enabled
+  chrome.storage.local.get(['autoReplyEnabled', 'autoReplyEnabledTimestamp', 'autoReplyText'], function(result) {
+    console.log('Checking if auto-reply should be enabled');
+    console.log('Auto-reply enabled flag:', result.autoReplyEnabled);
+    console.log('Auto-reply text:', result.autoReplyText);
+    console.log('Auto-reply timestamp:', result.autoReplyEnabledTimestamp);
+    
+    // For simplicity, we'll use the global flag for now
+    // This is a temporary solution until we find a better way to track windows in content scripts
+    let shouldAutoReply = false;
+    
+    if (result.autoReplyEnabled && result.autoReplyText) {
+      // Check if the flag is not too old (5 minutes)
+      const now = Date.now();
+      const fiveMinutesAgo = now - (5 * 60 * 1000);
       
-      // Function to attempt auto-reply
-      const attemptAutoReply = async (attempt = 1) => {
-        console.log(`Attempting auto-reply (attempt ${attempt})...`);
+      if (result.autoReplyEnabledTimestamp && result.autoReplyEnabledTimestamp > fiveMinutesAgo) {
+        console.log('Auto-reply is enabled and timestamp is recent');
+        shouldAutoReply = true;
+      } else {
+        // Clear the expired flag
+        console.log('Auto-reply flag is expired, clearing it');
+        chrome.storage.local.remove(['autoReplyEnabled', 'autoReplyEnabledTimestamp']);
+      }
+    }
+    
+    // Only proceed with auto-reply if it should be enabled
+    if (shouldAutoReply) {
+      console.log('Auto-reply is enabled, proceeding with auto-reply logic');
+      
+      // Special handling for Twitter intent URLs
+      if (lastUrl.includes('/intent/post') || 
+          lastUrl.includes('/intent/tweet') || 
+          lastUrl.includes('/intent/reply')) {
+        console.log('Detected Twitter intent URL, using direct handling');
+        handleTwitterIntent(badge, result.autoReplyText);
+      }
+      
+      // Attempt auto-reply if we're on a tweet page
+      if (lastUrl.includes('/status/')) {
+        console.log('Detected tweet status page, attempting auto-reply');
         
-        // First click the reply button
-        const replyButtonClicked = await autoClickReplyButton();
-        if (replyButtonClicked) {
-          // Then fill in the reply text
-          fillReplyText(result.autoReplyText);
-        } else if (attempt < 5) {
-          // If we couldn't find the reply button, try again after a delay
-          const delay = attempt * 1000; // Increasing delay with each attempt
-          console.log(`Reply button not found, trying again in ${delay}ms...`);
-          setTimeout(() => attemptAutoReply(attempt + 1), delay);
-        } else {
-          console.log('Failed to auto-reply after multiple attempts');
-          updateBadgeStatus(badge, 'error');
-        }
-      };
-      
-      // Wait a moment for the page to fully load, then start attempts
-      setTimeout(() => attemptAutoReply(), 2000);
-      
-      // Clear the auto-reply text so we don't keep auto-replying on page refreshes
-      chrome.storage.local.remove(['autoReplyText']);
+        // Define a function to attempt auto-reply with retries
+        const attemptAutoReply = async (attempt = 1) => {
+          if (attempt > 5) {
+            console.log('Max auto-reply attempts reached, giving up');
+            updateBadgeStatus(badge, 'error');
+            return;
+          }
+          
+          console.log(`Auto-reply attempt ${attempt}`);
+          updateBadgeStatus(badge, 'replying');
+          
+          const success = await autoClickReplyButton();
+          if (success) {
+            console.log('Successfully clicked reply button');
+            
+            // Get the reply text from storage
+            chrome.storage.local.get(['autoReplyText'], function(result) {
+              if (result.autoReplyText) {
+                console.log('Found auto-reply text:', result.autoReplyText);
+                
+                // Fill in the reply text
+                fillReplyText(result.autoReplyText);
+                
+                // Try to click the tweet button
+                setTimeout(async () => {
+                  const tweetSuccess = await clickTweetButton();
+                  if (tweetSuccess) {
+                    console.log('Successfully clicked tweet button');
+                    updateBadgeStatus(badge, 'success');
+                    
+                    // Only clear the auto-reply text after successful tweet
+                    chrome.storage.local.remove(['autoReplyText', 'autoReplyEnabled', 'autoReplyEnabledTimestamp'], () => {
+                      console.log('Cleared auto-reply settings after successful tweet');
+                    });
+                  } else {
+                    console.log('Failed to click tweet button');
+                    updateBadgeStatus(badge, 'error');
+                  }
+                }, 1000);
+              } else {
+                console.log('No auto-reply text found');
+                updateBadgeStatus(badge, 'error');
+              }
+            });
+          } else {
+            console.log(`Failed to click reply button on attempt ${attempt}, retrying...`);
+            setTimeout(() => attemptAutoReply(attempt + 1), 1000);
+          }
+        };
+        
+        // Start the auto-reply process after a short delay
+        setTimeout(() => attemptAutoReply(), 2000);
+      }
+    } else {
+      console.log('Auto-reply is NOT enabled, skipping auto-reply logic');
+      // Update badge to indicate passive mode
+      updateBadgeStatus(badge, 'passive');
     }
   });
   
@@ -600,13 +687,24 @@ function initTwitterContentScript() {
             updateBadgeStatus(badge, 'captured');
             
             // Check if we should auto-close the window
-            chrome.storage.local.get(['closeTab'], function(result) {
+            chrome.storage.local.get(['closeTab', 'openedWindows'], async function(result) {
               if (result.closeTab) {
-                console.log('Requesting window close from background script...');
-                // Instead of trying to close the window directly, ask the background script to do it
-                chrome.runtime.sendMessage({
-                  action: 'closeTwitterWindow'
-                });
+                // Check if this window was opened by our extension
+                try {
+                  const currentWindow = await new Promise(resolve => chrome.windows.getCurrent(resolve));
+                  
+                  if (result.openedWindows && result.openedWindows[currentWindow.id]) {
+                    console.log('This window was opened by our extension, requesting close');
+                    // Request window close
+                    chrome.runtime.sendMessage({
+                      action: 'closeTwitterWindow'
+                    });
+                  } else {
+                    console.log('This window was NOT opened by our extension, not closing');
+                  }
+                } catch (error) {
+                  console.error('Error getting current window:', error);
+                }
               }
             });
           }
@@ -670,17 +768,28 @@ function initTwitterContentScript() {
                 updateBadgeStatus(badge, 'captured');
                 
                 // Check if we should auto-close the window
-                chrome.storage.local.get(['closeTab'], function(result) {
+                chrome.storage.local.get(['closeTab', 'openedWindows'], async function(result) {
                   if (result.closeTab) {
-                    console.log('Requesting window close from background script...');
-                    // Instead of trying to close the window directly, ask the background script to do it
-                    chrome.runtime.sendMessage({
-                      action: 'closeTwitterWindow'
-                    });
+                    // Check if this window was opened by our extension
+                    try {
+                      const currentWindow = await new Promise(resolve => chrome.windows.getCurrent(resolve));
+                      
+                      if (result.openedWindows && result.openedWindows[currentWindow.id]) {
+                        console.log('This window was opened by our extension, requesting close');
+                        // Request window close
+                        chrome.runtime.sendMessage({
+                          action: 'closeTwitterWindow'
+                        });
+                      } else {
+                        console.log('This window was NOT opened by our extension, not closing');
+                      }
+                    } catch (error) {
+                      console.error('Error getting current window:', error);
+                    }
                   }
-        });
-      }
-    });
+                });
+              }
+            });
           }
         }
       }
@@ -711,286 +820,310 @@ function initTwitterContentScript() {
 }
 
 // Special handler for Twitter intent URLs
-function handleTwitterIntent(badge) {
+function handleTwitterIntent(badge, textParam) {
   updateBadgeStatus(badge, 'replying');
+  console.log('handleTwitterIntent called for intent URL:', window.location.href);
+  console.log('Text parameter provided:', textParam);
+  
+  if (!textParam) {
+    // If no text parameter was provided, check storage
+    chrome.storage.local.get(['autoReplyEnabled', 'autoReplyEnabledTimestamp', 'autoReplyText'], function(result) {
+      console.log('Intent handler - Auto-reply enabled:', result.autoReplyEnabled);
+      console.log('Intent handler - Auto-reply text:', result.autoReplyText);
+      console.log('Intent handler - Auto-reply timestamp:', result.autoReplyEnabledTimestamp);
+      
+      // For simplicity, we'll use the global flag for now
+      let shouldAutoReply = false;
+      
+      if (result.autoReplyEnabled && result.autoReplyText) {
+        // Check if the flag is not too old (5 minutes)
+        const now = Date.now();
+        const fiveMinutesAgo = now - (5 * 60 * 1000);
+        
+        if (result.autoReplyEnabledTimestamp && result.autoReplyEnabledTimestamp > fiveMinutesAgo) {
+          console.log('Auto-reply is enabled and timestamp is recent');
+          shouldAutoReply = true;
+        } else {
+          // Clear the expired flag
+          console.log('Auto-reply flag is expired, clearing it');
+          chrome.storage.local.remove(['autoReplyEnabled', 'autoReplyEnabledTimestamp']);
+        }
+      }
+      
+      if (!shouldAutoReply) {
+        console.log('Auto-reply is NOT enabled, not auto-replying');
+        updateBadgeStatus(badge, 'passive');
+        return;
+      }
+      
+      console.log('Auto-reply is enabled, proceeding with auto-reply');
+      
+      if (!result.autoReplyText) {
+        console.log('No auto-reply text found for intent page');
+        updateBadgeStatus(badge, 'error');
+        return;
+      }
+      
+      // Use the text from storage
+      handleIntentWithText(badge, result.autoReplyText);
+    });
+  } else {
+    // Use the provided text parameter directly
+    console.log('Using provided text parameter for auto-reply');
+    handleIntentWithText(badge, textParam);
+  }
+}
+
+// Helper function to handle intent with text
+function handleIntentWithText(badge, replyText) {
+  console.log('Handling intent with text:', replyText);
   
   // Store the initial URL to detect redirects
   const initialUrl = window.location.href;
-  const isIntentUrl = initialUrl.includes('/intent/');
   
-  // Extract the reply text from the URL if present
-  const urlParams = new URLSearchParams(window.location.search);
-  const textParam = urlParams.get('text');
+  // Function to check if we've been redirected from the intent page
+  const hasBeenRedirected = () => {
+    return window.location.href !== initialUrl;
+  };
   
-  // Get the auto-reply text from storage or use the URL text
-  chrome.storage.local.get(['autoReplyText'], function(result) {
-    const replyText = result.autoReplyText || textParam || 'Great post!';
+  // Function to check if we're on a successful tweet page
+  const isSuccessfulTweetPage = () => {
+    return window.location.href.includes('/status/') || 
+          window.location.href.includes('/home');
+  };
+  
+  // Function to handle the intent page
+  const handleIntent = async (attempt = 1, maxAttempts = 10) => {
+    console.log(`Handle intent attempt ${attempt}/${maxAttempts}`);
     
-    console.log('Using reply text:', replyText);
-    
-    // Function to check if we've been redirected from intent page
-    const hasBeenRedirected = () => {
-      const currentUrl = window.location.href;
-      return isIntentUrl && !currentUrl.includes('/intent/');
-    };
-    
-    // Function to check if we're on a successful tweet page and get the view link
-    const isSuccessfulTweetPage = () => {
-      const currentUrl = window.location.href;
-      console.log('Checking success on URL:', currentUrl);
+    // First check if we've been redirected or succeeded
+    if (hasBeenRedirected()) {
+      console.log('Redirected from intent page to:', window.location.href);
       
-      // Check for success notification and View link
-      const successElements = Array.from(document.querySelectorAll('div, span, a'));
-      const successNotification = successElements.find(el => 
-        el.textContent && (
-          el.textContent.includes('Your Tweet was sent') || 
-          el.textContent.includes('Your reply was sent')
-        )
-      );
-      
-      if (successNotification) {
-        console.log('Found success notification:', successNotification.textContent);
-        // Look for the View link near the success notification
-        const viewLink = successElements.find(el => 
-          el.tagName === 'A' && 
-          el.textContent?.toLowerCase() === 'view' &&
-          el.href?.includes('/status/')
-        );
+      if (isSuccessfulTweetPage()) {
+        console.log('Tweet was successful');
+        updateBadgeStatus(badge, 'captured');
         
-        if (viewLink) {
-          console.log('Found View link:', viewLink.href);
-          // Store this URL for later use
-          chrome.storage.local.set({ lastReplyUrl: viewLink.href });
-          return true;
-        }
-      }
-      
-      // Also check URL-based success indicators
-      const isStatusUrl = currentUrl.includes('/status/');
-      const isHomeUrl = currentUrl.includes('/home');
-      console.log('URL checks - Status:', isStatusUrl, 'Home:', isHomeUrl);
-      
-      return isStatusUrl || isHomeUrl;
-    };
-    
-    // Function to handle the intent page
-    const handleIntent = async (attempt = 1, maxAttempts = 10) => {
-      console.log(`Handle intent attempt ${attempt}/${maxAttempts}`);
-      
-      // First check if we've been redirected or succeeded
-      if (hasBeenRedirected()) {
-        console.log('Redirected from intent page to:', window.location.href);
-        
-        if (isSuccessfulTweetPage()) {
-          console.log('Tweet was successful');
-          updateBadgeStatus(badge, 'captured');
+        // If we're on the home page or have a stored reply URL
+        chrome.storage.local.get(['lastReplyUrl'], function(result) {
+          console.log('Retrieved stored reply URL:', result.lastReplyUrl);
           
-          // If we're on the home page or have a stored reply URL
-          chrome.storage.local.get(['lastReplyUrl'], function(result) {
-            console.log('Retrieved stored reply URL:', result.lastReplyUrl);
-            
-            if (result.lastReplyUrl) {
-              console.log('Sending captured reply URL to background');
-              chrome.runtime.sendMessage({
-                action: 'captureReplyUrl',
-                replyUrl: result.lastReplyUrl
-              }, response => {
-                console.log('Background response to URL capture:', response);
-                // Request window close after URL is captured
-                console.log('Requesting window close...');
-                chrome.runtime.sendMessage({ 
-                  action: 'closeTwitterWindow' 
-                }, closeResponse => {
-                  console.log('Window close response:', closeResponse);
-                });
+          if (result.lastReplyUrl) {
+            console.log('Sending captured reply URL to background');
+            chrome.runtime.sendMessage({
+              action: 'captureReplyUrl',
+              replyUrl: result.lastReplyUrl
+            }, response => {
+              console.log('Background response to URL capture:', response);
+              // Request window close after URL is captured
+              console.log('Requesting window close...');
+              chrome.runtime.sendMessage({ 
+                action: 'closeTwitterWindow' 
+              }, closeResponse => {
+                console.log('Window close response:', closeResponse);
               });
-    } else {
-              console.warn('No reply URL found to capture');
-              // Still close the window even if we don't have a URL
-              chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
-            }
-          });
-        } else {
-          console.log('Redirected but not to a success page');
-          updateBadgeStatus(badge, 'error');
-          // Close window even on error
-          chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
-        }
-        return;
-      }
-      
-      if (attempt > maxAttempts) {
-        console.error(`Failed to handle intent after ${maxAttempts} attempts`);
-        updateBadgeStatus(badge, 'error');
-        chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
-        return;
-      }
-      
-      console.log(`Intent handling attempt ${attempt}`);
-      
-      // For intent pages, the textarea is usually more straightforward to find
-      const textareas = document.querySelectorAll('textarea');
-      const contentEditables = document.querySelectorAll('[contenteditable="true"]');
-      const tweetInputs = [...textareas, ...contentEditables];
-      
-      if (tweetInputs.length > 0) {
-        console.log('Found tweet input on intent page:', tweetInputs[0]);
-        
-        // Focus and fill the input
-        tweetInputs[0].focus();
-        
-        // Try multiple methods to set the text
-        try {
-          // For textareas
-          if (tweetInputs[0].tagName === 'TEXTAREA') {
-            tweetInputs[0].value = replyText;
-    } else {
-            // For contenteditable divs
-            tweetInputs[0].textContent = replyText;
-            tweetInputs[0].innerHTML = replyText;
+            });
+          } else {
+            console.warn('No reply URL found to capture');
+            // Still close the window even if we don't have a URL
+            chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
           }
-          
-          // Dispatch events
+        });
+      } else {
+        console.log('Redirected but not to a success page');
+        updateBadgeStatus(badge, 'error');
+        // Close window even on error
+        chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
+      }
+      return;
+    }
+    
+    if (attempt > maxAttempts) {
+      console.error(`Failed to handle intent after ${maxAttempts} attempts`);
+      updateBadgeStatus(badge, 'error');
+      chrome.runtime.sendMessage({ action: 'closeTwitterWindow' });
+      return;
+    }
+    
+    console.log(`Intent handling attempt ${attempt}`);
+    
+    // For intent pages, the textarea is usually more straightforward to find
+    const textareas = document.querySelectorAll('textarea');
+    const contentEditables = document.querySelectorAll('[contenteditable="true"]');
+    const tweetInputs = [...textareas, ...contentEditables];
+    
+    if (tweetInputs.length > 0) {
+      console.log('Found tweet input on intent page:', tweetInputs[0]);
+      
+      // Focus and fill the input
+      tweetInputs[0].focus();
+      
+      try {
+        // Try to set the value directly first
+        if (tweetInputs[0].tagName === 'TEXTAREA') {
+          tweetInputs[0].value = replyText;
           tweetInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
-          tweetInputs[0].dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          // For contenteditable divs
+          tweetInputs[0].textContent = replyText;
+          tweetInputs[0].dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        console.log('Filled tweet input with text:', replyText);
+        
+        // Wait for the reply context to be established
+        await waitForReplyContext();
+        
+        // Look for the tweet button
+        const tweetButtons = Array.from(document.querySelectorAll('button, div[role="button"]')).filter(btn => {
+          const text = btn.textContent?.toLowerCase() || '';
+          return text.includes('tweet') || text.includes('reply') || text.includes('post');
+        });
+        
+        if (tweetButtons.length > 0) {
+          console.log('Found tweet button on intent page:', tweetButtons[0]);
           
-          // Now find and click the tweet/reply button
-          const buttons = document.querySelectorAll('button, [role="button"]');
-          const tweetButtons = Array.from(buttons).filter(button => {
-            const style = window.getComputedStyle(button);
-            const text = button.textContent?.toLowerCase() || '';
-            
-            // Check for blue background or tweet/reply text
-            return (
-              style.backgroundColor.includes('rgb(29, 155, 240)') || // Twitter blue
-              text.includes('tweet') || 
-              text.includes('reply') || 
-              text.includes('post')
-            ) && button.getAttribute('aria-disabled') !== 'true';
-          });
+          // Click the button
+          simulateRealClick(tweetButtons[0]);
           
-          if (tweetButtons.length > 0) {
-            console.log('Found tweet button on intent page:', tweetButtons[0]);
+          // Set up a URL change observer
+          let urlCheckInterval = setInterval(async () => {
+            const currentUrl = window.location.href;
+            console.log('Checking URL:', currentUrl);
             
-            // Click the button
-            simulateRealClick(tweetButtons[0]);
-            
-            // Set up a URL change observer
-            let urlCheckInterval = setInterval(async () => {
-              const currentUrl = window.location.href;
-              console.log('Checking URL:', currentUrl);
+            if (hasBeenRedirected()) {
+              clearInterval(urlCheckInterval);
+              console.log('Redirect detected to:', currentUrl);
               
-              if (hasBeenRedirected()) {
-                clearInterval(urlCheckInterval);
-                console.log('Redirect detected to:', currentUrl);
-                
-                // Wait a moment for any View link to appear
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Look for View link first
-                const viewLink = Array.from(document.querySelectorAll('a')).find(a => 
-                  a.textContent?.toLowerCase() === 'view' && 
-                  a.href?.includes('/status/')
-                );
-                
-                if (viewLink) {
-                  console.log('Found View link after redirect:', viewLink.href);
-                  await handleTweetSuccess(viewLink.href);
-                } else if (currentUrl.includes('/status/')) {
-                  console.log('No View link but found status URL:', currentUrl);
-                  await handleTweetSuccess(currentUrl);
-                } else if (currentUrl.includes('/home')) {
-                  console.log('Redirected to home, checking stored URL');
-                  const result = await chrome.storage.local.get(['lastReplyUrl']);
-                  if (result.lastReplyUrl) {
-                    console.log('Using stored reply URL:', result.lastReplyUrl);
-                    await handleTweetSuccess(result.lastReplyUrl);
-  } else {
-                    console.warn('No stored URL found after home redirect');
-                    await requestWindowClose('No URL but redirected to home');
-                  }
+              // Wait a moment for any View link to appear
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              
+              // Look for View link first
+              const viewLink = Array.from(document.querySelectorAll('a')).find(a => 
+                a.textContent?.toLowerCase() === 'view' && 
+                a.href?.includes('/status/')
+              );
+              
+              if (viewLink) {
+                console.log('Found View link after redirect:', viewLink.href);
+                await handleTweetSuccess(viewLink.href);
+              } else if (currentUrl.includes('/status/')) {
+                console.log('No View link but found status URL:', currentUrl);
+                await handleTweetSuccess(currentUrl);
+              } else if (currentUrl.includes('/home')) {
+                console.log('Redirected to home, checking stored URL');
+                const result = await chrome.storage.local.get(['lastReplyUrl']);
+                if (result.lastReplyUrl) {
+                  console.log('Using stored reply URL:', result.lastReplyUrl);
+                  await handleTweetSuccess(result.lastReplyUrl);
+                } else {
+                  console.warn('No stored URL found after home redirect');
+                  // Only request window close if it was opened by our extension
+                  await requestWindowClose('No URL but redirected to home');
                 }
               }
-            }, 500);
-            
-            // Set a timeout to clear the interval and close window anyway
-            setTimeout(async () => {
-              clearInterval(urlCheckInterval);
-              console.log('URL check timeout reached');
-              if (hasBeenRedirected()) {
-                console.log('Window still open after redirect, forcing close');
-                await requestWindowClose('Timeout after redirect');
-              }
-            }, 10000);
-          }
-        } catch (error) {
-          console.error('Error handling intent page:', error);
+            }
+          }, 500);
+          
+          // Set a timeout to clear the interval and close window anyway
+          setTimeout(async () => {
+            clearInterval(urlCheckInterval);
+            console.log('URL check timeout reached');
+            if (hasBeenRedirected()) {
+              console.log('Window still open after redirect, forcing close');
+              // Only request window close if it was opened by our extension
+              await requestWindowClose('Timeout after redirect');
+            }
+          }, 10000);
         }
-      }
-      
-      // If we get here and haven't been redirected, try again after a delay
-      if (!hasBeenRedirected() && !isSuccessfulTweetPage()) {
-        setTimeout(() => handleIntent(attempt + 1), 1000);
-      }
-    };
-    
-    // Start the intent handling process
-    setTimeout(() => handleIntent(), 1000);
-    
-    // Clear the auto-reply text
-    chrome.storage.local.remove(['autoReplyText']);
-  });
-
-  // Set up a continuous observer for the View link
-  const viewLinkObserver = new MutationObserver((mutations, observer) => {
-    for (const mutation of mutations) {
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-        const viewLink = Array.from(mutation.addedNodes).find(node => 
-          node.nodeType === Node.ELEMENT_NODE &&
-          node.tagName === 'A' &&
-          node.textContent?.toLowerCase() === 'view' &&
-          node.href?.includes('/status/')
-        );
-        
-        if (viewLink) {
-          console.log('Found View link through observer:', viewLink.href);
-          chrome.storage.local.set({ lastReplyUrl: viewLink.href }, () => {
-            console.log('Stored reply URL:', viewLink.href);
-          });
-          observer.disconnect();
-        }
+      } catch (error) {
+        console.error('Error handling intent page:', error);
       }
     }
-  });
-
-  // Start observing for View link
-  viewLinkObserver.observe(document.body, { 
-    childList: true, 
-    subtree: true 
-  });
+    
+    // If we get here and haven't been redirected, try again after a delay
+    if (!hasBeenRedirected() && !isSuccessfulTweetPage()) {
+      setTimeout(() => handleIntent(attempt + 1), 1000);
+    }
+  };
+  
+  // Helper function to wait for the reply context to be established
+  async function waitForReplyContext() {
+    console.log('Waiting for reply context to be established...');
+    
+    // Wait for indicators that this is a reply
+    return new Promise(resolve => {
+      let checkAttempt = 0;
+      const maxAttempts = 10;
+      const checkInterval = 500; // 500ms between checks
+      
+      const checkForReplyContext = () => {
+        checkAttempt++;
+        console.log(`Checking for reply context (attempt ${checkAttempt}/${maxAttempts})...`);
+        
+        // Check for reply indicators
+        const replyIndicators = [
+          // Check for "Replying to @username" text
+          Array.from(document.querySelectorAll('span, div')).some(el => 
+            el.textContent?.toLowerCase().includes('replying to @')
+          ),
+          
+          // Check for in_reply_to parameter in URL
+          window.location.href.includes('in_reply_to='),
+          
+          // Check for reply icon
+          document.querySelector('svg[aria-label*="reply" i]') !== null,
+          
+          // Check for the original tweet being displayed
+          document.querySelector('article[data-testid="tweet"]') !== null
+        ];
+        
+        const hasReplyContext = replyIndicators.some(indicator => indicator);
+        
+        if (hasReplyContext) {
+          console.log('Reply context found!', replyIndicators);
+          // Wait an additional second for the UI to fully stabilize
+          setTimeout(resolve, 1000);
+          return;
+        }
+        
+        if (checkAttempt >= maxAttempts) {
+          console.log('Max attempts reached waiting for reply context, proceeding anyway');
+          resolve();
+          return;
+        }
+        
+        // Try again after a delay
+        setTimeout(checkForReplyContext, checkInterval);
+      };
+      
+      // Start checking
+      checkForReplyContext();
+    });
+  }
+  
+  // Start the intent handling process
+  setTimeout(() => handleIntent(), 1000);
+  
+  // Don't clear the auto-reply text here, it will be cleared after successful tweet
 }
 
 // Function to request window close with logging
 function requestWindowClose(reason) {
   console.log(`Requesting window close (Reason: ${reason})`);
   return new Promise((resolve) => {
-    // First try using the background script
+    // Only use the background script to close windows - this ensures
+    // only windows opened by our extension will be closed
     chrome.runtime.sendMessage({ 
       action: 'closeTwitterWindow',
       reason: reason 
     }, response => {
       console.log('Window close request response:', response);
       if (chrome.runtime.lastError || !response?.success) {
-        console.log('Background script close failed, trying window.close()');
-        // If background script fails, try window.close() as fallback
-        try {
-          window.close();
-          resolve(true);
-        } catch (e) {
-          console.error('Failed to close window:', e);
-          resolve(false);
-        }
-    } else {
+        console.log('Background script close failed or window was not opened by our extension');
+        // Do NOT try window.close() as fallback - this could close user's manually opened windows
+        resolve(false);
+      } else {
         resolve(true);
       }
     });

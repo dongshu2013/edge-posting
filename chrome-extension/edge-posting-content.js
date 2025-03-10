@@ -328,8 +328,8 @@ function interceptReplyButtons() {
           
           // Open Twitter in a popup window
           chrome.runtime.sendMessage({
-            action: 'openTwitter',
-            tweetUrl: tweetLink,
+            action: 'openTwitterWithReply',
+            tweetLink: tweetLink,
             replyText: instructions || 'Great tweet!',
             buzzId: buzzId,
             price: price || 0

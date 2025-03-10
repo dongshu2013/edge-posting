@@ -35,12 +35,14 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
       const openedWindows = result.openedWindows || {};
       const windowId = sender.tab?.windowId;
       
+      // Only close the window if it was opened by our extension
       if (windowId && openedWindows[windowId]) {
-        console.log('Found matching window:', windowId);
-        // Remove this window from tracking
+        console.log('Found matching window opened by our extension:', windowId);
+        
+        // Remove this window from tracking BEFORE closing it
         delete openedWindows[windowId];
         
-        // Update storage and close window
+        // Update storage first, then close window
         chrome.storage.local.set({ openedWindows }, function() {
           chrome.windows.remove(windowId, function() {
             if (chrome.runtime.lastError) {
@@ -53,21 +55,8 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
           });
         });
       } else {
-        console.log('Window was not opened by our extension or tab info missing');
-        // Try closing the window directly as a fallback
-        if (windowId) {
-          chrome.windows.remove(windowId, function() {
-            if (chrome.runtime.lastError) {
-              console.error('Error in fallback close:', chrome.runtime.lastError);
-              sendResponse({ success: false, error: chrome.runtime.lastError.message });
-            } else {
-              console.log('Window closed via fallback');
-              sendResponse({ success: true });
-            }
-          });
-        } else {
-          sendResponse({ success: false, reason: 'No window ID found' });
-        }
+        console.log('Window was not opened by our extension or tab info missing - NOT closing');
+        sendResponse({ success: false, reason: 'Window was not opened by our extension' });
       }
     });
     
@@ -88,9 +77,13 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
         if (openedWindows[sender.tab.windowId]) {
           console.log('Closing window that was opened by our extension:', sender.tab.windowId);
           
-          // Remove this window from tracking
+          // Remove this window from tracking BEFORE closing it
           delete openedWindows[sender.tab.windowId];
-          chrome.storage.local.set({ openedWindows });
+          chrome.storage.local.set({ openedWindows }, function() {
+            chrome.windows.remove(sender.tab.windowId);
+          });
+        } else {
+          console.log('Window was not opened by our extension - NOT closing');
         }
       }
     });
@@ -100,7 +93,20 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     console.log('Opening Twitter with auto-reply:', message.tweetLink, message.replyText);
     
     // Store the reply text for the Twitter content script to use
-    chrome.storage.local.set({ autoReplyText: message.replyText });
+    chrome.storage.local.set({ 
+      autoReplyText: message.replyText,
+      // Set a flag to indicate this is a window that should have auto-reply enabled
+      autoReplyEnabled: true,
+      // Store a timestamp to expire this setting
+      autoReplyEnabledTimestamp: Date.now()
+    }, () => {
+      console.log('Stored auto-reply text and enabled auto-reply flag');
+      
+      // Debug: Log all storage values
+      chrome.storage.local.get(null, (allData) => {
+        console.log('All storage data after setting flags:', allData);
+      });
+    });
     
     // Configure popup window dimensions
     const width = 600;
@@ -108,26 +114,73 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
     const left = Math.max((screen.width - width) / 2, 0);
     const top = Math.max((screen.height - height) / 2, 0);
     
+    // Format the tweet link as a reply URL if it's a valid tweet URL
+    let replyUrl = message.tweetLink;
+    
+    // Check if it's a valid tweet URL with a status ID
+    if (message.tweetLink && 
+        (message.tweetLink.includes('/status/') || message.tweetLink.includes('/statuses/'))) {
+      // Extract the tweet ID
+      const match = message.tweetLink.match(/\/status(?:es)?\/(\d+)/i);
+      if (match && match[1]) {
+        const tweetId = match[1];
+        // Format as a reply URL with the reply text included
+        const encodedReplyText = encodeURIComponent(message.replyText || '');
+        
+        // Use the correct intent URL format for replies
+        // Twitter's intent API prefers /intent/tweet over /intent/post for replies
+        replyUrl = `https://twitter.com/intent/tweet?in_reply_to=${tweetId}&text=${encodedReplyText}`;
+        console.log('Formatted as reply URL with text:', replyUrl);
+      }
+    }
+    
+    // Generate a unique identifier for this window
+    const windowUniqueId = 'buzz-reply-' + Date.now();
+    
     // Open Twitter in a popup window
     chrome.windows.create({
-      url: message.tweetLink,
+      url: replyUrl,
       type: 'popup',
       width: width,
       height: height,
       left: Math.round(left),
       top: Math.round(top)
     }, function(window) {
-      console.log('Opened Twitter popup window:', window.id);
+      console.log('Opened Twitter popup window:', window.id, 'with unique ID:', windowUniqueId);
       
-      // Track this window with timestamp
+      // Track this window with timestamp and unique ID
       chrome.storage.local.get(['openedWindows'], function(result) {
         const openedWindows = result.openedWindows || {};
+        
+        // Clean up any old windows that might have been left in storage
+        // (windows older than 30 minutes)
+        const now = Date.now();
+        const thirtyMinutesAgo = now - (30 * 60 * 1000);
+        
+        Object.keys(openedWindows).forEach(windowId => {
+          if (openedWindows[windowId].timestamp < thirtyMinutesAgo) {
+            console.log('Removing stale window reference:', windowId);
+            delete openedWindows[windowId];
+          }
+        });
+        
+        // Add the new window
         openedWindows[window.id] = {
-          timestamp: Date.now(),
-          url: message.tweetLink
+          timestamp: now,
+          url: message.tweetLink,
+          uniqueId: windowUniqueId,
+          buzzId: message.buzzId || null,
+          autoReplyEnabled: true // Flag this window for auto-reply
         };
-        chrome.storage.local.set({ openedWindows });
-        console.log('Updated opened windows list:', openedWindows);
+        
+        chrome.storage.local.set({ openedWindows }, () => {
+          console.log('Updated opened windows list. Current windows:', openedWindows);
+          
+          // Debug: Log all storage values
+          chrome.storage.local.get(null, (allData) => {
+            console.log('All storage data:', allData);
+          });
+        });
       });
       
       // Set up an auto-close timeout (5 minutes)
@@ -136,9 +189,15 @@ chrome.runtime.onMessage.addListener(function(message, sender, sendResponse) {
           const windows = result.openedWindows || {};
           if (windows[window.id]) {
             console.log('Auto-closing window after timeout:', window.id);
-            chrome.windows.remove(window.id, function() {
-              delete windows[window.id];
-              chrome.storage.local.set({ openedWindows: windows });
+            
+            // Remove this window from tracking BEFORE closing it
+            delete windows[window.id];
+            chrome.storage.local.set({ openedWindows: windows }, function() {
+              chrome.windows.remove(window.id, function() {
+                if (chrome.runtime.lastError) {
+                  console.error('Error auto-closing window:', chrome.runtime.lastError);
+                }
+              });
             });
           }
         });

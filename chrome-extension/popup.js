@@ -35,7 +35,12 @@ document.addEventListener('DOMContentLoaded', function() {
       // Add active class to clicked tab and corresponding content
       tab.classList.add('active');
       const tabId = tab.getAttribute('data-tab');
-      document.getElementById(`${tabId}-tab`).classList.add('active');
+      const tabContent = document.getElementById(`${tabId}-tab`);
+      if (tabContent) {
+        tabContent.classList.add('active');
+      } else {
+        console.warn(`Tab content with ID ${tabId}-tab not found`);
+      }
     });
   });
   
@@ -47,6 +52,21 @@ document.addEventListener('DOMContentLoaded', function() {
   const modelSelect = document.getElementById('modelSelect');
   const refreshButton = document.getElementById('refreshButton');
   const buzzListContainer = document.getElementById('buzzList');
+  
+  // Check if all required elements exist
+  if (!autoSubmitCheckbox || !closeTabCheckbox || !apiKeyInput || 
+      !toggleApiKey || !modelSelect || !refreshButton || !buzzListContainer) {
+    console.error('One or more required UI elements not found:', {
+      autoSubmitCheckbox: !!autoSubmitCheckbox,
+      closeTabCheckbox: !!closeTabCheckbox,
+      apiKeyInput: !!apiKeyInput,
+      toggleApiKey: !!toggleApiKey,
+      modelSelect: !!modelSelect,
+      refreshButton: !!refreshButton,
+      buzzListContainer: !!buzzListContainer
+    });
+    return; // Exit early if elements are missing
+  }
   
   // Toggle API key visibility
   toggleApiKey.addEventListener('click', function() {
@@ -71,36 +91,52 @@ document.addEventListener('DOMContentLoaded', function() {
     if (result.model) {
       modelSelect.value = result.model;
     }
+    
+    // Load buzz cards with forceRefresh=false to always use cache if available
+    loadBuzzCards(false);
   });
   
   // Save settings when changed
-  autoSubmitCheckbox.addEventListener('change', function() {
-    chrome.storage.local.set({ autoSubmit: this.checked });
-  });
-  
-  closeTabCheckbox.addEventListener('change', function() {
-    chrome.storage.local.set({ closeTab: this.checked });
-  });
-  
-  apiKeyInput.addEventListener('change', function() {
-    chrome.storage.local.set({ apiKey: this.value });
-  });
-  
-  modelSelect.addEventListener('change', function() {
-    chrome.storage.local.set({ model: this.value });
-  });
-  
-  // Function to refresh the buzz list
-  refreshButton.addEventListener('click', function() {
-    // Clear the cached buzz cards when manually refreshing
-    chrome.storage.local.remove(['cachedBuzzCards', 'cachedBuzzTimestamp', 'cachedBuzzUrl'], function() {
-      console.log('Cleared buzz card cache');
-      loadBuzzCards(true); // Pass true to force refresh
+  if (autoSubmitCheckbox) {
+    autoSubmitCheckbox.addEventListener('change', function() {
+      chrome.storage.local.set({ autoSubmit: this.checked });
     });
-  });
+  }
+  
+  if (closeTabCheckbox) {
+    closeTabCheckbox.addEventListener('change', function() {
+      chrome.storage.local.set({ closeTab: this.checked });
+    });
+  }
+  
+  if (apiKeyInput) {
+    apiKeyInput.addEventListener('change', function() {
+      chrome.storage.local.set({ apiKey: this.value });
+    });
+  }
+  
+  if (modelSelect) {
+    modelSelect.addEventListener('change', function() {
+      chrome.storage.local.set({ model: this.value });
+    });
+  }
+  
+  // Function to refresh the buzz list - ONLY refresh when this button is clicked
+  if (refreshButton) {
+    refreshButton.addEventListener('click', function() {
+      // Clear the cached buzz cards when manually refreshing
+      chrome.storage.local.remove(['cachedBuzzCards', 'cachedBuzzTimestamp', 'cachedBuzzUrl'], function() {
+        console.log('Cleared buzz card cache');
+        loadBuzzCards(true); // Pass true to force refresh
+      });
+    });
+  }
   
   // Function to load buzz cards from the active tab using AI only
   async function loadBuzzCards(forceRefresh = false) {
+    // forceRefresh will be true ONLY when the user clicks the "Refresh Buzz List" button
+    // Otherwise, we always try to use cached data first
+    
     buzzListContainer.innerHTML = '<div class="loading">Loading buzz cards...</div>';
     
     try {
@@ -121,36 +157,46 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      // Check if we have cached buzz cards for this URL and they're not too old
+      // Always check for cached data first, unless forceRefresh is true
       if (!forceRefresh) {
         const cachedData = await new Promise(resolve => {
           chrome.storage.local.get(['cachedBuzzCards', 'cachedBuzzTimestamp', 'cachedBuzzUrl'], resolve);
         });
         
-        const now = Date.now();
-        const cacheAge = now - (cachedData.cachedBuzzTimestamp || 0);
-        const cacheMaxAge = 5 * 60 * 1000; // 5 minutes
-        
-        // Use cached data if it exists, is for the current URL, and is not too old
+        // Use cached data if it exists and is for the current URL, regardless of age
         if (cachedData.cachedBuzzCards && 
             cachedData.cachedBuzzCards.length > 0 && 
-            cachedData.cachedBuzzUrl === currentUrl &&
-            cacheAge < cacheMaxAge) {
-          console.log('Using cached buzz cards, age:', Math.round(cacheAge / 1000), 'seconds');
-          buzzListContainer.innerHTML = '<div class="status">Using cached data. <button id="forceCacheRefresh">Force Refresh</button></div>';
+            cachedData.cachedBuzzUrl === currentUrl) {
+          
+          const now = Date.now();
+          const cacheAge = now - (cachedData.cachedBuzzTimestamp || 0);
+          const cacheAgeMinutes = Math.round(cacheAge / (60 * 1000));
+          
+          console.log('Using cached buzz cards, age:', cacheAgeMinutes, 'minutes');
+          buzzListContainer.innerHTML = `<div class="status">Using cached data (${cacheAgeMinutes} min old). <button id="forceCacheRefresh">Refresh</button></div>`;
           renderBuzzCards(cachedData.cachedBuzzCards, activeTab.id);
           
-          // Add event listener to the force refresh button
-          document.getElementById('forceCacheRefresh').addEventListener('click', function() {
-            chrome.storage.local.remove(['cachedBuzzCards', 'cachedBuzzTimestamp', 'cachedBuzzUrl'], function() {
-              console.log('Cleared buzz card cache');
-              loadBuzzCards(true); // Force refresh
+          // Add event listener to the force refresh button (alternative to the main refresh button)
+          const forceCacheRefreshButton = document.getElementById('forceCacheRefresh');
+          if (forceCacheRefreshButton) {
+            forceCacheRefreshButton.addEventListener('click', function() {
+              chrome.storage.local.remove(['cachedBuzzCards', 'cachedBuzzTimestamp', 'cachedBuzzUrl'], function() {
+                console.log('Cleared buzz card cache');
+                loadBuzzCards(true); // Force refresh
+              });
             });
-          });
+          } else {
+            console.warn('Force refresh button not found in the DOM');
+          }
           
           return;
         }
       }
+      
+      // If we get here, either:
+      // 1. forceRefresh is true (user clicked refresh button)
+      // 2. There's no cached data for this URL
+      // In either case, we need to fetch fresh data
       
       buzzListContainer.innerHTML = '<div class="loading">Analyzing page with AI...</div>';
       
@@ -250,12 +296,14 @@ document.addEventListener('DOMContentLoaded', function() {
         CRITICAL REQUIREMENTS:
         1. Each buzz card MUST have a unique and correct ID
         2. Each buzz card MUST have a precise CSS selector that targets ONLY its specific "Reply & Earn X BUZZ" or "Reply (No Reward)" button
-        3. Each buzz card MUST have the correct tweet link
+        3. Each buzz card MUST have a Twitter/X URL - this can be either:
+           - A specific tweet URL (containing /status/ or /statuses/)
+           - A profile URL (e.g., https://twitter.com/username or https://x.com/username)
         
         For each buzz card, identify:
         - id: The exact unique identifier for this specific buzz card (string, often a UUID or data attribute)
         - buttonSelector: A precise CSS selector that will target ONLY the "Reply & Earn X BUZZ" or "Reply (No Reward)" button for this specific buzz card
-        - tweetLink: The exact Twitter/X URL that users need to reply to (string)
+        - tweetLink: The Twitter/X URL that users need to reply to (string) - can be a tweet URL or profile URL
         - instructions: The instructions for replying (string)
         - replyCount: Current number of replies (number), every buzz cards is with "View X Replies" button where X is the total replies allowed
         - totalDeposits: the total amount of BUZZ tokens deposited for this buzz card (number)
@@ -268,12 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
         - If needed, use parent-child relationships to ensure uniqueness
         - Example: '[data-buzz-id="123456"] button.reply-button' or '#buzz-card-123456 .reply-button'
         
-        For the ID:
-        - Look for data-id, data-buzz-id attributes, or any other unique identifier in the HTML
-        - If no explicit ID is found, use any unique attribute or combination that can identify this specific buzz card
-        - The ID must be different for each buzz card
+        For the tweetLink:
+        - Prefer specific tweet URLs (with /status/ or /statuses/) when available
+        - If only a profile URL is found (e.g., https://twitter.com/username), that's acceptable
+        - Look for iframe src attributes that contain twitter.com/i/cards or links to Twitter/X
         
-        Return the data as a JSON array of objects with these fields. Each object must represent a single, unique buzz card.
+        Return the data as a JSON array of objects, with each object representing one buzz card.
+        Example: [{"id": "123", "buttonSelector": "#buzz-123 button", "tweetLink": "https://twitter.com/user/status/123456", ...}]
         
         HTML: ${html ? html.substring(0, Math.min(15000, html.length)) : 'No HTML available'}...
       `;
@@ -345,6 +394,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tweetLink: card.tweetLink,
             instructions: card.instructions || 'No instructions provided',
             replyCount: card.replyCount || 0,
+            totalDeposits: card.totalDeposits || 0,
             createdBy: card.createdBy || 'Unknown',
             username: card.username || 'Unknown'
           };
@@ -380,155 +430,243 @@ document.addEventListener('DOMContentLoaded', function() {
     buzzListContainer.appendChild(headerDiv);
     
     buzzCards.forEach((buzz, index) => {
+      // Validate tweet link - check if it's a tweet URL or profile URL
+      const isTweetUrl = validateTweetUrl(buzz.tweetLink);
+      const isProfile = isProfileUrl(buzz.tweetLink);
+      const tweetId = isTweetUrl ? extractTweetId(buzz.tweetLink) : null;
+      const username = isProfile ? extractUsername(buzz.tweetLink) : null;
+      
       const buzzCard = document.createElement('div');
       buzzCard.className = 'buzz-card';
-      buzzCard.innerHTML = `
-        <h3>${truncateText(buzz.instructions, 50)}</h3>
-        <p class="creator">Created by: ${buzz.username || 'Unknown'}</p>
-        <p>Tweet: ${truncateText(buzz.tweetLink, 30)}</p>
-        <p class="Total Rewards">Total Rewards: ${buzz.totalDeposits} BUZZ</p>
-        <p>Replies: ${buzz.replyCount || 0}</p>
-        <p class="buzz-id">ID: ${truncateText(buzz.id, 15)}</p>
-        <div class="actions">
-          <button class="reply-btn" data-buzz-id="${buzz.id}" data-button-selector="${buzz.buttonSelector || ''}" data-tweet-link="${buzz.tweetLink || ''}">Reply Now</button>
-        </div>
-      `;
+      
+      // Create content based on the type of URL
+      if (isTweetUrl && tweetId) {
+        // Valid tweet URL with ID - show tweet embed
+        buzzCard.innerHTML = `
+          <h3>${truncateText(buzz.instructions, 50)}</h3>
+          <p class="creator">Created by: ${buzz.username || 'Unknown'}</p>
+          <div class="tweet-embed">
+            <iframe 
+              src="https://platform.twitter.com/embed/index.html?dnt=false&embedId=twitter-widget-0&frame=false&hideCard=false&hideThread=false&id=${tweetId}" 
+              style="width: 100%; height: 300px; border: none; overflow: hidden;"
+              allowtransparency="true"
+              allowfullscreen="true"
+            ></iframe>
+          </div>
+          <p class="Total Rewards">Total Rewards: ${buzz.totalDeposits} BUZZ</p>
+          <p>Replies: ${buzz.replyCount || 0}</p>
+          <p class="buzz-id">ID: <span class="full-text">${buzz.id}</span></p>
+          <p class="tweet-url">URL: <a href="${buzz.tweetLink}" target="_blank" class="full-text">${buzz.tweetLink}</a></p>
+          <div class="actions">
+            <button class="reply-btn" data-buzz-id="${buzz.id}" data-button-selector="${buzz.buttonSelector || ''}" data-tweet-link="${buzz.tweetLink || ''}">Reply Now</button>
+          </div>
+        `;
+      } else if (isProfile && username) {
+        // Valid profile URL - show profile embed
+        buzzCard.innerHTML = `
+          <h3>${truncateText(buzz.instructions, 50)}</h3>
+          <p class="creator">Created by: ${buzz.username || 'Unknown'}</p>
+          <div class="tweet-embed">
+            <a 
+              class="twitter-timeline" 
+              data-height="300" 
+              data-theme="light" 
+              href="https://twitter.com/${username}?ref_src=twsrc%5Etfw"
+            >
+              Tweets by ${username}
+            </a>
+            <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+          </div>
+          <p class="warning">⚠️ This is a profile URL, not a specific tweet. You may need to find the specific tweet to reply to.</p>
+          <p class="Total Rewards">Total Rewards: ${buzz.totalDeposits} BUZZ</p>
+          <p>Replies: ${buzz.replyCount || 0}</p>
+          <p class="buzz-id">ID: <span class="full-text">${buzz.id}</span></p>
+          <p class="tweet-url">URL: <a href="${buzz.tweetLink}" target="_blank" class="full-text">${buzz.tweetLink}</a></p>
+          <div class="actions">
+            <button class="reply-btn" data-buzz-id="${buzz.id}" data-button-selector="${buzz.buttonSelector || ''}" data-tweet-link="${buzz.tweetLink || ''}">Reply Now</button>
+          </div>
+        `;
+        
+        // Load Twitter widgets script if it's not already loaded
+        if (!document.getElementById('twitter-widgets-script')) {
+          const script = document.createElement('script');
+          script.id = 'twitter-widgets-script';
+          script.src = 'https://platform.twitter.com/widgets.js';
+          script.async = true;
+          document.body.appendChild(script);
+        }
+      } else {
+        // Invalid URL - show error message
+        buzzCard.innerHTML = `
+          <h3>${truncateText(buzz.instructions, 50)}</h3>
+          <p class="creator">Created by: ${buzz.username || 'Unknown'}</p>
+          <p class="error">⚠️ Invalid URL format. Expected a Twitter/X URL.</p>
+          <p class="Total Rewards">Total Rewards: ${buzz.totalDeposits} BUZZ</p>
+          <p>Replies: ${buzz.replyCount || 0}</p>
+          <p class="buzz-id">ID: <span class="full-text">${buzz.id}</span></p>
+          <p class="tweet-url">URL: <a href="${buzz.tweetLink}" target="_blank" class="full-text">${buzz.tweetLink}</a></p>
+          <div class="actions">
+            <button class="reply-btn" data-buzz-id="${buzz.id}" data-button-selector="${buzz.buttonSelector || ''}" data-tweet-link="${buzz.tweetLink || ''}">Reply Now</button>
+          </div>
+        `;
+      }
       
       buzzListContainer.appendChild(buzzCard);
       
       // Add click event to the reply button
       const replyBtn = buzzCard.querySelector('.reply-btn');
-      replyBtn.addEventListener('click', function() {
-        const buzzId = this.getAttribute('data-buzz-id');
-        const buttonSelector = this.getAttribute('data-button-selector');
-        const tweetLink = this.getAttribute('data-tweet-link');
-        
-        console.log(`Clicking Reply button for buzz #${index + 1}:`, { 
-          buzzId, 
-          buttonSelector, 
-          tweetLink 
-        });
-        
-        // Execute script to click the corresponding Reply & Earn button
-        chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          func: (buzzId, buttonSelector, tweetLink) => {
-            console.log('Looking for Reply & Earn button for buzz ID:', buzzId);
-            console.log('Using button selector:', buttonSelector);
-            
-            // If we have a button selector from AI, try to use it first
-            if (buttonSelector) {
-              try {
-                // For :contains pseudo-selector (not standard CSS)
-                if (buttonSelector.includes(':contains(')) {
-                  const selectorParts = buttonSelector.match(/(.*):contains\("(.*)"\)/);
-                  if (selectorParts) {
-                    const baseSelector = selectorParts[1];
-                    const containsText = selectorParts[2];
-                    
-                    const elements = document.querySelectorAll(baseSelector);
-                    for (const element of elements) {
-                      if (element.textContent.includes(containsText)) {
-                        console.log('Found button using AI selector with :contains:', element);
-                        element.click();
-                        return true;
-                      }
-                    }
-                  }
-                } else {
-                  // Standard CSS selector
+      if (replyBtn) {
+        replyBtn.addEventListener('click', function() {
+          const buzzId = this.getAttribute('data-buzz-id');
+          const buttonSelector = this.getAttribute('data-button-selector');
+          const tweetLink = this.getAttribute('data-tweet-link');
+          
+          console.log(`Clicking Reply button for buzz #${index + 1}:`, { 
+            buzzId, 
+            buttonSelector, 
+            tweetLink 
+          });
+          
+          // Execute script to click the corresponding Reply & Earn button
+          chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            func: (buzzId, buttonSelector, tweetLink) => {
+              console.log('Looking for Reply & Earn button for buzz ID:', buzzId);
+              console.log('Using button selector:', buttonSelector);
+              
+              // If we have a button selector from AI, try to use it first
+              if (buttonSelector) {
+                try {
                   const button = document.querySelector(buttonSelector);
                   if (button) {
                     console.log('Found button using AI selector:', button);
                     button.click();
                     return true;
-                  } else {
-                    console.log('Button not found with selector:', buttonSelector);
-                    
-                    // Try a more relaxed approach by looking for parts of the selector
-                    const selectorParts = buttonSelector.split(' ');
-                    if (selectorParts.length > 1) {
-                      // Try the last part of the selector which might be more specific
-                      const lastPart = selectorParts[selectorParts.length - 1];
-                      const buttons = document.querySelectorAll(lastPart);
-                      if (buttons.length > 0) {
-                        console.log('Found button using partial selector:', buttons[0]);
-                        buttons[0].click();
-                        return true;
-                      }
-                    }
                   }
+                } catch (error) {
+                  console.error('Error using AI selector:', error);
+                }
+              }
+              
+              // If AI selector failed, try to find the button by ID
+              try {
+                const buttonById = document.querySelector(`[data-buzz-id="${buzzId}"]`);
+                if (buttonById) {
+                  console.log('Found button by ID:', buttonById);
+                  buttonById.click();
+                  return true;
                 }
               } catch (error) {
-                console.error('Error using AI selector:', error);
+                console.error('Error finding button by ID:', error);
               }
-            }
-            
-            // If AI selector failed, try to find the button by ID
-            try {
-              const buttonById = document.querySelector(`[data-buzz-id="${buzzId}"]`);
-              if (buttonById) {
-                console.log('Found button by ID:', buttonById);
-                buttonById.click();
-                return true;
-              }
-            } catch (error) {
-              console.error('Error finding button by ID:', error);
-            }
-            
-            // If all else fails, use a generic approach to find buttons
-            const allButtons = document.querySelectorAll('button');
-            const replyButtons = Array.from(allButtons).filter(button => 
-              button.textContent.toLowerCase().includes('reply') && 
-              button.textContent.toLowerCase().includes('earn')
-            );
-            
-            if (replyButtons.length > 0) {
-              console.log('Found Reply & Earn button (generic approach), clicking it');
-              replyButtons[0].click();
-              return true;
-            }
-            
-            // If we couldn't find any button but have a tweet link, open it directly in a popup
-            if (tweetLink) {
-              console.log('No Reply & Earn button found, opening tweet link directly:', tweetLink);
               
-              // Send a message to the background script to open Twitter with auto-reply
-              if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
-                chrome.runtime.sendMessage({
-                  action: 'openTwitterWithReply',
-                  tweetLink: tweetLink,
-                  buzzId: buzzId
-                });
-                return true;
-              } else {
-                // Configure popup window dimensions
-                const width = 600;
-                const height = 700;
-                const left = (window.screen.width - width) / 2;
-                const top = (window.screen.height - height) / 2;
-                
-                // Open Twitter in a popup window
-                window.open(
-                  tweetLink,
-                  "twitter_popup",
-                  `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
-                );
-                
+              // If all else fails, use a generic approach to find buttons
+              const allButtons = document.querySelectorAll('button');
+              const replyButtons = Array.from(allButtons).filter(button => 
+                button.textContent.toLowerCase().includes('reply') && 
+                button.textContent.toLowerCase().includes('earn')
+              );
+              
+              if (replyButtons.length > 0) {
+                console.log('Found Reply & Earn button (generic approach), clicking it');
+                replyButtons[0].click();
                 return true;
               }
-            }
-            
-            console.log('Could not find Reply & Earn button or tweet link');
-            return false;
-          },
-          args: [buzzId, buttonSelector, tweetLink]
+              
+              // If we couldn't find any button but have a tweet link, open it directly in a popup
+              if (tweetLink) {
+                console.log('No Reply & Earn button found, opening tweet link directly:', tweetLink);
+                
+                // Send a message to the background script to open Twitter with auto-reply
+                if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage) {
+                  chrome.runtime.sendMessage({
+                    action: 'openTwitterWithReply',
+                    tweetLink: tweetLink,
+                    buzzId: buzzId
+                  });
+                  return true;
+                } else {
+                  // Configure popup window dimensions
+                  const width = 600;
+                  const height = 700;
+                  const left = (window.screen.width - width) / 2;
+                  const top = (window.screen.height - height) / 2;
+                  
+                  // Open Twitter in a popup window - use the reply intent URL
+                  const replyUrl = formatReplyUrl(tweetLink);
+                  window.open(
+                    replyUrl,
+                    "twitter_popup",
+                    `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
+                  );
+                  
+                  return true;
+                }
+              }
+              
+              console.log('Could not find Reply & Earn button or tweet link');
+              return false;
+            },
+            args: [buzzId, buttonSelector, tweetLink]
+          });
+          
+          // Close the popup
+          window.close();
         });
-        
-        // Close the popup
-        window.close();
-      });
+      }
     });
+  }
+  
+  // Function to validate a tweet URL
+  function validateTweetUrl(url) {
+    if (!url) return false;
+    
+    // Check if it's a valid tweet URL (must contain /status/ or /statuses/)
+    return url.includes('/status/') || url.includes('/statuses/');
+  }
+  
+  // Function to check if it's a profile URL
+  function isProfileUrl(url) {
+    if (!url) return false;
+    
+    // Check if it's a Twitter/X profile URL (doesn't contain /status/ but has twitter.com or x.com)
+    return (url.includes('twitter.com/') || url.includes('x.com/')) && 
+           !url.includes('/status/') && 
+           !url.includes('/statuses/');
+  }
+  
+  // Function to extract tweet ID from a tweet URL
+  function extractTweetId(url) {
+    if (!url) return null;
+    
+    try {
+      // Match status or statuses followed by a number
+      const match = url.match(/\/status(?:es)?\/(\d+)/i);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error extracting tweet ID:', error);
+      return null;
+    }
+  }
+  
+  // Function to extract username from a profile URL
+  function extractUsername(url) {
+    if (!url) return null;
+    
+    try {
+      // Extract username from twitter.com/username or x.com/username
+      const match = url.match(/(?:twitter\.com|x\.com)\/([^\/\?]+)/i);
+      if (match && match[1]) {
+        return match[1];
+      }
+      return null;
+    } catch (error) {
+      console.error('Error extracting username:', error);
+      return null;
+    }
   }
   
   // Helper function to truncate text
@@ -537,6 +675,30 @@ document.addEventListener('DOMContentLoaded', function() {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   }
   
-  // Load buzz cards when popup opens
-  loadBuzzCards();
+  // Function to format a tweet URL as a reply URL
+  function formatReplyUrl(tweetUrl) {
+    if (!tweetUrl) return null;
+    
+    try {
+      // Check if it's a valid tweet URL
+      if (!validateTweetUrl(tweetUrl)) {
+        console.warn('Cannot format as reply URL: Not a valid tweet URL', tweetUrl);
+        return tweetUrl; // Return original URL if not a valid tweet URL
+      }
+      
+      // Extract the tweet ID
+      const tweetId = extractTweetId(tweetUrl);
+      if (!tweetId) {
+        console.warn('Cannot format as reply URL: Failed to extract tweet ID', tweetUrl);
+        return tweetUrl; // Return original URL if can't extract ID
+      }
+      
+      // Format as a reply URL
+      // Twitter's reply URL format: https://twitter.com/intent/tweet?in_reply_to=TWEET_ID
+      return `https://twitter.com/intent/tweet?in_reply_to=${tweetId}`;
+    } catch (error) {
+      console.error('Error formatting reply URL:', error);
+      return tweetUrl; // Return original URL on error
+    }
+  }
 }); 

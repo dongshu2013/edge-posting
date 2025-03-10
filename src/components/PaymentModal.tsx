@@ -35,9 +35,7 @@ export const PaymentModal = ({
   });
 
   useEffect(() => {
-    if (isOpen) {
-      ongoingOrderQuery.refetch();
-    }
+    ongoingOrderQuery.refetch();
   }, [isOpen]);
 
   const createOrder = async () => {

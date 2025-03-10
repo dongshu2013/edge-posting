@@ -9,8 +9,7 @@
     "lint": "next lint",
     "check-data": "ts-node scripts/check-data.ts",
     "seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts",
-    "postinstall": "prisma generate",
-    "cron:settle": "curl -X POST /api/cron/settle-rewards -H \"Authorization: Bearer $CRON_SECRET\""
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "ts-node -T --experimental-specifier-resolution=node prisma/seed.ts"

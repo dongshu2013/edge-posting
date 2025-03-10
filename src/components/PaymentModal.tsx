@@ -44,6 +44,7 @@ export const PaymentModal = ({
       return;
     }
 
+    setIsSubmitting(true);
     const resJson = await fetch(`${paymentServiceUrl}/create-order`, {
       method: "POST",
       headers: {
@@ -59,6 +60,7 @@ export const PaymentModal = ({
 
     ongoingOrderQuery.refetch();
     setError(null);
+    setIsSubmitting(false);
   };
 
   const checkOrder = async (orderId: string) => {

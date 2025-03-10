@@ -54,8 +54,6 @@ export async function middleware(request: NextRequest) {
     const requestHeaders = new Headers(request.headers);
     // requestHeaders.set("x-user-id", userData.uid);
     // requestHeaders.set("x-user-email", userData.email || "");
-    requestHeaders.set("x-user-id", "1");
-    requestHeaders.set("x-user-email", "test@test.com");
 
     return NextResponse.next({ headers: requestHeaders });
   }

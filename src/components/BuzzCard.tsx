@@ -112,17 +112,37 @@ export default function BuzzCard({
     }
   };
 
-  const getRandomReplyText = () => {
-    const template =
-      replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
-    return template.replace("{{instructions}}", instructions);
+  const getRandomReplyText = async () => {
+    try {
+      const response = await fetchApi("/api/generate-reply", {
+        method: "POST",
+        body: JSON.stringify({
+          instructions,
+        }),
+      });
+
+      if (response.error) {
+        // 如果 AI 生成失败，回退到模板
+        const template =
+          replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+        return template.replace("{{instructions}}", instructions);
+      }
+
+      return response.text;
+    } catch (error) {
+      console.error("Failed to generate reply:", error);
+      // 发生错误时回退到模板
+      const template =
+        replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+      return template.replace("{{instructions}}", instructions);
+    }
   };
 
-  const handleReplyClick = () => {
-    const replyText = getRandomReplyText();
+  const handleReplyClick = async () => {
+    const replyText = await getRandomReplyText();
     window.open(getReplyIntentUrl(tweetLink, replyText), "_blank");
     setIsReplyModalOpen(true);
-    setGeneratedReplyText(replyText); // 保存生成的文案
+    setGeneratedReplyText(replyText);
   };
 
   const renderReplyButton = () => {

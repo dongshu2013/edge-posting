@@ -58,7 +58,7 @@ export default function NewBuzzPage() {
       }
 
       // Show success message
-      alert("Buzz created successfully!");
+      // alert("Buzz created successfully!");
 
       // Redirect to the buzz details page
       router.push(`/buzz/${buzz.id}`);

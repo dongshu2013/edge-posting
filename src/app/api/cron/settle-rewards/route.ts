@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Buzz } from '@prisma/client';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { Buzz } from "@prisma/client";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
 
 interface Reply {
@@ -17,24 +17,33 @@ type BuzzWithReplies = Buzz & {
 export async function POST(request: Request) {
   try {
     // Verify the request is from a trusted source (e.g., cron job service)
-    const authHeader = request.headers.get('authorization');
+    const authHeader = request.headers.get("authorization");
     if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    await prisma.buzz.updateMany({
+      where: {
+        isActive: true,
+        deadline: {
+          lte: new Date(),
+        },
+      },
+      data: {
+        isActive: false,
+      },
+    });
 
     // Find all expired, unsettled buzzes
     const expiredBuzzes = await prisma.buzz.findMany({
       where: {
         isSettled: false,
-        OR: [
-          { deadline: { lte: new Date() } },
-          { isActive: false },
-        ],
+        OR: [{ deadline: { lte: new Date() } }, { isActive: false }],
       },
       include: {
         replies: {
-          orderBy: { createdAt: 'asc' },
-          where: { status: 'PENDING' },
+          orderBy: { createdAt: "asc" },
+          where: { status: "PENDING" },
         },
       },
     });
@@ -50,18 +59,18 @@ export async function POST(request: Request) {
           // Mark all eligible replies as APPROVED
           await tx.reply.updateMany({
             where: {
-              id: { in: eligibleReplies.map(reply => reply.id) },
+              id: { in: eligibleReplies.map((reply) => reply.id) },
             },
             data: {
-              status: 'APPROVED',
+              status: "APPROVED",
             },
           });
 
           // Create reward transactions for approved replies
           const rewardTransactions = eligibleReplies.map((reply: Reply) => ({
             amount: buzz.price,
-            type: 'REWARD' as const,
-            status: 'PENDING' as const,
+            type: "REWARD" as const,
+            status: "PENDING" as const,
             fromAddress: buzz.createdBy,
             toAddress: reply.createdBy,
             buzzId: buzz.id,
@@ -79,10 +88,10 @@ export async function POST(request: Request) {
             await tx.transaction.create({
               data: {
                 amount: buzz.price * remainingSlots,
-                type: 'BURN',
-                status: 'PENDING',
+                type: "BURN",
+                status: "PENDING",
                 fromAddress: buzz.createdBy,
-                toAddress: '0x000000000000000000000000000000000000dEaD', // Burn address
+                toAddress: "0x000000000000000000000000000000000000dEaD", // Burn address
                 buzzId: buzz.id,
               },
             });
@@ -106,14 +115,14 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({
-      message: 'Settlement completed',
+      message: "Settlement completed",
       settledBuzzes: results,
     });
   } catch (error) {
-    console.error('Error in settle rewards job:', error);
+    console.error("Error in settle rewards job:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

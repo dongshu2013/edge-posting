@@ -23,7 +23,14 @@ export function useAuth() {
   const [isSyncing, setIsSyncing] = useState(false);
   const authStateInitialized = useRef(false);
 
-  // Save user to database only if they don't exist
+  const generateRandomUsername = () => {
+    const prefix = "user";
+    const randomNum = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0");
+    return `${prefix}${randomNum}`;
+  };
+
   const saveUserToDatabase = useCallback(
     async (user: User) => {
       if (isSyncing || !user) return;
@@ -46,7 +53,7 @@ export function useAuth() {
             body: JSON.stringify({
               uid: user.uid,
               email: user.email,
-              username: user.displayName,
+              username: generateRandomUsername(), // 使用随机生成的用户名
               nickname: user.displayName,
               avatar: user.photoURL,
             }),

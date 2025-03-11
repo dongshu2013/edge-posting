@@ -23,7 +23,21 @@ export function useAuth() {
   const [isSyncing, setIsSyncing] = useState(false);
   const authStateInitialized = useRef(false);
 
-  // Save user to database only if they don't exist
+  const generateRandomUsername = () => {
+    const chars =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const timestamp = Date.now().toString(36); // Convert timestamp to base36
+    const randomLength = 12; // Fixed length for random string
+    let randomString = "";
+
+    for (let i = 0; i < randomLength; i++) {
+      const randomIndex = Math.floor(Math.random() * chars.length);
+      randomString += chars.charAt(randomIndex);
+    }
+
+    return `user_${timestamp}${randomString}`;
+  };
+
   const saveUserToDatabase = useCallback(
     async (user: User) => {
       if (isSyncing || !user) return;
@@ -46,7 +60,7 @@ export function useAuth() {
             body: JSON.stringify({
               uid: user.uid,
               email: user.email,
-              username: user.displayName,
+              username: generateRandomUsername(), // 使用随机生成的用户名
               nickname: user.displayName,
               avatar: user.photoURL,
             }),

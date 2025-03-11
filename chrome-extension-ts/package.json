@@ -1,0 +1,30 @@
+{
+  "name": "buzz-reply-helper",
+  "version": "1.0.0",
+  "description": "Chrome extension for BUZZ Reply Helper",
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "watch": "webpack --watch --config webpack.config.js",
+    "dev": "webpack --watch --config webpack.config.js --mode=development",
+    "prod": "webpack --config webpack.config.js --mode=production",
+    "zip": "node scripts/create-zip.js"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.246",
+    "@types/react": "^18.2.21",
+    "@types/react-dom": "^18.2.7",
+    "copy-webpack-plugin": "^11.0.0",
+    "css-loader": "^6.8.1",
+    "html-webpack-plugin": "^5.5.3",
+    "style-loader": "^3.3.3",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.2.2",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "zip-a-folder": "^2.0.0"
+  }
+} 

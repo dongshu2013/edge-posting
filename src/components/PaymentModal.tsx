@@ -26,12 +26,22 @@ export const PaymentModal = ({
     queryKey: ["payment-user-ongoing-order", user?.uid],
     staleTime: Infinity, // Prevent automatic refetching
     refetchOnWindowFocus: false, // Prevent refetching when window regains focus
+    enabled: !!user?.uid && !!paymentServiceUrl,
     queryFn: async () => {
-      const resJson = await fetch(
-        `${paymentServiceUrl}/user-ongoing-order?payerId=${user?.uid}&applicationId=${paymentServiceApplicationId}`
-      ).then((res) => res.json());
+      if (!user?.uid || !paymentServiceUrl) {
+        return null;
+      }
+      
+      try {
+        const resJson = await fetch(
+          `${paymentServiceUrl}/user-ongoing-order?payerId=${user.uid}&applicationId=${paymentServiceApplicationId}`
+        ).then((res) => res.json());
 
-      return resJson?.data?.order;
+        return resJson?.data?.order;
+      } catch (error) {
+        console.error("Error fetching ongoing order:", error);
+        return null;
+      }
     },
   });
 

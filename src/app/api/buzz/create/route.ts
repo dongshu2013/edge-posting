@@ -78,6 +78,33 @@ export async function POST(request: Request) {
       return { buzz, transaction };
     });
 
+    // Trigger QStash API to schedule the settle-rewards cron job
+    try {
+      const qstashUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/settle-rewards`;
+      const qstashToken = process.env.QSTASH_TOKEN;
+      
+      if (!qstashToken) {
+        console.error("QSTASH_TOKEN is not defined in environment variables");
+      } else {
+        // Schedule the job to run at the deadline
+        await fetch("https://qstash.upstash.io/v2/publish", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${qstashToken}`,
+          },
+          body: JSON.stringify({
+            url: qstashUrl,
+            body: JSON.stringify({ buzzId: result.buzz.id }),
+            delay: Math.floor((new Date(deadline).getTime() - Date.now()) / 1000), // Delay in seconds
+          }),
+        });
+      }
+    } catch (qstashError) {
+      console.error("Failed to schedule QStash job:", qstashError);
+      // Continue execution even if QStash scheduling fails
+    }
+
     return NextResponse.json(result.buzz);
   } catch (error) {
     console.error("Failed to create buzz:", error);

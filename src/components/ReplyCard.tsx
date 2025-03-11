@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { fetchApi } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReplyCardProps {
   id: string;
@@ -48,11 +49,12 @@ export default function ReplyCard({
   showRejectButton = true,
   username,
 }: ReplyCardProps) {
-  const { address } = useAccount();
+  const { user } = useAuth();
+
   const isOwner =
-    address &&
+    user &&
     buzzCreator &&
-    address.toLowerCase() === buzzCreator.toLowerCase();
+    user.uid.toLowerCase() === buzzCreator.toLowerCase();
   const [isRejecting, setIsRejecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentStatus, setCurrentStatus] = useState(status);

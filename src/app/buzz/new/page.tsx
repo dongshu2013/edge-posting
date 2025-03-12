@@ -79,77 +79,73 @@ export default function NewBuzzPage() {
           <p className="mt-2 text-sm text-gray-600">
             Let&apos;s make some noise in the meme-verse! 🚀
           </p>
-          <p className="mt-2 text-sm text-gray-600">
-            Don&apos;t have a tweet to share? Browse our curated list of tweets
-            and earn BUZZ by contributing thoughtful replies!
-          </p>
         </div>
 
         {/* Main Form Card */}
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-6 py-8 sm:p-10">
-            <form className="space-y-6" onSubmit={handleSubmit}>
+          <div className="px-6 py-6 sm:p-8">
+            <form className="space-y-5" onSubmit={handleSubmit}>
               {/* Tweet Link Input */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label
                   htmlFor="tweetLink"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Drop Your Tweet 🎯
+                  Tweet URL 🔗
                 </label>
-                <div className="mt-1 relative rounded-xl shadow-sm">
+                <div className="relative rounded-xl shadow-sm">
                   <input
                     type="url"
                     name="tweetLink"
                     id="tweetLink"
-                    className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                    className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                     placeholder="https://twitter.com/..."
                     required
                     value={formData.tweetLink}
                     onChange={handleInputChange}
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <BoltIcon className="h-5 w-5 text-indigo-500" />
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-r-xl">
+                    <BoltIcon className="h-5 w-5 text-white" />
                   </div>
                 </div>
               </div>
 
               {/* Instructions Input */}
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <label
                   htmlFor="instructions"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Spill the Tea ☕️
+                  Reply Instructions 📝
                 </label>
                 <textarea
                   name="instructions"
                   id="instructions"
-                  rows={3}
-                  className="mt-1 block w-full px-4 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                  placeholder="How should the AI squad engage with your tweet?"
+                  rows={2}
+                  className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                  placeholder="Share context about your tweet and how we should reply to it"
                   required
                   value={formData.instructions}
                   onChange={handleInputChange}
                 />
               </div>
 
-              {/* Price and Replies Grid */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              {/* Settings Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
                 {/* Price Input */}
-                <div className="relative group">
+                <div className="space-y-2">
                   <label
                     htmlFor="pricePerReply"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    BUZZ per Reply 💰
+                    Price 💰
                   </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
+                  <div className="relative rounded-xl shadow-sm">
                     <input
                       type="number"
                       name="pricePerReply"
                       id="pricePerReply"
-                      className="block w-full pl-4 pr-16 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       placeholder="0.00"
                       step="0.01"
                       min="0.01"
@@ -163,19 +159,19 @@ export default function NewBuzzPage() {
                 </div>
 
                 {/* Replies Input */}
-                <div className="relative group">
+                <div className="space-y-2">
                   <label
                     htmlFor="numberOfReplies"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Number of Replies 🎯
+                    Replies 🎯
                   </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
+                  <div className="relative rounded-xl shadow-sm">
                     <input
                       type="number"
                       name="numberOfReplies"
                       id="numberOfReplies"
-                      className="block w-full pl-4 pr-20 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       placeholder="100"
                       step="1"
                       min="1"
@@ -189,80 +185,48 @@ export default function NewBuzzPage() {
                 </div>
 
                 {/* Deadline Input */}
-                <div className="relative group sm:col-span-2">
+                <div className="space-y-2">
                   <label
                     htmlFor="deadline"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Campaign Deadline ⏰
+                    Expires in ⏰
                   </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
+                  <div className="relative rounded-xl shadow-sm">
                     <input
                       type="number"
                       name="deadline"
                       id="deadline"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      placeholder="1"
                       min="1"
-                      className="block w-full pl-4 pr-20 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       value={formData.deadline}
                       onChange={handleInputChange}
-                      required
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-r-xl">
                       <span className="text-sm font-medium">hours</span>
                     </div>
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Campaign will end {formData.deadline} hours from now
-                  </p>
                 </div>
               </div>
 
-              {/* Total Deposit Section */}
-              <div className="relative mt-8">
-                <div
-                  className="absolute inset-0 flex items-center"
-                  aria-hidden="true"
-                >
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="px-3 bg-white text-sm text-gray-500">
-                    deposit summary
-                  </span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 transform transition-all duration-200 hover:scale-[1.02]">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700 flex items-center">
-                    <SparklesIcon className="h-5 w-5 mr-2 text-amber-500" />
-                    Total Deposit Required
-                  </span>
-                  <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+              {/* Total Deposit Summary */}
+              <div className="mt-6 bg-gray-50 rounded-xl p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">Total Deposit Required:</span>
+                  <span className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
                     {totalDeposit} BUZZ
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Covering {formData.numberOfReplies} replies at{" "}
-                  {formData.pricePerReply} BUZZ each
-                </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-4 pt-6">
-                <button
-                  type="button"
-                  onClick={() => router.push("/buzz")}
-                  className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
-                >
-                  Never Mind
-                </button>
+              {/* Submit Button */}
+              <div className="mt-6">
                 <button
                   type="submit"
-                  className={`px-6 py-3 rounded-xl text-sm font-medium text-white shadow-xl
-                    ${"bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"} transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
-                  Create Buzz 🚀
+                  Create Buzz Campaign 🚀
                 </button>
               </div>
             </form>

@@ -500,6 +500,7 @@ export default function ProfilePage() {
                 </label>
                 <input
                   type="text"
+                  disabled
                   id="withdrawAddress"
                   value={withdrawAddress}
                   onChange={(e) => setWithdrawAddress(e.target.value)}
@@ -515,6 +516,7 @@ export default function ProfilePage() {
                   Amount
                 </label>
                 <input
+                  disabled
                   type="number"
                   id="withdrawAmount"
                   value={withdrawAmount}
@@ -526,6 +528,9 @@ export default function ProfilePage() {
                 />
               </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
+              <p className="text-sm text-red-600">
+                Withdrawal will be enabled after production release.
+              </p>
               <div className="flex gap-4">
                 <button
                   disabled={withdrawLoading}

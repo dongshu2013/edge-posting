@@ -154,48 +154,46 @@ export default function MyBuzzesPage() {
   return (
     <div className="py-8">
       <div className="flex-1">
-        {buzzes.length > 0 && (
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(e.target.value as "newest" | "price" | "engagement")
-              }
-              className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
-            >
-              <option value="newest">✨ Newest First</option>
-              <option value="price">💰 Highest Price</option>
-              <option value="engagement">🔥 Highest Engagement</option>
-            </select>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(e.target.value as "newest" | "price" | "engagement")
+            }
+            className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
+          >
+            <option value="newest">✨ Newest First</option>
+            <option value="price">💰 Highest Price</option>
+            <option value="engagement">🔥 Highest Engagement</option>
+          </select>
 
-            <div className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto">
-              <span className="text-base sm:text-lg text-gray-700 font-medium">
-                Only active buzzes
-              </span>
-              <button
-                role="switch"
-                id="onlyActive"
-                aria-checked={onlyActive}
-                onClick={() => setOnlyActive(!onlyActive)}
-                className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                  onlyActive ? "bg-indigo-600" : "bg-gray-200"
+          <div className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto">
+            <span className="text-base sm:text-lg text-gray-700 font-medium">
+              Only active buzzes
+            </span>
+            <button
+              role="switch"
+              id="onlyActive"
+              aria-checked={onlyActive}
+              onClick={() => setOnlyActive(!onlyActive)}
+              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                onlyActive ? "bg-indigo-600" : "bg-gray-200"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
+                  onlyActive ? "translate-x-6" : "translate-x-1"
                 }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                    onlyActive ? "translate-x-6" : "translate-x-1"
-                  }`}
-                />
-              </button>
-            </div>
+              />
+            </button>
           </div>
-        )}
+        </div>
 
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sortedBuzzes.map((buzz) => (
                   <BuzzCard
                     key={buzz.id}

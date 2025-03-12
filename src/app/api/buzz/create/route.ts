@@ -1,6 +1,5 @@
 import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
-import { qstashClient } from "@/lib/qstash";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -81,16 +80,31 @@ export async function POST(request: Request) {
 
     // Trigger QStash API to schedule the settle-rewards cron job
     try {
-      const publishRes = await qstashClient.publish({
-        url: `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/settle-rewards`,
+      const targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/settle-rewards`;
+      const qstashEndpoint = `https://qstash.upstash.io/v2/publish/${targetUrl}`;
+
+      const delayInSeconds = Math.floor(
+        (new Date(deadline).getTime() - Date.now()) / 1000
+      );
+      const publishRes = await fetch(qstashEndpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.QSTASH_TOKEN}`,
+          "Content-Type": "application/json",
+          "Upstash-Delay": `${delayInSeconds}s`, // delay in seconds
+        },
         body: JSON.stringify({
           cronSecret: process.env.CRON_SECRET,
           buzzId: result.buzz.id,
         }),
-        delay: Math.floor((new Date(deadline).getTime() - Date.now()) / 1000),
       });
 
-      console.log("publishRes", publishRes);
+      if (!publishRes.ok) {
+        throw new Error(`QStash API error: ${publishRes.statusText}`);
+      }
+
+      const qstashResponse = await publishRes.json();
+      console.log("publishRes", qstashResponse);
     } catch (qstashError) {
       console.error("Failed to schedule QStash job:", qstashError);
       // Continue execution even if QStash scheduling fails

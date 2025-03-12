@@ -160,9 +160,10 @@ export default function BuzzCard({
   };
 
   const renderReplyButton = () => {
+    // For expired or inactive buzzes - "Reply (No Reward)" with normal style
     if (!isActive || isExpired) {
       if (!user) {
-        return <AuthButton buttonText="Reply (No Reward)" />;
+        return <AuthButton buttonText="Reply (No Reward)" variant="secondary" />;
       }
       return (
         <button
@@ -178,8 +179,9 @@ export default function BuzzCard({
       return <span className="text-gray-500">Full</span>;
     }
 
+    // For active buzzes - "Reply & Earn X BUZZ" with colorful gradient
     if (!user) {
-      return <AuthButton buttonText={`Reply & Earn ${price} BUZZ`} />;
+      return <AuthButton buttonText={`Reply & Earn ${price} BUZZ`} variant="primary" />;
     }
 
     return (
@@ -187,7 +189,7 @@ export default function BuzzCard({
         {!hasReplied && (
           <button
             onClick={handleDirectReply}
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
           >
             Reply & Earn {price} BUZZ
           </button>

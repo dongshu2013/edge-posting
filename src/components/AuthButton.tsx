@@ -8,7 +8,15 @@ import { Menu } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 
-export function AuthButton({ buttonText, onSuccess }: { buttonText?: string, onSuccess?: () => void }) {
+export function AuthButton({ 
+  buttonText, 
+  onSuccess,
+  variant = "primary"
+}: { 
+  buttonText?: string, 
+  onSuccess?: () => void,
+  variant?: "primary" | "secondary"
+}) {
   const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
@@ -67,7 +75,10 @@ export function AuthButton({ buttonText, onSuccess }: { buttonText?: string, onS
       <>
         <button
           onClick={() => setIsOpen(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 transition-all duration-200"
+          className={variant === "primary" 
+            ? "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
+            : "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+          }
         >
           {buttonText || "Sign In"}
         </button>

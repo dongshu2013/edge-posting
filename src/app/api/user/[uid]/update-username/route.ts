@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthUser } from "@/lib/auth-helpers";
 
 export async function POST(
   request: NextRequest,
@@ -24,32 +25,13 @@ export async function POST(
 
     // Verify token by calling our verify-token endpoint
     try {
-      const verifyResponse = await fetch(
-        new URL("/api/auth/verify-token", request.url),
-        {
-          method: "POST",
-          headers: {
-            Authorization: authHeader,
-          },
-        }
-      );
-
-      if (!verifyResponse.ok) {
-        console.error(
-          "Token verification failed:",
-          await verifyResponse.text()
-        );
-        return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-      }
-
-      const userData = await verifyResponse.json();
-      console.log("User data from token:", userData);
+      const userData = await getAuthUser();
 
       const { uid } = params;
 
       // Only allow users to update their own username
-      if (userData.uid !== uid) {
-        console.error("User ID mismatch:", userData.uid, "vs", uid);
+      if (userData?.uid !== uid) {
+        console.error("User ID mismatch:", userData?.uid, "vs", uid);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 

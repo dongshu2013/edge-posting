@@ -3,17 +3,15 @@
 import {
   ChatBubbleLeftRightIcon,
   DocumentDuplicateIcon,
-  CheckIcon,
   LightBulbIcon,
 } from "@heroicons/react/24/outline";
-import Link from "next/link";
+import { CheckIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchApi } from "@/lib/api";
+import { AuthButton } from "@/components/AuthButton";
 import ReplyLinkModal from "./ReplyLinkModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
-import { useAuth } from "@/hooks/useAuth";
-import { AuthButton } from "@/components/AuthButton";
-import { fetchApi } from "@/lib/api";
-import { ReplyModal } from "./ReplyModal";
 
 export interface BuzzCardProps {
   id: string;
@@ -67,7 +65,6 @@ export default function BuzzCard({
   username,
 }: BuzzCardProps) {
   const { user } = useAuth();
-  const [generateReplyModalOpen, setGenerateReplyModalOpen] = useState(false);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
@@ -141,30 +138,25 @@ export default function BuzzCard({
     return template;
   };
 
-  const handleReplyClick = () => {
+  const handleDirectReply = () => {
     const replyText = getRandomReplyText();
-
-    setGeneratedReplyText(replyText); // 保存生成的文案
-    setGenerateReplyModalOpen(true);
-  };
-
-  const onGenerateReplySubmit = (replyText: string) => {
-    setGeneratedReplyText(replyText);
-    // Open Twitter in a popup window instead of a new tab
+    
     // Configure popup window dimensions
     const width = 600;
     const height = 700;
     const left = (window.screen.width - width) / 2;
     const top = (window.screen.height - height) / 2;
 
+    // Open Twitter directly in a popup window
     window.open(
       getReplyIntentUrl(tweetLink, replyText),
       "twitter_popup",
       `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
     );
-
+    
+    // Open the reply link modal to track the reply
+    setGeneratedReplyText(replyText);
     setIsReplyModalOpen(true);
-    setGenerateReplyModalOpen(false);
   };
 
   const renderReplyButton = () => {
@@ -174,7 +166,7 @@ export default function BuzzCard({
       }
       return (
         <button
-          onClick={handleReplyClick}
+          onClick={handleDirectReply}
           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
         >
           Reply (No Reward)
@@ -194,7 +186,7 @@ export default function BuzzCard({
       <>
         {!hasReplied && (
           <button
-            onClick={handleReplyClick}
+            onClick={handleDirectReply}
             className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
           >
             Reply & Earn {price} BUZZ
@@ -274,14 +266,6 @@ export default function BuzzCard({
         initialReplyText={generatedReplyText}
       />
 
-      <ReplyModal
-        instructions={instructions}
-        isOpen={generateReplyModalOpen}
-        initialContent={generatedReplyText}
-        onClose={() => setGenerateReplyModalOpen(false)}
-        onSubmit={onGenerateReplySubmit}
-      />
-
       {/* Instructions Modal */}
       {showInstructionsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -303,10 +287,10 @@ export default function BuzzCard({
               </div>
               <p className="text-gray-700 whitespace-pre-wrap">{instructions}</p>
             </div>
-            <div className="bg-gray-50 px-5 py-3 flex justify-end rounded-b-xl">
+            <div className="px-5 py-3 bg-gray-50 flex justify-end rounded-b-xl">
               <button
                 onClick={() => setShowInstructionsModal(false)}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm font-medium transition-colors"
+                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
               >
                 Close
               </button>

@@ -27,7 +27,8 @@ export default function FaucetModal({ isOpen, onClose }: FaucetModalProps) {
       toast.success("Faucet successful");
       onClose();
     } else {
-      toast.error("Faucet failed");
+      const data = await res.json();
+      toast.error(data.message);
     }
   };
 

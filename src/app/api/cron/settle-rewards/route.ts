@@ -70,6 +70,14 @@ export async function POST(request: Request) {
             replyId: reply.id,
           }));
 
+          // Increase the balance of the user who replied
+          rewardTransactions.forEach(async (transaction) => {
+            await prisma.user.update({
+              where: { uid: transaction.toAddress },
+              data: { balance: { increment: transaction.amount } },
+            });
+          });
+
           if (rewardTransactions.length > 0) {
             await tx.transaction.createMany({
               data: rewardTransactions,

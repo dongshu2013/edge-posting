@@ -74,7 +74,10 @@ export async function POST(request: Request) {
           rewardTransactions.forEach(async (transaction) => {
             await prisma.user.update({
               where: { uid: transaction.toAddress },
-              data: { balance: { increment: transaction.amount } },
+              data: {
+                balance: { increment: transaction.amount },
+                totalEarned: { increment: transaction.amount },
+              },
             });
           });
 

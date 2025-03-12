@@ -1,12 +1,31 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
+import { getAuthUser } from "@/lib/auth-helpers";
+import { getRateLimiter } from "@/lib/rateLimiter";
 
 export async function POST(request: Request) {
+  const userData = await getAuthUser();
+  if (!userData) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const identifier = `generate-reply-${userData.uid}`;
+
+  const rateLimiter = getRateLimiter(identifier, {
+    tokensPerInterval: 30,
+    interval: "day",
+  });
+
+  const isRateLimited = rateLimiter.tryRemoveTokens(1);
+  if (!isRateLimited) {
+    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+  }
+
   try {
     const { instructions } = await request.json();
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "nousresearch/hermes-3-llama-3.1-70b",
       messages: [
         {
           role: "system",
@@ -21,6 +40,8 @@ export async function POST(request: Request) {
       max_tokens: 150,
       temperature: 0.7,
     });
+
+    console.log("Completion:", completion);
 
     return NextResponse.json({ text: completion.choices[0].message.content });
   } catch (error) {

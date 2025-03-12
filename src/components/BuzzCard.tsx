@@ -12,6 +12,7 @@ import { getReplyIntentUrl } from "@/lib/twitter";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthButton } from "@/components/AuthButton";
 import { fetchApi } from "@/lib/api";
+import { ReplyModal } from "./ReplyModal";
 
 export interface BuzzCardProps {
   id: string;
@@ -65,6 +66,7 @@ export default function BuzzCard({
   username,
 }: BuzzCardProps) {
   const { user } = useAuth();
+  const [generateReplyModalOpen, setGenerateReplyModalOpen] = useState(false);
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
@@ -120,22 +122,28 @@ export default function BuzzCard({
 
   const handleReplyClick = () => {
     const replyText = getRandomReplyText();
-    
+
+    setGeneratedReplyText(replyText); // 保存生成的文案
+    setGenerateReplyModalOpen(true);
+  };
+
+  const onGenerateReplySubmit = (replyText: string) => {
+    setGeneratedReplyText(replyText);
+    // Open Twitter in a popup window instead of a new tab
     // Configure popup window dimensions
     const width = 600;
     const height = 700;
     const left = (window.screen.width - width) / 2;
     const top = (window.screen.height - height) / 2;
-    
-    // Open Twitter in a popup window instead of a new tab
+
     window.open(
       getReplyIntentUrl(tweetLink, replyText),
       "twitter_popup",
       `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
     );
-    
+
     setIsReplyModalOpen(true);
-    setGeneratedReplyText(replyText); // 保存生成的文案
+    setGenerateReplyModalOpen(false);
   };
 
   const renderReplyButton = () => {
@@ -315,6 +323,14 @@ export default function BuzzCard({
         onSubmit={handleReplySubmit}
         buzzAmount={price}
         initialReplyText={generatedReplyText} // 传入生成的文案
+      />
+
+      <ReplyModal
+        instructions={instructions}
+        isOpen={generateReplyModalOpen}
+        initialContent={generatedReplyText}
+        onClose={() => setGenerateReplyModalOpen(false)}
+        onSubmit={onGenerateReplySubmit}
       />
     </div>
   );

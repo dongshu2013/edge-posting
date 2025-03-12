@@ -4,6 +4,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
 import { paymentServiceApplicationId, paymentServiceUrl } from "@/config";
 import { useAuth } from "@/hooks/useAuth";
+import { sleep } from "openai/core.mjs";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -23,7 +24,7 @@ export const PaymentModal = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [isChecking, setIsChecking] = useState(false);
   const ongoingOrderQuery = useQuery({
     queryKey: ["payment-user-ongoing-order", user?.uid],
     staleTime: Infinity, // Prevent automatic refetching
@@ -77,18 +78,28 @@ export const PaymentModal = ({
   };
 
   const checkOrder = async (orderId: string) => {
-    const resJson = await fetch(
-      `${paymentServiceUrl}/order-detail?orderId=${orderId}`
-    ).then((res) => res.json());
+    setIsChecking(true);
+    let retryTimes = 5;
+    while (true) {
+      const resJson = await fetch(
+        `${paymentServiceUrl}/order-detail?orderId=${orderId}`
+      ).then((res) => res.json());
 
-    console.log(resJson);
+      console.log(resJson);
 
-    if (resJson?.data?.order?.status === 1) {
-      setError(null);
-      onSuccess();
-    } else {
-      setError("Order is not paid");
+      if (resJson?.data?.order?.status === 1) {
+        setError(null);
+        onSuccess();
+        break;
+      } else if (retryTimes <= 0) {
+        setError("Order is not paid");
+        break;
+      }
+
+      retryTimes--;
+      await sleep(6000);
     }
+    setIsChecking(false);
   };
 
   const cancelOrder = async (orderId: string) => {
@@ -211,13 +222,17 @@ export const PaymentModal = ({
                             </p>
 
                             <div className="mt-5 sm:mt-2">
-                              <span className="font-bold opacity-60">ChainId:</span>
+                              <span className="font-bold opacity-60">
+                                ChainId:
+                              </span>
                               <br />
                               {ongoingOrderQuery.data.chain_id}
                             </div>
 
                             <div className="mt-3 sm:mt-2">
-                              <span className="font-bold opacity-60">Token Address:</span>
+                              <span className="font-bold opacity-60">
+                                Token Address:
+                              </span>
                               <br />
                               {ongoingOrderQuery.data.token_address}
                             </div>
@@ -234,13 +249,17 @@ export const PaymentModal = ({
                             )}
 
                             <div className="mt-3 sm:mt-2">
-                              <span className="font-bold opacity-60">Transfer To:</span>
+                              <span className="font-bold opacity-60">
+                                Transfer To:
+                              </span>
                               <br />
                               {ongoingOrderQuery.data.transfer_address}
                             </div>
 
                             <div className="mt-3 sm:mt-2">
-                              <span className="font-bold opacity-60">Transfer Amount:</span>
+                              <span className="font-bold opacity-60">
+                                Transfer Amount:
+                              </span>
                               <br />
                               {Number(
                                 ongoingOrderQuery.data.transfer_amount_on_chain
@@ -249,13 +268,15 @@ export const PaymentModal = ({
 
                             <div className="mt-5 sm:mt-4">
                               <button
-                                disabled={isSubmitting || isCancelling}
+                                disabled={
+                                  isSubmitting || isCancelling || isChecking
+                                }
                                 className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                                 onClick={() => {
                                   checkOrder(ongoingOrderQuery.data.id);
                                 }}
                               >
-                                I have paid
+                                {isChecking ? "Checking..." : "I have paid"}
                               </button>
 
                               <button

@@ -222,7 +222,8 @@ export default function BuzzesPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        {/* Grid layout for BuzzCards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sortedBuzzes.map((buzz, index) => (
             <div
               key={buzz.id}
@@ -247,15 +248,15 @@ export default function BuzzesPage() {
               />
             </div>
           ))}
-
-          {isLoadingMore && (
-            <div className="animate-pulse space-y-6">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-2xl h-64" />
-              ))}
-            </div>
-          )}
         </div>
+
+        {isLoadingMore && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl h-64 animate-pulse" />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

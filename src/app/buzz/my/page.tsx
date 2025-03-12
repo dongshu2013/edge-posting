@@ -132,9 +132,9 @@ export default function MyBuzzesPage() {
   if (isLoading) {
     return (
       <div className="py-8">
-        <div className="animate-pulse space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl h-64" />
+            <div key={i} className="bg-white rounded-xl h-64 animate-pulse" />
           ))}
         </div>
       </div>
@@ -195,22 +195,24 @@ export default function MyBuzzesPage() {
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
             <>
-              {sortedBuzzes.map((buzz) => (
-                <BuzzCard
-                  key={buzz.id}
-                  id={buzz.id}
-                  tweetLink={buzz.tweetLink}
-                  instructions={buzz.instructions}
-                  price={buzz.price}
-                  replyCount={buzz.replyCount}
-                  totalReplies={buzz.totalReplies}
-                  createdBy={buzz.createdBy}
-                  deadline={buzz.deadline}
-                  createdAt={buzz.createdAt}
-                  isActive={buzz.isActive}
-                  username={buzz?.user?.username}
-                />
-              ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {sortedBuzzes.map((buzz) => (
+                  <BuzzCard
+                    key={buzz.id}
+                    id={buzz.id}
+                    tweetLink={buzz.tweetLink}
+                    instructions={buzz.instructions}
+                    price={buzz.price}
+                    replyCount={buzz.replyCount}
+                    totalReplies={buzz.totalReplies}
+                    createdBy={buzz.createdBy}
+                    deadline={buzz.deadline}
+                    createdAt={buzz.createdAt}
+                    isActive={buzz.isActive}
+                    username={buzz?.user?.username}
+                  />
+                ))}
+              </div>
               {hasMore && (
                 <div className="flex justify-center mt-6">
                   <button

@@ -43,11 +43,11 @@ const getEmbedUrl = (tweetUrl: string) => {
 };
 
 const replyTemplates = [
-  "[Test] Great point! 🎯 ",
-  "[Test] Interesting perspective! 💡",
-  "[Test] Love this! ✨",
-  "[Test] Absolutely agree! 💯",
-  "[Test] This is fascinating! 🌟",
+  "[Test] Great point! ",
+  "[Test] Interesting perspective! ",
+  "[Test] Love this! ",
+  "[Test] Absolutely agree! ",
+  "[Test] This is fascinating! ",
 ];
 
 export default function BuzzCard({
@@ -75,6 +75,25 @@ export default function BuzzCard({
   const deadlineTime = new Date(deadline).getTime();
   const currentTime = Date.now();
   const isExpired = !isActive || currentTime >= deadlineTime;
+
+  // Format creation time as relative time (e.g., "1h ago")
+  const formatRelativeTime = (date: Date) => {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    // If it's today, show relative time
+    if (diffInSeconds < 86400) {
+      if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+      return `${Math.floor(diffInSeconds / 3600)}h ago`;
+    }
+    
+    // Otherwise show the date
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric",
+    });
+  };
 
   const handleCopyAddress = async () => {
     try {
@@ -184,136 +203,60 @@ export default function BuzzCard({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-      <div
-        className={`rounded-2xl transition-all duration-300 p-4 sm:p-6 relative ${
-          isExpired
-            ? "bg-gray-50 border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)]"
-            : "bg-white border border-gray-200/80 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)]"
-        }`}
-      >
-        <div className="flex flex-col lg:flex-row lg:gap-6">
-          <div
-            className={`w-full lg:w-[350px] border rounded-xl overflow-hidden shrink-0 mb-4 lg:mb-0 ${
-              isExpired ? "border-gray-200 opacity-75" : "border-gray-200"
-            }`}
-          >
-            <div className="aspect-[3/4]">
-              <iframe
-                src={getEmbedUrl(tweetLink)}
-                className="w-full h-full"
-                frameBorder="0"
-                title="Tweet Preview"
-              />
-            </div>
+    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+      <div className="p-4">
+        {/* Header with creator info and price */}
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center">
+            <span className="text-sm font-medium text-gray-900">@{username || createdBy.substring(0, 6)}</span>
+            <span className="mx-1 text-gray-500">·</span>
+            {createdAt && (
+              <span className="text-sm text-gray-500">
+                {formatRelativeTime(new Date(createdAt))}
+              </span>
+            )}
           </div>
-
-          <div className="flex-1 space-y-4">
-            <div
-              className={`rounded-xl p-4 ${
-                isExpired ? "bg-gray-100" : "bg-gray-50"
-              }`}
-            >
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-500">Created by</div>
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="text-sm font-medium text-gray-900">
-                      {username || createdBy}
-                    </div>
-                    <button
-                      onClick={handleCopyAddress}
-                      className="inline-flex items-center justify-center p-1 rounded-md hover:bg-gray-200 transition-colors"
-                      title={`Copy ID: ${createdBy}`}
-                    >
-                      {copied ? (
-                        <CheckIcon className="h-4 w-4 text-green-500" />
-                      ) : (
-                        <DocumentDuplicateIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                      )}
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <span className="text-gray-500">Total Deposit</span>
-                  <span className="font-medium">
-                    {(price * totalReplies).toFixed(2)} BUZZ
-                  </span>
-                </div>
-                {createdAt && (
-                  <div className="flex items-center gap-2">
-                    <div className="text-sm text-gray-500">Created on</div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {new Date(createdAt).toLocaleDateString(undefined, {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                  </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-gray-500">Expires on</div>
-                  <div
-                    className={`text-sm font-medium ${
-                      isExpired ? "text-red-600" : "text-gray-900"
-                    }`}
-                  >
-                    {new Date(deadline).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`rounded-xl p-4 transform transition-all duration-200 hover:scale-[1.01] ${
-                isExpired
-                  ? "bg-gray-100"
-                  : "bg-gradient-to-r from-blue-50 via-blue-50 to-indigo-50"
-              }`}
-            >
-              <h4 className="text-sm font-medium text-gray-900 mb-2 flex items-center">
-                <ChatBubbleLeftRightIcon
-                  className={`h-5 w-5 mr-2 ${
-                    isExpired ? "text-gray-400" : "text-blue-500"
-                  }`}
-                />
-                Instructions
-              </h4>
-              <p
-                className={`text-sm break-words ${
-                  isExpired ? "text-gray-500" : "text-gray-600"
-                }`}
-              >
-                {instructions}
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-2">
-              {showViewReplies && (
-                <Link
-                  href={`/buzz/${encodeURIComponent(id)}`}
-                  className={`inline-flex items-center justify-center px-4 py-2 rounded-xl text-white text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
-                    isExpired
-                      ? "bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700"
-                      : "bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
-                  }`}
-                >
-                  <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2" />
-                  View {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
-                </Link>
-              )}
-              <div className="flex-shrink-0">{renderReplyButton()}</div>
-            </div>
+          <div className="text-sm font-medium">
+            <span className="text-amber-500 font-semibold">{price.toFixed(2)} BUZZ</span>
+            <span className="text-gray-500 mx-1">×</span>
+            <span className="text-gray-700">{totalReplies}</span>
           </div>
+        </div>
+
+        {/* Twitter Embed */}
+        <div className="border rounded-lg overflow-hidden mb-3">
+          <div className="aspect-video">
+            <iframe
+              src={getEmbedUrl(tweetLink)}
+              className="w-full h-full"
+              frameBorder="0"
+              title="Tweet Preview"
+            />
+          </div>
+        </div>
+
+        {/* Instructions */}
+        <div className="mb-3 bg-gray-50 p-3 rounded-lg">
+          <div className="flex items-start text-sm text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span>{instructions}</span>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex justify-between items-center">
+          {showViewReplies && (
+            <button
+              onClick={() => window.location.href = `/buzz/${encodeURIComponent(id)}`}
+              className="inline-flex items-center px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-sm font-medium text-gray-700 rounded-lg transition-colors"
+            >
+              <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />
+              View {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
+            </button>
+          )}
+          <div>{renderReplyButton()}</div>
         </div>
       </div>
 
@@ -322,7 +265,7 @@ export default function BuzzCard({
         onClose={() => setIsReplyModalOpen(false)}
         onSubmit={handleReplySubmit}
         buzzAmount={price}
-        initialReplyText={generatedReplyText} // 传入生成的文案
+        initialReplyText={generatedReplyText}
       />
 
       <ReplyModal

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const idToken = authHeader.split("Bearer ")[1];
-      console.log("Token received, verifying...", idToken);
+      // console.log("Token received, verifying...", idToken);
       const decodedToken = await adminAuth.verifyIdToken(idToken);
       console.log(
         "Token verified successfully for user:",

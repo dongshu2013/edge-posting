@@ -9,12 +9,14 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onRequestFaucet?: () => void;
 }
 
 export const PaymentModal = ({
   isOpen,
   onClose,
   onSuccess,
+  onRequestFaucet,
 }: PaymentModalProps) => {
   const { user } = useAuth();
   const [amount, setAmount] = useState<number>();
@@ -31,7 +33,7 @@ export const PaymentModal = ({
       if (!user?.uid || !paymentServiceUrl) {
         return null;
       }
-      
+
       try {
         const resJson = await fetch(
           `${paymentServiceUrl}/user-ongoing-order?payerId=${user.uid}&applicationId=${paymentServiceApplicationId}`
@@ -208,14 +210,37 @@ export const PaymentModal = ({
                               before paying again.
                             </p>
 
-                            <div className="mt-5 sm:mt-4">
-                              Transfer Address:
+                            <div className="mt-5 sm:mt-2">
+                              <span className="font-bold opacity-60">ChainId:</span>
+                              <br />
+                              {ongoingOrderQuery.data.chain_id}
+                            </div>
+
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">Token Address:</span>
+                              <br />
+                              {ongoingOrderQuery.data.token_address}
+                            </div>
+
+                            {!!onRequestFaucet && (
+                              <span
+                                className="mt-1 underline text-blue-500 cursor-pointer"
+                                onClick={() => {
+                                  onRequestFaucet();
+                                }}
+                              >
+                                Request Faucet
+                              </span>
+                            )}
+
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">Transfer To:</span>
                               <br />
                               {ongoingOrderQuery.data.transfer_address}
                             </div>
 
-                            <div className="mt-5 sm:mt-4">
-                              Transfer Amount:
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">Transfer Amount:</span>
                               <br />
                               {Number(
                                 ongoingOrderQuery.data.transfer_amount_on_chain
@@ -241,7 +266,9 @@ export const PaymentModal = ({
                                 }}
                                 disabled={isCancelling || isSubmitting}
                               >
-                                {isCancelling ? "Cancelling..." : "Cancel"}
+                                {isCancelling
+                                  ? "Cancelling..."
+                                  : "Cancel Order"}
                               </button>
                             </div>
                           </div>

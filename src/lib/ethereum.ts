@@ -10,7 +10,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { base, baseSepolia } from "viem/chains";
 
-const ethereumConfigs: {
+export const ethereumConfigs: {
   [key: number]: {
     chain: Chain;
     tokenAddress: `0x${string}`;

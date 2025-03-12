@@ -17,8 +17,10 @@ type BuzzWithReplies = Buzz & {
 export async function POST(request: Request) {
   try {
     // Verify the request is from a trusted source (e.g., cron job service)
-    const authHeader = request.headers.get('authorization');
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    const body = await request.json();
+    const cronSecret = body.cronSecret;
+
+    if (cronSecret !== process.env.CRON_SECRET) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -10,6 +10,7 @@ import { PaymentModal } from "@/components/PaymentModal";
 import { paymentServiceApplicationId } from "@/config";
 import { useQuery } from "@tanstack/react-query";
 import { paymentServiceUrl } from "@/config";
+import FaucetModal from "@/components/FaucetModal";
 
 interface UserProfile {
   email: string | null;
@@ -55,7 +56,7 @@ export default function ProfilePage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("deposits");
-
+  const [showFaucetModal, setShowFaucetModal] = useState(false);
   const userOrdersQuery = useQuery({
     queryKey: ["payment-user-orders", user?.uid],
     enabled: !!user?.uid,
@@ -135,7 +136,7 @@ export default function ProfilePage() {
   }, [userInfo, loading, router, params.uid, user, fetchData]);
 
   const handleWithdraw = async () => {
-    if (!withdrawAddress || !withdrawAmount||withdrawLoading) return;
+    if (!withdrawAddress || !withdrawAmount || withdrawLoading) return;
 
     try {
       setWithdrawLoading(true);
@@ -309,7 +310,7 @@ export default function ProfilePage() {
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           Payment History
         </h2>
-        
+
         {/* Tabs */}
         <div className="border-b border-gray-200 mb-6">
           <nav className="-mb-px flex space-x-8">
@@ -368,7 +369,9 @@ export default function ProfilePage() {
                               {order.id}
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)} BUZZ
+                              {Number(order.transfer_amount_on_chain) /
+                                Math.pow(10, 6)}{" "}
+                              BUZZ
                             </td>
                             <td className="px-4 py-3 text-sm">
                               <span
@@ -443,7 +446,9 @@ export default function ProfilePage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right text-sm text-gray-500">
-                            {new Date(withdrawal.createdAt).toLocaleDateString()}
+                            {new Date(
+                              withdrawal.createdAt
+                            ).toLocaleDateString()}
                           </td>
                         </tr>
                       ))}
@@ -468,6 +473,16 @@ export default function ProfilePage() {
         onSuccess={() => {
           setShowDepositModal(false);
           fetchData();
+        }}
+        onRequestFaucet={() => {
+          setShowFaucetModal(true);
+        }}
+      />
+
+      <FaucetModal
+        isOpen={showFaucetModal}
+        onClose={() => {
+          setShowFaucetModal(false);
         }}
       />
 

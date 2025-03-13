@@ -6,8 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import BuzzCard from "@/components/BuzzCard";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
-import Link from "next/link";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
+import { Suspense } from "react";
 
 interface Buzz {
   id: string;
@@ -26,6 +26,14 @@ interface Buzz {
 }
 
 export default function MyBuzzesPage() {
+  return (
+    <Suspense fallback={<div className="py-8">Loading your buzzes...</div>}>
+      <MyBuzzesPageContent />
+    </Suspense>
+  );
+}
+
+function MyBuzzesPageContent() {
   const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);

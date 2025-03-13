@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { BoltIcon, SparklesIcon } from "@heroicons/react/24/outline";
+import { BoltIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
 

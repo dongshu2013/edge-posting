@@ -1,25 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { protectedRoutes, isProtectedRoute } from "@/lib/routes";
+import { isProtectedRoute } from "@/lib/routes";
 
-async function verifyAuthToken(token: string, requestUrl: URL) {
-  const verifyResponse = await fetch(
-    new URL("/api/auth/verify-token", requestUrl),
-    {
-      method: "POST",
-      headers: {
-        Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
-      },
-    }
-  );
+// async function verifyAuthToken(token: string, requestUrl: URL) {
+//   const verifyResponse = await fetch(
+//     new URL("/api/auth/verify-token", requestUrl),
+//     {
+//       method: "POST",
+//       headers: {
+//         Authorization: token.startsWith("Bearer ") ? token : `Bearer ${token}`,
+//       },
+//     }
+//   );
 
-  if (!verifyResponse.ok) {
-    console.log("Token verification failed:", await verifyResponse.text());
-    return null;
-  }
+//   if (!verifyResponse.ok) {
+//     console.log("Token verification failed:", await verifyResponse.text());
+//     return null;
+//   }
 
-  return verifyResponse.json();
-}
+//   return verifyResponse.json();
+// }
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -75,6 +75,10 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/api/:path*",
-    ...protectedRoutes.pages, // 直接使用 routes 中定义的页面路由
+    "/buzz/new",
+    "/buzz/my",
+    "/buzz/my/replies",
+    "/play",
+    "/profile",
   ],
 };

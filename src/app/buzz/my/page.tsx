@@ -7,6 +7,7 @@ import BuzzCard from "@/components/BuzzCard";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
+import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 
 interface Buzz {
   id: string;
@@ -156,36 +157,23 @@ export default function MyBuzzesPage() {
     <div className="py-8">
       <div className="flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <SparklesIcon className="h-6 w-6 text-blue-500" />
-            <h1 className="text-2xl font-semibold">My Buzzes</h1>
-          </div>
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) =>
+              setSortBy(e.target.value as "newest" | "price" | "engagement")
+            }
+            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
+          >
+            <option value="newest">✨ Newest First</option>
+            <option value="price">💰 Highest Price</option>
+            <option value="engagement">🔥 Most Engagement</option>
+          </select>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <select
-              id="sortBy"
-              value={sortBy}
-              onChange={(e) =>
-                setSortBy(e.target.value as "newest" | "price" | "engagement")
-              }
-              className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
-            >
-              <option value="newest">✨ Newest First</option>
-              <option value="price">💰 Highest Price</option>
-              <option value="engagement">🔥 Most Engagement</option>
-            </select>
-
-            <button
-              onClick={() => setOnlyActive(!onlyActive)}
-              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
-                onlyActive
-                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {onlyActive ? "Show All" : "Show Active Only"}
-            </button>
-          </div>
+          <ActiveBuzzesToggle 
+            isActive={onlyActive}
+            onToggle={() => setOnlyActive(!onlyActive)}
+          />
         </div>
 
         <div className="space-y-6">
@@ -214,20 +202,12 @@ export default function MyBuzzesPage() {
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="bg-white rounded-2xl shadow-xl p-9 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Get started by creating your first buzz! 🚀
+                Create your first buzz to start earning rewards! 🚀
               </p>
-              <div className="mt-6">
-                <Link
-                  href="/buzz/new"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
-                >
-                  Create New Buzz
-                </Link>
-              </div>
             </div>
           )}
           {hasMore && (

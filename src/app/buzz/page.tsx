@@ -80,7 +80,7 @@ function BuzzesPageContent() {
         // Only show buzzes that the user hasn't replied to
         url.searchParams.append("excludeReplied", "true");
 
-        return await fetchApi(url.toString(), { auth: true });
+        return await fetchApi(url.toString());
       } catch (err) {
         throw err;
       }

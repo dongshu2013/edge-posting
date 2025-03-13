@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import BuzzCard from "@/components/BuzzCard";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
+import Link from "next/link";
 
 interface Buzz {
   id: string;
@@ -155,48 +156,47 @@ export default function MyBuzzesPage() {
     <div className="py-8">
       <div className="flex-1">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) =>
-              setSortBy(e.target.value as "newest" | "price" | "engagement")
-            }
-            className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
-          >
-            <option value="newest">✨ Newest First</option>
-            <option value="price">💰 Highest Price</option>
-            <option value="engagement">🔥 Highest Engagement</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <SparklesIcon className="h-6 w-6 text-blue-500" />
+            <h1 className="text-2xl font-semibold">My Buzzes</h1>
+          </div>
 
-          <div className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto">
-            <span className="text-base sm:text-lg text-gray-700 font-medium">
-              Only active buzzes
-            </span>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <select
+              id="sortBy"
+              value={sortBy}
+              onChange={(e) =>
+                setSortBy(e.target.value as "newest" | "price" | "engagement")
+              }
+              className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
+            >
+              <option value="newest">✨ Newest First</option>
+              <option value="price">💰 Highest Price</option>
+              <option value="engagement">🔥 Most Engagement</option>
+            </select>
+
             <button
-              role="switch"
-              id="onlyActive"
-              aria-checked={onlyActive}
               onClick={() => setOnlyActive(!onlyActive)}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                onlyActive ? "bg-indigo-600" : "bg-gray-200"
+              className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-2xl transition-all duration-200 ${
+                onlyActive
+                  ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
               }`}
             >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                  onlyActive ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
+              {onlyActive ? "Show All" : "Show Active Only"}
             </button>
           </div>
         </div>
 
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sortedBuzzes.map((buzz) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedBuzzes.map((buzz) => (
+                <div 
+                  key={buzz.id}
+                  className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 overflow-hidden"
+                >
                   <BuzzCard
-                    key={buzz.id}
                     id={buzz.id}
                     tweetLink={buzz.tweetLink}
                     instructions={buzz.instructions}
@@ -206,31 +206,38 @@ export default function MyBuzzesPage() {
                     createdBy={buzz.createdBy}
                     deadline={buzz.deadline}
                     createdAt={buzz.createdAt}
+                    showViewReplies={true}
                     isActive={buzz.isActive}
-                    username={buzz?.user?.username}
+                    username={buzz.user.username}
                   />
-                ))}
-              </div>
-              {hasMore && (
-                <div className="flex justify-center mt-6">
-                  <button
-                    onClick={loadMore}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
-                  >
-                    Load More
-                  </button>
                 </div>
-              )}
-            </>
+              ))}
+            </div>
           ) : (
             <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">
-                No buzzes yet
-              </h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
               <p className="mt-1 text-sm text-gray-500">
-                Create your first buzz to start engaging with the community! ✨
+                Get started by creating your first buzz! 🚀
               </p>
+              <div className="mt-6">
+                <Link
+                  href="/buzz/new"
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+                >
+                  Create New Buzz
+                </Link>
+              </div>
+            </div>
+          )}
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={loadMore}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+              >
+                Load More
+              </button>
             </div>
           )}
         </div>

@@ -9,7 +9,7 @@ export const protectedRoutes = {
     "/api/withdraw",
     "/api/withdraw/*",
   ],
-  pages: ["/buzz/new", "/buzz/my", "/history", "/play", "/profile"],
+  pages: ["/buzz/new", "/buzz/my", "/buzz/my/replies", "/play", "/profile"],
 };
 
 export function isProtectedRoute(path: string, type: "api" | "pages"): boolean {

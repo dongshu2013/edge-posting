@@ -107,7 +107,7 @@ export function useAuth() {
       if (user) {
         try {
           console.log("Getting ID token");
-          const token = await getIdToken(user, true); // Force refresh token
+          const token = await getIdToken(user);
 
           // Store token in localStorage and cookies
           localStorage.setItem("authToken", token);
@@ -115,7 +115,7 @@ export function useAuth() {
           // Set cookie with SameSite=Strict for security
           document.cookie = `authToken=${token}; path=/; max-age=3600; SameSite=Strict`;
 
-          if (!isSyncing && !userInfo) {
+          if (!isSyncing && !user) {
             console.log("Syncing user to database");
             await saveUserToDatabase(user);
           }
@@ -126,7 +126,7 @@ export function useAuth() {
         // Clear token from localStorage and cookies
         localStorage.removeItem("authToken");
         document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
-        setUserInfo(null);
+        setUser(null);
       }
 
       setLoading(false);
@@ -136,7 +136,7 @@ export function useAuth() {
       console.log("Cleaning up auth state listener");
       unsubscribe();
     };
-  }, [saveUserToDatabase, isSyncing, userInfo, setUserInfo]);
+  }, [saveUserToDatabase, isSyncing]);
 
   const signInWithGoogle = async () => {
     try {
@@ -213,6 +213,7 @@ export function useAuth() {
       localStorage.removeItem("authToken");
       document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
       setUserInfo(null);
+      setUser(null);
       console.log("Sign out successful");
     } catch (error) {
       console.error("Error signing out:", error);

@@ -11,6 +11,8 @@ import { paymentServiceApplicationId } from "@/config";
 import { useQuery } from "@tanstack/react-query";
 import { paymentServiceUrl } from "@/config";
 import FaucetModal from "@/components/FaucetModal";
+import { Copy } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface UserProfile {
   email: string | null;
@@ -253,6 +255,15 @@ export default function ProfilePage() {
             </p>
           </div>
           <div className="flex gap-2">
+            <span
+              className="self-center underline text-white cursor-pointer"
+              onClick={() => {
+                setShowFaucetModal(true);
+              }}
+            >
+              Request Faucet
+            </span>
+
             <button
               onClick={() => setShowDepositModal(true)}
               className="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-sm font-medium"
@@ -301,6 +312,19 @@ export default function ProfilePage() {
             <p className="text-lg font-medium text-gray-900">
               {profile.totalEarned} BUZZ
             </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">My Referral Code</p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-medium text-gray-900">{user?.uid}</p>
+              <Copy
+                className="w-4 h-4 cursor-pointer text-gray-500"
+                onClick={() => {
+                  navigator.clipboard.writeText(user?.uid || "");
+                  toast.success('Copied')
+                }}
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -473,9 +497,6 @@ export default function ProfilePage() {
         onSuccess={() => {
           setShowDepositModal(false);
           fetchData();
-        }}
-        onRequestFaucet={() => {
-          setShowFaucetModal(true);
         }}
       />
 

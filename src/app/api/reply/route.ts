@@ -50,12 +50,12 @@ export async function POST(request: Request) {
     }
 
     // Check if the buzz is already settled
-    if (buzz.isSettled) {
-      return NextResponse.json(
-        { error: "This buzz has already been settled" },
-        { status: 400 }
-      );
-    }
+    // if (buzz.isSettled) {
+    //   return NextResponse.json(
+    //     { error: "This buzz has already been settled" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Check if the user has already replied to this buzz
     const existingReply = await prisma.reply.findFirst({

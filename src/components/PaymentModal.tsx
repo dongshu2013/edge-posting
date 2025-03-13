@@ -10,14 +10,12 @@ interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  onRequestFaucet?: () => void;
 }
 
 export const PaymentModal = ({
   isOpen,
   onClose,
   onSuccess,
-  onRequestFaucet,
 }: PaymentModalProps) => {
   const { user } = useAuth();
   const [amount, setAmount] = useState<number>();
@@ -236,17 +234,6 @@ export const PaymentModal = ({
                               <br />
                               {ongoingOrderQuery.data.token_address}
                             </div>
-
-                            {!!onRequestFaucet && (
-                              <span
-                                className="mt-1 underline text-blue-500 cursor-pointer"
-                                onClick={() => {
-                                  onRequestFaucet();
-                                }}
-                              >
-                                Request Faucet
-                              </span>
-                            )}
 
                             <div className="mt-3 sm:mt-2">
                               <span className="font-bold opacity-60">

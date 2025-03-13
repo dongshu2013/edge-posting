@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChatBubbleLeftRightIcon, LightBulbIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleLeftRightIcon,
+  LightBulbIcon,
+} from "@heroicons/react/24/outline";
 import BuzzCard from "@/components/BuzzCard";
 import ReplyCard from "@/components/ReplyCard";
 import { useParams } from "next/navigation";
@@ -48,35 +51,41 @@ export default function BuzzDetailPage() {
   const [hasReplied, setHasReplied] = useState(false);
   const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+  const isOwner =
+    userInfo &&
+    buzz?.createdBy &&
+    userInfo.uid.toLowerCase() === buzz?.createdBy.toLowerCase();
+
+  const fetchBuzzDetails = async () => {
+    try {
+      const data = await fetchApi(`/api/buzz/${params.id}`);
+
+      if (!data) {
+        throw new Error(data.error || "Failed to fetch buzz details");
+      }
+
+      console.log("🍓 User:", userInfo);
+      const replied = data.replies.some(
+        (reply: Reply) => reply.createdBy === userInfo?.uid
+      );
+
+      console.log("🍓Has replied:", replied);
+
+      setHasReplied(replied);
+      setBuzz(data);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch buzz details"
+      );
+      console.error("Error fetching buzz details:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchBuzzDetails = async () => {
-      try {
-        const data = await fetchApi(`/api/buzz/${params.id}`);
-
-        if (!data) {
-          throw new Error(data.error || "Failed to fetch buzz details");
-        }
-        
-        console.log("🍓 User:", userInfo);
-        const replied = data.replies.some(
-          (reply: Reply) => reply.createdBy === userInfo?.uid
-        );
-
-        console.log("🍓Has replied:", replied);
-
-        setHasReplied(replied);
-        setBuzz(data);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to fetch buzz details"
-        );
-        console.error("Error fetching buzz details:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (params.id) {
       fetchBuzzDetails();
     }
@@ -85,6 +94,30 @@ export default function BuzzDetailPage() {
   const handleReplyClick = (reply: Reply) => {
     setSelectedReply(reply);
     setShowReplyModal(true);
+  };
+
+  const handleReject = async (replyId: string) => {
+    if (!isOwner || !buzz?.id) return;
+
+    try {
+      setIsRejecting(true);
+      setError(null);
+
+      const response = await fetchApi(`/api/reply/${replyId}/reject`, {
+        method: "POST",
+      });
+
+      if (response.error) {
+        throw new Error(response.error || "Failed to reject reply");
+      }
+
+      fetchBuzzDetails();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reject reply");
+      console.error("Error rejecting reply:", err);
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   if (isLoading) {
@@ -178,7 +211,7 @@ export default function BuzzDetailPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {buzz.replies.map((reply) => (
-                <div 
+                <div
                   key={reply.id}
                   className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 overflow-hidden"
                 >
@@ -189,15 +222,30 @@ export default function BuzzDetailPage() {
                         @{reply?.user?.username}
                       </span>
                       <span className="text-sm text-gray-500">
-                        {new Date(reply.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                        })}
+                        {new Date(reply.createdAt).toLocaleDateString(
+                          undefined,
+                          {
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )}
                       </span>
+
+                      <div className="flex items-center gap-2">
+                        {isOwner && reply.status === "PENDING" && (
+                          <button
+                            onClick={() => handleReject(reply.id)}
+                            disabled={isRejecting}
+                            className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isRejecting ? "Rejecting..." : "Reject"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div>
+                    <div >
                       {reply.status === "APPROVED" && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           Approved
                         </span>
                       )}
@@ -207,13 +255,13 @@ export default function BuzzDetailPage() {
                         </span>
                       )}
                       {reply.status === "PENDING" && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                           Pending
                         </span>
                       )}
                     </div>
                   </div>
-                  
+
                   {/* Tweet Embed */}
                   <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
                     <div className="aspect-[16/9]">
@@ -225,9 +273,9 @@ export default function BuzzDetailPage() {
                       />
                     </div>
                   </div>
-                  
+
                   {/* Reply Text - Truncated */}
-                  <div 
+                  <div
                     className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] flex items-center"
                     onClick={() => handleReplyClick(reply)}
                   >
@@ -252,16 +300,28 @@ export default function BuzzDetailPage() {
                   <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2 text-blue-500" />
                   Reply from @{selectedReply?.user?.username}
                 </h3>
-                <button 
+                <button
                   onClick={() => setShowReplyModal(false)}
                   className="text-gray-400 hover:text-gray-500"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{selectedReply.text}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {selectedReply.text}
+              </p>
             </div>
             <div className="px-5 py-3 bg-gray-50 flex justify-end rounded-b-xl">
               <button

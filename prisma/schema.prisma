@@ -105,6 +105,18 @@ model Withdrawal {
   @@index([status])
 }
 
+model Referral {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invitedUserId String @unique
+  invitorUserId String?
+
+  @@index([invitedUserId])
+  @@index([invitorUserId])
+}
+
 enum ReplyStatus {
   PENDING
   APPROVED
@@ -114,6 +126,7 @@ enum ReplyStatus {
 enum TransactionType {
   REWARD
   BURN
+  REFERRAL_REWARD
 }
 
 enum TransactionStatus {

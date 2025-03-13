@@ -17,9 +17,18 @@ export default function NewBuzzPage() {
     deadline: 1,
   });
 
-  const totalDeposit = useMemo(() => {
+  const rewardAmount = useMemo(() => {
     return (formData.pricePerReply * formData.numberOfReplies).toFixed(2);
   }, [formData.pricePerReply, formData.numberOfReplies]);
+
+  // 20% commission
+  const commissionAmount = useMemo(() => {
+    return (Number(rewardAmount) * 0.2).toFixed(2);
+  }, [rewardAmount]);
+
+  const totalDeposit = useMemo(() => {
+    return (Number(rewardAmount) + Number(commissionAmount)).toFixed(2);
+  }, [rewardAmount, commissionAmount]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -213,9 +222,29 @@ export default function NewBuzzPage() {
               {/* Total Deposit Summary */}
               <div className="mt-6 bg-gray-50 rounded-xl p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">Total Deposit Required:</span>
+                  <span className="text-sm font-medium text-gray-700">
+                    Total Deposit Required:
+                  </span>
                   <span className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
                     {totalDeposit} BUZZ
+                  </span>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-400">
+                    Reward Amount:
+                  </span>
+                  <span className="text-md font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                    {rewardAmount} BUZZ
+                  </span>
+                </div>
+
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-400">
+                    Commission Fee:
+                  </span>
+                  <span className="text-md font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                    {commissionAmount} BUZZ
                   </span>
                 </div>
               </div>

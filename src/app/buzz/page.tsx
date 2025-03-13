@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import BuzzCard from "@/components/BuzzCard";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Buzz {
   id: string;
@@ -29,17 +30,30 @@ interface BuzzResponse {
 }
 
 export default function BuzzesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "price" | "engagement">(
-    "newest"
-  );
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [onlyActive, setOnlyActive] = useState(true);
   const observer = useRef<IntersectionObserver | null>(null);
+
+  const showAll = searchParams.get("showAll") === "true";
+  const sortBy = useMemo(() => {
+    const sortByParam = searchParams.get("sortBy");
+    switch (sortByParam) {
+      case "newest":
+        return "newest";
+      case "price":
+        return "price";
+      case "engagement":
+        return "engagement";
+      default:
+        return "newest";
+    }
+  }, [searchParams]);
 
   const fetchBuzzes = useCallback(
     async (cursor?: string): Promise<BuzzResponse> => {
@@ -48,13 +62,21 @@ export default function BuzzesPage() {
         if (cursor) {
           url.searchParams.append("cursor", cursor);
         }
+        if (sortBy) {
+          url.searchParams.append("sortBy", sortBy);
+        }
+        if (!showAll) {
+          url.searchParams.append("onlyActive", "true");
+        }
+        // Only show buzzes that the user hasn't replied to
+        url.searchParams.append("excludeReplied", "true");
 
-        return await fetchApi(url.toString());
+        return await fetchApi(url.toString(), { auth: true });
       } catch (err) {
         throw err;
       }
     },
-    []
+    [showAll, sortBy]
   );
 
   const loadMore = useCallback(async () => {
@@ -126,12 +148,12 @@ export default function BuzzesPage() {
   }, []);
 
   const sortedBuzzes = [...buzzes]
-    .filter((buzz) => {
-      if (!onlyActive) return true;
-      const deadlineTime = new Date(buzz.deadline).getTime();
-      const currentTime = Date.now();
-      return buzz.isActive && currentTime < deadlineTime;
-    })
+    // .filter((buzz) => {
+    //   if (showAll) return true;
+    //   const deadlineTime = new Date(buzz.deadline).getTime();
+    //   const currentTime = Date.now();
+    //   return buzz.isActive && currentTime < deadlineTime;
+    // })
     .sort((a, b) => {
       switch (sortBy) {
         case "price":
@@ -171,6 +193,31 @@ export default function BuzzesPage() {
   if (buzzes.length === 0) {
     return (
       <div className="py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <select
+            id="sortBy"
+            value={sortBy}
+            onChange={(e) => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("sortBy", e.target.value);
+              router.push(url.toString());
+            }}
+            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
+          >
+            <option value="newest">✨ Newest First</option>
+            <option value="price">💰 Highest Price</option>
+            <option value="engagement">🔥 Most Engagement</option>
+          </select>
+
+          <ActiveBuzzesToggle
+            isActive={!showAll}
+            onToggle={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("showAll", (!showAll).toString());
+              router.push(url.toString());
+            }}
+          />
+        </div>
         <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
           <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-2 text-lg font-medium text-gray-900">
@@ -191,9 +238,11 @@ export default function BuzzesPage() {
           <select
             id="sortBy"
             value={sortBy}
-            onChange={(e) =>
-              setSortBy(e.target.value as "newest" | "price" | "engagement")
-            }
+            onChange={(e) => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("sortBy", e.target.value);
+              router.push(url.toString());
+            }}
             className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
           >
             <option value="newest">✨ Newest First</option>
@@ -202,8 +251,12 @@ export default function BuzzesPage() {
           </select>
 
           <ActiveBuzzesToggle
-            isActive={onlyActive}
-            onToggle={() => setOnlyActive(!onlyActive)}
+            isActive={!showAll}
+            onToggle={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("showAll", (!showAll).toString());
+              router.push(url.toString());
+            }}
           />
         </div>
 
@@ -240,7 +293,10 @@ export default function BuzzesPage() {
             {isLoadingMore && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="bg-white rounded-xl h-64 animate-pulse" />
+                  <div
+                    key={i}
+                    className="bg-white rounded-xl h-64 animate-pulse"
+                  />
                 ))}
               </div>
             )}

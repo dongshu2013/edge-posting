@@ -27,7 +27,9 @@ export async function POST(request: Request) {
     }
 
     // 计算所需总金额
-    const totalAmount = parseFloat(price) * numberOfReplies;
+    const rewardAmount = parseFloat(price) * numberOfReplies;
+    const commissionAmount = rewardAmount * 0.2;
+    const totalAmount = rewardAmount + commissionAmount;
 
     // 检查用户余额
     const userBalance = await prisma.user.findUnique({
@@ -65,7 +67,52 @@ export async function POST(request: Request) {
       // 创建交易记录
       const transaction = await tx.transaction.create({
         data: {
-          amount: totalAmount,
+          amount: rewardAmount,
+          type: "BURN",
+          status: "COMPLETED",
+          fromAddress: user.uid,
+          toAddress: "SYSTEM",
+          buzzId: buzz.id,
+          settledAt: new Date(),
+        },
+      });
+
+      // Check user referral
+      let txCommissionAmount = commissionAmount;
+      const referral = await tx.referral.findUnique({
+        where: {
+          invitedUserId: user.uid,
+        },
+      });
+
+      if (referral?.invitorUserId) {
+        const txReferralRewardAmount = Number(
+          (commissionAmount / 2).toFixed(2)
+        );
+        txCommissionAmount = commissionAmount - txReferralRewardAmount;
+        // Create referral reward transaction
+        await tx.transaction.create({
+          data: {
+            amount: txReferralRewardAmount,
+            type: "REFERRAL_REWARD",
+            status: "COMPLETED",
+            fromAddress: user.uid,
+            toAddress: referral.invitorUserId,
+            buzzId: buzz.id,
+            settledAt: new Date(),
+          },
+        });
+        // Send referral reward to invitor
+        await tx.user.update({
+          where: { uid: referral.invitorUserId },
+          data: { balance: { increment: txReferralRewardAmount } },
+        });
+      }
+
+      // Create commission fee transaction
+      await tx.transaction.create({
+        data: {
+          amount: txCommissionAmount,
           type: "BURN",
           status: "COMPLETED",
           fromAddress: user.uid,

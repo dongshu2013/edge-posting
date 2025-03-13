@@ -49,6 +49,9 @@ export function useAuth() {
         const response = await fetchApi(`/api/user/${user.uid}`, {
           method: "GET",
           auth: true,
+        }).catch((err) => {
+          console.error("Error fetching user info from database:", err);
+          return null;
         });
 
         // Only create user if they don't exist

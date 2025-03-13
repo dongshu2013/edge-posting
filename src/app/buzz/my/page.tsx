@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import BuzzCard from "@/components/BuzzCard";
 import { SparklesIcon } from "@heroicons/react/24/outline";
@@ -26,17 +26,29 @@ interface Buzz {
 }
 
 export default function MyBuzzesPage() {
+  const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | undefined>();
-  const [sortBy, setSortBy] = useState<"newest" | "price" | "engagement">(
-    "newest"
-  );
-  const [onlyActive, setOnlyActive] = useState(true);
   const { user, loading } = useAuth();
   const router = useRouter();
+
+  const showAll = searchParams.get("showAll") === "true";
+  const sortBy = useMemo(() => {
+    const sortByParam = searchParams.get("sortBy");
+    switch (sortByParam) {
+      case "newest":
+        return "newest";
+      case "price":
+        return "price";
+      case "engagement":
+        return "engagement";
+      default:
+        return "newest";
+    }
+  }, [searchParams]);
 
   const fetchUserBuzzes = useCallback(
     async (cursor?: string) => {
@@ -48,13 +60,19 @@ export default function MyBuzzesPage() {
         if (cursor) {
           url.searchParams.append("cursor", cursor);
         }
+        if (sortBy) {
+          url.searchParams.append("sortBy", sortBy);
+        }
+        if (!showAll) {
+          url.searchParams.append("onlyActive", "true");
+        }
 
         return await fetchApi(url.toString());
       } catch (err) {
         throw err;
       }
     },
-    [user]
+    [user, sortBy, showAll]
   );
 
   useEffect(() => {
@@ -108,7 +126,7 @@ export default function MyBuzzesPage() {
   // Sort and filter buzzes
   const sortedBuzzes = [...buzzes]
     .filter((buzz) => {
-      if (!onlyActive) return true;
+      if (showAll) return true;
       const deadlineTime = new Date(buzz.deadline).getTime();
       const currentTime = Date.now();
       return buzz.isActive && currentTime < deadlineTime;
@@ -160,9 +178,11 @@ export default function MyBuzzesPage() {
           <select
             id="sortBy"
             value={sortBy}
-            onChange={(e) =>
-              setSortBy(e.target.value as "newest" | "price" | "engagement")
-            }
+            onChange={(e) => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("sortBy", e.target.value);
+              router.push(url.toString());
+            }}
             className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
           >
             <option value="newest">✨ Newest First</option>
@@ -170,9 +190,13 @@ export default function MyBuzzesPage() {
             <option value="engagement">🔥 Most Engagement</option>
           </select>
 
-          <ActiveBuzzesToggle 
-            isActive={onlyActive}
-            onToggle={() => setOnlyActive(!onlyActive)}
+          <ActiveBuzzesToggle
+            isActive={!showAll}
+            onToggle={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("showAll", (!showAll).toString());
+              router.push(url.toString());
+            }}
           />
         </div>
 
@@ -180,7 +204,7 @@ export default function MyBuzzesPage() {
           {sortedBuzzes.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedBuzzes.map((buzz) => (
-                <div 
+                <div
                   key={buzz.id}
                   className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 overflow-hidden"
                 >
@@ -204,7 +228,9 @@ export default function MyBuzzesPage() {
           ) : (
             <div className="bg-white rounded-2xl shadow-xl p-9 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">No buzzes yet</h3>
+              <h3 className="mt-2 text-lg font-medium text-gray-900">
+                No buzzes yet
+              </h3>
               <p className="mt-1 text-sm text-gray-500">
                 Create your first buzz to start earning rewards! 🚀
               </p>

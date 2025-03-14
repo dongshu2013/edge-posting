@@ -3,6 +3,11 @@ const nextConfig = {
   eslint: {
     // Disable ESLint during build
     ignoreDuringBuilds: true,
+    dirs: ['src', 'app', 'pages', 'components', 'lib', 'utils'], // Only run ESLint on these directories
+  },
+  typescript: {
+    // Only type check these directories
+    tsconfigPath: './tsconfig.json',
   },
   reactStrictMode: true,
   images: {
@@ -18,6 +23,14 @@ const nextConfig = {
       },
     ];
   },
+  // Exclude chrome extension from webpack compilation
+  webpack: (config, { isServer }) => {
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/chrome-extension-ts/**'],
+    };
+    return config;
+  },
 };
 
-export default nextConfig; 
+export default nextConfig;

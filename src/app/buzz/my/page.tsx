@@ -23,6 +23,9 @@ interface Buzz {
   user: {
     username: string;
   };
+  _count: {
+    replies: number;
+  };
 }
 
 export default function MyBuzzesPage() {
@@ -144,7 +147,7 @@ function MyBuzzesPageContent() {
         case "price":
           return b.price - a.price;
         case "engagement":
-          return b.replyCount - a.replyCount;
+          return b._count.replies - a._count.replies;
         case "newest":
         default:
           return (
@@ -221,7 +224,7 @@ function MyBuzzesPageContent() {
                     tweetLink={buzz.tweetLink}
                     instructions={buzz.instructions}
                     price={buzz.price}
-                    replyCount={buzz.replyCount}
+                    replyCount={buzz._count.replies}
                     totalReplies={buzz.totalReplies}
                     createdBy={buzz.createdBy}
                     deadline={buzz.deadline}

@@ -2,10 +2,8 @@
 
 import {
   ChatBubbleLeftRightIcon,
-  DocumentDuplicateIcon,
   LightBulbIcon,
 } from "@heroicons/react/24/outline";
-import { CheckIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
@@ -66,7 +64,6 @@ export default function BuzzCard({
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
 
@@ -79,14 +76,14 @@ export default function BuzzCard({
   const formatRelativeTime = (date: Date) => {
     const now = new Date();
     const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     // If it's today, show relative time
     if (diffInSeconds < 86400) {
       if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
       if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
       return `${Math.floor(diffInSeconds / 3600)}h ago`;
     }
-    
+
     // Otherwise show the date
     return date.toLocaleDateString(undefined, {
       month: "short",
@@ -94,15 +91,15 @@ export default function BuzzCard({
     });
   };
 
-  const handleCopyAddress = async () => {
-    try {
-      await navigator.clipboard.writeText(createdBy);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy address:", err);
-    }
-  };
+  // const handleCopyAddress = async () => {
+  //   try {
+  //     await navigator.clipboard.writeText(createdBy);
+  //     setCopied(true);
+  //     setTimeout(() => setCopied(false), 2000);
+  //   } catch (err) {
+  //     console.error("Failed to copy address:", err);
+  //   }
+  // };
 
   const handleReplySubmit = async ({
     replyLink,
@@ -140,7 +137,7 @@ export default function BuzzCard({
 
   const handleDirectReply = () => {
     const replyText = getRandomReplyText();
-    
+
     // Configure popup window dimensions
     const width = 600;
     const height = 700;
@@ -153,7 +150,7 @@ export default function BuzzCard({
       "twitter_popup",
       `width=${width},height=${height},left=${left},top=${top},popup=yes,toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes`
     );
-    
+
     // Open the reply link modal to track the reply
     setGeneratedReplyText(replyText);
     setIsReplyModalOpen(true);
@@ -163,7 +160,9 @@ export default function BuzzCard({
     // For expired or inactive buzzes - "Reply (No Reward)" with normal style
     if (!isActive || isExpired) {
       if (!user) {
-        return <AuthButton buttonText="Reply (No Reward)" variant="secondary" />;
+        return (
+          <AuthButton buttonText="Reply (No Reward)" variant="secondary" />
+        );
       }
       return (
         <button
@@ -181,7 +180,12 @@ export default function BuzzCard({
 
     // For active buzzes - "Reply & Earn X BUZZ" with colorful gradient
     if (!user) {
-      return <AuthButton buttonText={`Reply & Earn ${price} BUZZ`} variant="primary" />;
+      return (
+        <AuthButton
+          buttonText={`Reply & Earn ${price} BUZZ`}
+          variant="primary"
+        />
+      );
     }
 
     return (
@@ -204,7 +208,9 @@ export default function BuzzCard({
         {/* Header with creator info and price */}
         <div className="flex justify-between items-center mb-3">
           <div className="flex items-center">
-            <span className="text-sm font-medium text-gray-900">@{username || createdBy.substring(0, 6)}</span>
+            <span className="text-sm font-medium text-gray-900">
+              @{username || createdBy.substring(0, 6)}
+            </span>
             <span className="mx-1 text-gray-500">·</span>
             {createdAt && (
               <span className="text-sm text-gray-500">
@@ -213,7 +219,9 @@ export default function BuzzCard({
             )}
           </div>
           <div className="text-sm font-medium">
-            <span className="text-amber-500 font-semibold">{price.toFixed(2)} BUZZ</span>
+            <span className="text-amber-500 font-semibold">
+              {price.toFixed(2)} BUZZ
+            </span>
             <span className="text-gray-500 mx-1">×</span>
             <span className="text-gray-700">{totalReplies}</span>
           </div>
@@ -232,7 +240,7 @@ export default function BuzzCard({
         </div>
 
         {/* Instructions */}
-        <div 
+        <div
           className="mb-3 bg-gray-50 p-3 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
           onClick={() => setShowInstructionsModal(true)}
           title={instructions}
@@ -249,7 +257,9 @@ export default function BuzzCard({
         <div className="flex justify-between items-center">
           {showViewReplies && (
             <button
-              onClick={() => window.location.href = `/buzz/${encodeURIComponent(id)}`}
+              onClick={() =>
+                (window.location.href = `/buzz/${encodeURIComponent(id)}`)
+              }
               className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
             >
               <ChatBubbleLeftRightIcon className="h-4 w-4 mr-1" />
@@ -278,16 +288,28 @@ export default function BuzzCard({
                   <LightBulbIcon className="h-5 w-5 mr-2 text-amber-500" />
                   Instructions
                 </h3>
-                <button 
+                <button
                   onClick={() => setShowInstructionsModal(false)}
                   className="text-gray-400 hover:text-gray-500"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{instructions}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {instructions}
+              </p>
             </div>
             <div className="px-5 py-3 bg-gray-50 flex justify-end rounded-b-xl">
               <button

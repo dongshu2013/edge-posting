@@ -2,12 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import {
-  ChatBubbleLeftRightIcon,
-  LightBulbIcon,
-} from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
 import BuzzCard from "@/components/BuzzCard";
-import ReplyCard from "@/components/ReplyCard";
 import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
@@ -243,7 +239,7 @@ export default function BuzzDetailPage() {
                         )}
                       </div>
                     </div>
-                    <div >
+                    <div>
                       {reply.status === "APPROVED" && (
                         <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           Approved

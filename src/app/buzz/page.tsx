@@ -22,6 +22,9 @@ interface Buzz {
   user: {
     username: string;
   };
+  _count: {
+    replies: number;
+  };
 }
 
 interface BuzzResponse {
@@ -287,7 +290,7 @@ function BuzzesPageContent() {
                     tweetLink={buzz.tweetLink}
                     instructions={buzz.instructions}
                     price={buzz.price}
-                    replyCount={buzz.replyCount}
+                    replyCount={buzz?._count?.replies || 0}
                     totalReplies={buzz.totalReplies}
                     createdBy={buzz.createdBy}
                     deadline={buzz.deadline}

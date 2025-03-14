@@ -63,6 +63,11 @@ export async function GET(request: NextRequest) {
             username: true,
           },
         },
+        _count: {
+          select: {
+            replies: true,
+          },
+        },
       },
       ...(cursor && {
         cursor: {

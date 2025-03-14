@@ -31,10 +31,9 @@ export function useAuth() {
   const authStateInitialized = useRef(false);
 
   const generateRandomUsername = () => {
-    const chars =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const timestamp = Date.now().toString(36);
-    const randomLength = 12;
+    const randomLength = 6;
     let randomString = "";
 
     for (let i = 0; i < randomLength; i++) {
@@ -42,7 +41,7 @@ export function useAuth() {
       randomString += chars.charAt(randomIndex);
     }
 
-    return `user_${timestamp}${randomString}`;
+    return `user_${timestamp}_${randomString}`;
   };
 
   const saveUserToDatabase = useCallback(

@@ -11,7 +11,7 @@ import { paymentServiceApplicationId } from "@/config";
 import { useQuery } from "@tanstack/react-query";
 import { paymentServiceUrl } from "@/config";
 import FaucetModal from "@/components/FaucetModal";
-import { Copy } from "lucide-react";
+import { ArrowRight, Copy } from "lucide-react";
 import toast from "react-hot-toast";
 import ProfileEditModal from "@/components/ProfileEditModal";
 
@@ -254,9 +254,18 @@ export default function ProfilePage() {
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-white text-lg font-medium">Total Balance</h2>
-            <p className="text-4xl font-bold text-white mt-2">
-              {(profile.balance || 0.0).toFixed(2)} BUZZ
-            </p>
+            <div
+              className="mt-2 flex items-center gap-2 cursor-pointer"
+              onClick={() => {
+                router.push("/buzz/my/txs");
+              }}
+            >
+              <p className="text-4xl font-bold text-white">
+                {(profile.balance || 0.0).toFixed(2)} BUZZ
+              </p>
+
+              <ArrowRight className="w-6 h-6 text-white" strokeWidth={3} />
+            </div>
           </div>
           <div className="flex gap-2">
             <span

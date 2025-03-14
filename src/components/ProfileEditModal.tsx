@@ -82,7 +82,7 @@ export default function ProfileEditModal({
                       as="h3"
                       className="text-lg font-semibold leading-6 text-gray-900"
                     >
-                      Edit Profile
+                      Edit Bio
                     </Dialog.Title>
 
                     <div className="mt-4">

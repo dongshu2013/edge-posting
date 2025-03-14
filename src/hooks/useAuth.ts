@@ -15,8 +15,15 @@ import { auth, googleProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
 
+const isBrowser = typeof window !== "undefined";
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(auth?.currentUser || null);
+  const [user, setUser] = useState<User | null>(() => {
+    if (!isBrowser) return null;
+    // Restore user state from localStorage
+    const savedUser = localStorage.getItem("authUser");
+    return savedUser ? JSON.parse(savedUser) : auth?.currentUser || null;
+  });
   const { setUserInfo, userInfo } = useUserStore((state) => state);
 
   const [loading, setLoading] = useState(true);
@@ -26,8 +33,8 @@ export function useAuth() {
   const generateRandomUsername = () => {
     const chars =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    const timestamp = Date.now().toString(36); // Convert timestamp to base36
-    const randomLength = 12; // Fixed length for random string
+    const timestamp = Date.now().toString(36);
+    const randomLength = 12;
     let randomString = "";
 
     for (let i = 0; i < randomLength; i++) {
@@ -56,33 +63,31 @@ export function useAuth() {
 
         // Only create user if they don't exist
         if (!response) {
-          console.log("User not found in database, creating...");
+          console.log("Creating new user...");
+          const newUser = {
+            uid: user.uid,
+            email: user.email,
+            username: generateRandomUsername(),
+            nickname: user.displayName,
+            avatar: user.photoURL,
+          };
+
           await fetchApi("/api/user", {
             method: "POST",
             auth: true,
-            body: JSON.stringify({
-              uid: user.uid,
-              email: user.email,
-              username: generateRandomUsername(), // 使用随机生成的用户名
-              nickname: user.displayName,
-              avatar: user.photoURL,
-            }),
+            body: JSON.stringify(newUser),
           });
-        }
 
-        setUserInfo(
-          response || {
-            uid: user.uid,
-            email: user.email,
-            username: user.displayName,
-            nickname: user.displayName,
-            avatar: user.photoURL,
+          setUserInfo({
+            ...newUser,
             bio: null,
             totalEarned: 0,
             balance: 0,
             createdAt: new Date(),
-          }
-        );
+          });
+        } else {
+          setUserInfo(response);
+        }
       } catch (error) {
         console.error("Failed to save user to database:", error);
       } finally {
@@ -93,7 +98,7 @@ export function useAuth() {
   );
 
   useEffect(() => {
-    if (!auth) return;
+    if (!isBrowser || !auth) return;
 
     const token = localStorage.getItem("authToken");
     if (!token) {
@@ -101,6 +106,13 @@ export function useAuth() {
     }
 
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // Save user state to localStorage
+      if (user) {
+        localStorage.setItem("authUser", JSON.stringify(user));
+      } else {
+        localStorage.removeItem("authUser");
+      }
+
       setUser(user);
       authStateInitialized.current = true;
 
@@ -115,7 +127,8 @@ export function useAuth() {
           // Set cookie with SameSite=Strict for security
           document.cookie = `authToken=${token}; path=/; max-age=3600; SameSite=Strict`;
 
-          if (!isSyncing && !user) {
+          // Fix sync condition check
+          if (!isSyncing && !userInfo) {
             console.log("Syncing user to database");
             await saveUserToDatabase(user);
           }
@@ -127,6 +140,7 @@ export function useAuth() {
         localStorage.removeItem("authToken");
         document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
         setUser(null);
+        setUserInfo(null);
       }
 
       setLoading(false);
@@ -136,7 +150,7 @@ export function useAuth() {
       console.log("Cleaning up auth state listener");
       unsubscribe();
     };
-  }, [saveUserToDatabase, isSyncing]);
+  }, [saveUserToDatabase, isSyncing, userInfo]);
 
   const signInWithGoogle = async () => {
     try {
@@ -166,7 +180,9 @@ export function useAuth() {
 
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       // Save the email for verification
-      window.localStorage.setItem("emailForSignIn", email);
+      if (isBrowser) {
+        localStorage.setItem("emailForSignIn", email);
+      }
       console.log("Magic link sent successfully");
       return true;
     } catch (error) {
@@ -184,7 +200,7 @@ export function useAuth() {
       if (!auth) throw new Error("Auth is not initialized");
 
       if (isSignInWithEmailLink(auth, window.location.href)) {
-        const email = window.localStorage.getItem("emailForSignIn");
+        const email = isBrowser ? localStorage.getItem("emailForSignIn") : null;
         if (!email) {
           throw new Error("Email not found. Please try signing in again.");
         }
@@ -194,7 +210,9 @@ export function useAuth() {
           email,
           window.location.href
         );
-        window.localStorage.removeItem("emailForSignIn");
+        if (isBrowser) {
+          localStorage.removeItem("emailForSignIn");
+        }
         console.log("Magic link verification successful");
         return result.user;
       }
@@ -210,7 +228,9 @@ export function useAuth() {
     try {
       console.log("Signing out");
       await signOut(auth!);
-      localStorage.removeItem("authToken");
+      if (isBrowser) {
+        localStorage.removeItem("authToken");
+      }
       document.cookie = "authToken=; path=/; max-age=0; SameSite=Strict";
       setUserInfo(null);
       setUser(null);

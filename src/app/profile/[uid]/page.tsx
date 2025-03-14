@@ -44,7 +44,7 @@ export default function ProfilePage() {
   const setUser = useUserStore((state) => state.setUserInfo);
   const params = useParams();
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { loading, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [withdrawAddress, setWithdrawAddress] = useState("");
@@ -54,24 +54,23 @@ export default function ProfilePage() {
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [username, setUserName] = useState("");
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [, setTransactions] = useState<Transaction[]>([]);
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("deposits");
   const [showFaucetModal, setShowFaucetModal] = useState(false);
   const userOrdersQuery = useQuery({
-    queryKey: ["payment-user-orders", user?.uid],
-    enabled: !!user?.uid,
+    queryKey: ["payment-user-orders", userInfo?.uid],
+    enabled: !!userInfo?.uid,
     queryFn: async () => {
       const resJson = await fetch(
-        `${paymentServiceUrl}/user-orders?payerId=${user?.uid}&applicationId=${paymentServiceApplicationId}`
+        `${paymentServiceUrl}/user-orders?payerId=${userInfo?.uid}&applicationId=${paymentServiceApplicationId}`
       ).then((res) => res.json());
 
       return resJson?.data?.orders || [];
     },
   });
 
-  // Define fetchData with useCallback to prevent it from changing on every render
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -123,7 +122,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (loading) return;
 
-    if (!user) {
+    if (!isAuthenticated) {
       router.push("/buzz");
       return;
     }
@@ -135,7 +134,7 @@ export default function ProfilePage() {
     }
 
     fetchData();
-  }, [userInfo, loading, router, params.uid, user, fetchData]);
+  }, [isAuthenticated, loading, router, params.uid, fetchData]);
 
   const handleWithdraw = async () => {
     if (!withdrawAddress || !withdrawAmount || withdrawLoading) return;
@@ -173,26 +172,28 @@ export default function ProfilePage() {
       return;
     }
 
-    if (!user || !user.uid) {
+    if (!userInfo || !userInfo.uid) {
       setError("You must be logged in to update your username");
       return;
     }
 
     try {
       setError(null);
-      const response = await fetchApi(`/api/user/${user.uid}/update-username`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username,
-        }),
-        auth: true, // Explicitly set auth to true
-      });
+      const response = await fetchApi(
+        `/api/user/${userInfo.uid}/update-username`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username,
+          }),
+          auth: true, // Explicitly set auth to true
+        }
+      );
 
       console.log("Update username response:", response);
 
       if (response) {
-        // Update the user info in the store
         if (userInfo) {
           setUser({
             ...userInfo,
@@ -316,12 +317,14 @@ export default function ProfilePage() {
           <div>
             <p className="text-sm text-gray-500">My Referral Code</p>
             <div className="flex items-center gap-2">
-              <p className="text-lg font-medium text-gray-900">{user?.uid}</p>
+              <p className="text-lg font-medium text-gray-900">
+                {userInfo?.uid}
+              </p>
               <Copy
                 className="w-4 h-4 cursor-pointer text-gray-500"
                 onClick={() => {
-                  navigator.clipboard.writeText(user?.uid || "");
-                  toast.success('Copied')
+                  navigator.clipboard.writeText(userInfo?.uid || "");
+                  toast.success("Copied");
                 }}
               />
             </div>
@@ -529,6 +532,7 @@ export default function ProfilePage() {
                   placeholder="0x..."
                 />
               </div>
+
               <div>
                 <label
                   htmlFor="withdrawAmount"

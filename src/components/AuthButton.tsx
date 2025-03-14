@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, Fragment, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -7,33 +7,35 @@ import { Dialog, Transition } from "@headlessui/react";
 import { Menu } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { useUserStore } from "@/store/userStore";
 
-export function AuthButton({ 
-  buttonText, 
+export function AuthButton({
+  buttonText,
   onSuccess,
-  variant = "primary"
-}: { 
-  buttonText?: string, 
-  onSuccess?: () => void,
-  variant?: "primary" | "secondary"
+  variant = "primary",
+}: {
+  buttonText?: string;
+  onSuccess?: () => void;
+  variant?: "primary" | "secondary";
 }) {
-  const { user, signInWithGoogle, sendMagicLink, signOut } = useAuth();
+  const { signInWithGoogle, sendMagicLink, signOut } = useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const userInfo = useUserStore((state) => state.userInfo);
 
   // Close modal when user is authenticated
   useEffect(() => {
-    if (user && isOpen) {
+    if (userInfo && isOpen) {
       setIsOpen(false);
       if (onSuccess) {
         onSuccess();
       }
     }
-  }, [user, isOpen, onSuccess]);
+  }, [userInfo, isOpen, onSuccess]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -70,14 +72,15 @@ export function AuthButton({
     }
   };
 
-  if (!user) {
+  if (!userInfo) {
     return (
       <>
         <button
           onClick={() => setIsOpen(true)}
-          className={variant === "primary" 
-            ? "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
-            : "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
+          className={
+            variant === "primary"
+              ? "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
+              : "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
           }
         >
           {buttonText || "Sign In"}
@@ -200,7 +203,7 @@ export function AuthButton({
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 transition-all duration-200">
-        <span className="text-gray-900">{user.displayName}</span>
+        <span className="text-gray-900">{userInfo.username}</span>
         <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
       </Menu.Button>
 
@@ -218,7 +221,7 @@ export function AuthButton({
             <Menu.Item>
               {({ active }) => (
                 <button
-                  onClick={() => router.push(`/profile/${user.uid}`)}
+                  onClick={() => router.push(`/profile/${userInfo.uid}`)}
                   className={`${
                     active ? "bg-gray-50 text-gray-900" : "text-gray-700"
                   } block w-full text-left px-4 py-2 text-sm`}

@@ -23,6 +23,23 @@ export function isProtectedRoute(path: string, type: "api" | "pages"): boolean {
         ? new RegExp(pattern).test(path)
         : path === baseRoute;
     }
+    // 处理动态路由参数
+    if (type === "api") {
+      const pathSegments = path.split("/");
+      const routeSegments = route.split("/");
+      // 检查路径段数是否匹配
+      if (pathSegments.length === routeSegments.length) {
+        // 检查每个段是否匹配，忽略动态参数段
+        const isMatch = routeSegments.every((segment, index) => {
+          // 如果是通配符段，则跳过匹配
+          if (segment === "*") return true;
+          // 如果是动态参数段（以冒号开头），则跳过匹配
+          if (segment.startsWith(":")) return true;
+          return segment === pathSegments[index];
+        });
+        if (isMatch) return true;
+      }
+    }
     // 精确匹配所有路由
     return path === route;
   });

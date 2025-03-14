@@ -8,6 +8,10 @@
     "activeTab",
     "scripting"
   ],
+  "host_permissions": [
+    "https://*.twitter.com/*",
+    "https://*.x.com/*"
+  ],
   "action": {
     "default_popup": "index.html",
     "default_icon": "images/icon16.png"
@@ -20,7 +24,10 @@
   "options_page": "options.html",
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "https://*.twitter.com/*",
+        "https://*.x.com/*"
+      ],
       "js": ["content.js"]
     }
   ],

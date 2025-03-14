@@ -256,10 +256,21 @@ class ProfileBuilder {
   }
 
   private async learnFromCurrentPage() {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab.id) return;
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      if (!tab.id) return;
 
-    chrome.tabs.sendMessage(tab.id, { type: 'ANALYZE_PAGE' });
+      // Ensure content script is injected
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['content.js']
+      });
+
+      // Now send the message
+      await chrome.tabs.sendMessage(tab.id, { type: 'ANALYZE_PAGE' });
+    } catch (error) {
+      console.error('Error learning from page:', error);
+    }
   }
 
   private async updateProfileFromPageAnalysis(analysis: {

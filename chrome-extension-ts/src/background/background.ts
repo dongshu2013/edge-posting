@@ -15,15 +15,29 @@ chrome.runtime.onInstalled.addListener(async () => {
   }
 });
 
-// Handle messages from content script to popup
+// Handle messages from content script and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'PROFILE_TRAIT') {
-    // Forward the text data to the popup
-    chrome.runtime.sendMessage({
-      type: 'PAGE_ANALYSIS',
-      data: {
-        text: message.data.text
-      }
+    // Save the profile data
+    chrome.storage.sync.get(['profile'], (result) => {
+      const profile = message.data.text;
+      chrome.storage.sync.set({ profile }, () => {
+        // Forward the text data to the popup
+        chrome.runtime.sendMessage({
+          type: 'PAGE_ANALYSIS',
+          data: {
+            text: profile
+          }
+        });
+      });
     });
+  }
+  
+  if (message.type === 'GET_PROFILE_CONTENT') {
+    // Retrieve existing profile content
+    chrome.storage.sync.get(['profile'], (result) => {
+      sendResponse({ content: result.profile || '' });
+    });
+    return true; // Required for async response
   }
 });

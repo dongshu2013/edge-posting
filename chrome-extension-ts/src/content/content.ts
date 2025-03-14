@@ -54,16 +54,49 @@ class ContentAnalyzer {
   }
 
   async analyzePageContent() {
-    const pageText = this.extractPageText();
-    if (!pageText) return;
+    // Check if it's a Twitter profile page
+    if (this.isTwitterProfilePage()) {
+      try {
+        const html = await this.getTwitterProfileHtml();
+        if (!html) {
+          console.error('Failed to get Twitter profile HTML');
+          return;
+        }
 
-    // Send message to background script
-    chrome.runtime.sendMessage({
-      type: 'PROFILE_TRAIT',
-      data: {
-        text: pageText
+        const posts = await this.extractTwitterPosts(html);
+        if (posts.length === 0) {
+          console.error('No posts extracted from profile');
+          return;
+        }
+
+        // Get existing profile content if any
+        const existingContent = await new Promise<string>((resolve) => {
+          chrome.runtime.sendMessage({ type: 'GET_PROFILE_CONTENT' }, (response) => {
+            resolve(response?.content || '');
+          });
+        });
+
+        const updatedProfile = await this.summarizeProfile(posts, existingContent);
+
+        // Send the updated profile back to the extension
+        chrome.runtime.sendMessage({
+          type: 'PROFILE_TRAIT',
+          data: {
+            text: updatedProfile
+          }
+        });
+      } catch (error) {
+        console.error('Error analyzing Twitter profile:', error);
       }
-    });
+    } else {
+      // For non-Twitter pages, just send a message that it's not supported
+      chrome.runtime.sendMessage({
+        type: 'PROFILE_TRAIT',
+        data: {
+          text: 'Profile learning is currently only supported for Twitter/X profile pages.'
+        }
+      });
+    }
   }
 
   private handleTextSelection(e: MouseEvent) {
@@ -158,6 +191,160 @@ class ContentAnalyzer {
     }
 
     this.hideContextMenu();
+  }
+
+  private async getSettings(): Promise<{
+    model?: string;
+    apiKey?: string;
+  }> {
+    return new Promise((resolve) => {
+      chrome.storage.sync.get(['settings'], (result) => {
+        resolve(result.settings || {});
+      });
+    });
+  }
+
+  private isTwitterProfilePage(): boolean {
+    const url = window.location.href;
+    // Match twitter.com/username or x.com/username but not subpages
+    return /^https?:\/\/(twitter|x)\.com\/[^/]+$/.test(url);
+  }
+
+  private async getTwitterProfileHtml(): Promise<string | null> {
+    if (!this.isTwitterProfilePage()) {
+      return null;
+    }
+
+    // Save initial scroll position
+    const initialScroll = window.scrollY;
+    
+    try {
+      // Auto-scroll to load more content
+      let lastHeight = document.body.scrollHeight;
+      let scrollAttempts = 0;
+      const maxScrollAttempts = 10; // Limit scrolling to avoid infinite loops
+      
+      while (scrollAttempts < maxScrollAttempts) {
+        window.scrollTo(0, document.body.scrollHeight);
+        await new Promise(resolve => setTimeout(resolve, 2000)); // Wait for content to load
+        
+        const newHeight = document.body.scrollHeight;
+        if (newHeight === lastHeight) {
+          break; // No more content to load
+        }
+        
+        lastHeight = newHeight;
+        scrollAttempts++;
+      }
+      
+      // Get the full HTML
+      const html = document.documentElement.outerHTML;
+      return html;
+    } catch (error) {
+      console.error('Error getting Twitter profile HTML:', error);
+      return null;
+    } finally {
+      // Restore original scroll position
+      window.scrollTo(0, initialScroll);
+    }
+  }
+
+  private async callAiModel(prompt: string, model: string, apiKey: string, temperature: number = 0.7): Promise<string> {
+    if (model.startsWith('google/')) {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1/models/' + model.replace('google/', '') + ':generateContent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+              text: prompt
+            }]
+          }],
+          generationConfig: {
+            temperature: temperature,
+            topK: 40,
+            topP: 0.95,
+          }
+        })
+      });
+
+      const data = await response.json();
+      return data.candidates[0].content.parts[0].text;
+    } else {
+      // OpenAI-compatible endpoint
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: model,
+          messages: [{
+            role: 'user',
+            content: prompt
+          }],
+          temperature: temperature
+        })
+      });
+
+      const data = await response.json();
+      return data.choices[0].message.content;
+    }
+  }
+
+  private async extractTwitterPosts(html: string): Promise<string[]> {
+    const settings = await this.getSettings();
+    const model = settings.model || 'google/gemini-2-flash';
+    const apiKey = settings.apiKey;
+
+    if (!apiKey) {
+      throw new Error('API key not configured');
+    }
+
+    try {
+      const prompt = `
+        Extract all tweets (posts and replies) from this Twitter profile page HTML.
+        Only return the text content of the tweets, one per line.
+        Ignore retweets, likes, and other metadata.
+        Format: Just the tweet text content, nothing else.
+        HTML: ${html}
+      `;
+
+      const response = await this.callAiModel(prompt, model, apiKey, 0.3);
+      return response.split('\n').filter((tweet: string) => tweet.trim());
+    } catch (error) {
+      console.error('Error extracting tweets:', error);
+      return [];
+    }
+  }
+
+  private async summarizeProfile(posts: string[], existingContent: string = ''): Promise<string> {
+    const settings = await this.getSettings();
+    const model = settings.model || 'google/gemini-2-flash';
+    const apiKey = settings.apiKey;
+
+    if (!apiKey) {
+      throw new Error('API key not configured');
+    }
+
+    try {
+      const prompt = `
+        Analyze these tweets and create a comprehensive profile of the person.
+        Focus on their interests, expertise, communication style, and recurring themes.
+        If there is existing profile content, merge it with the new insights.
+        Existing profile: ${existingContent}
+        Tweets: ${posts.join('\n')}
+      `;
+
+      return await this.callAiModel(prompt, model, apiKey, 0.7);
+    } catch (error) {
+      console.error('Error summarizing profile:', error);
+      return existingContent;
+    }
   }
 
   // Add styles for the context menu

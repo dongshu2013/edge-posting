@@ -105,8 +105,10 @@ export function useAuth() {
             body: JSON.stringify(newUser),
           });
 
+          console.log("User created successfully", userInfo);
           setUserInfo(userInfo);
         } else {
+          console.log("User created", response);
           setUserInfo(response);
         }
       } catch (error) {

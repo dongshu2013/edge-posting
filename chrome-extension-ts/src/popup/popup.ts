@@ -1,4 +1,5 @@
 import { Profile, ProfileStore, Settings } from '../types';
+import { isTwitterProfileUrl } from '../utils/url';
 
 class ProfileBuilder {
   private activeProfileSection: HTMLDivElement;
@@ -76,10 +77,15 @@ class ProfileBuilder {
       }
     });
 
-    // Listen for profile updates from content script
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    this.initializeMessageListeners();
+  }
+
+  private initializeMessageListeners() {
+    chrome.runtime.onMessage.addListener((message) => {
       if (message.type === 'PAGE_ANALYSIS') {
         this.updateProfileFromPageAnalysis(message.data);
+      } else if (message.type === 'PROFILE_ERROR') {
+        this.showError(message.error);
       }
     });
   }
@@ -257,20 +263,82 @@ class ProfileBuilder {
 
   private async learnFromCurrentPage() {
     try {
+      console.log('Learning from current page...');
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab.id) return;
+      if (!tab.id) {
+        console.error('No active tab found');
+        this.showError('No active tab found');
+        return;
+      }
+      console.log('Active tab:', tab.url);
+
+      // Check if we're on a supported URL
+      if (!tab.url || tab.url.startsWith('chrome://') || !isTwitterProfileUrl(tab.url)) {
+        this.showError('Please navigate to a Twitter/X profile page first.');
+        return;
+      }
+
+      // Show loading state
+      const loadingDiv = document.createElement('div');
+      loadingDiv.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-blue-100 border border-blue-400 text-blue-700 px-4 py-2 rounded flex items-center';
+      loadingDiv.innerHTML = `
+        <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Analyzing profile...
+      `;
+      document.body.appendChild(loadingDiv);
 
       // Ensure content script is injected
-      await chrome.scripting.executeScript({
-        target: { tabId: tab.id },
-        files: ['content.js']
-      });
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ['content.js']
+        });
+        console.log('Content script injected successfully');
+      } catch (error: unknown) {
+        console.error('Error injecting content script:', error);
+        if (error instanceof Error && error.message.includes('chrome://')) {
+          this.showError('Please navigate to a Twitter/X profile page first.');
+        } else {
+          this.showError('Failed to analyze page. Please try again.');
+        }
+        if (loadingDiv.parentNode) {
+          document.body.removeChild(loadingDiv);
+        }
+        return;
+      }
 
       // Now send the message
+      console.log('Sending ANALYZE_PAGE message to content script');
       await chrome.tabs.sendMessage(tab.id, { type: 'ANALYZE_PAGE' });
-    } catch (error) {
+      console.log('Message sent successfully');
+
+      // Remove loading after 30 seconds if no response
+      setTimeout(() => {
+        if (loadingDiv.parentNode) {
+          document.body.removeChild(loadingDiv);
+          this.showError('Analysis timed out. Please try again.');
+        }
+      }, 30000);
+    } catch (error: unknown) {
       console.error('Error learning from page:', error);
+      this.showError('Failed to analyze page. Please try again.');
     }
+  }
+
+  private showError(message: string) {
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded';
+    errorDiv.textContent = message;
+    document.body.appendChild(errorDiv);
+    
+    setTimeout(() => {
+      if (errorDiv.parentNode) {
+        document.body.removeChild(errorDiv);
+      }
+    }, 5000);
   }
 
   private async updateProfileFromPageAnalysis(analysis: {

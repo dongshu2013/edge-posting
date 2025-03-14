@@ -1,30 +1,23 @@
 {
-  "name": "buzz-reply-helper",
+  "name": "ai-character-builder",
   "version": "1.0.0",
-  "description": "Chrome extension for BUZZ Reply Helper",
+  "description": "Build personalized AI characters by browsing website content",
   "scripts": {
     "build": "webpack --config webpack.config.js",
-    "watch": "webpack --watch --config webpack.config.js",
-    "dev": "webpack --watch --config webpack.config.js --mode=development",
-    "prod": "webpack --config webpack.config.js --mode=production",
-    "zip": "node scripts/create-zip.js"
+    "watch": "webpack --config webpack.config.js --watch",
+    "dev": "webpack --config webpack.config.js --mode development --watch",
+    "prod": "webpack --config webpack.config.js --mode production"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "webextension-polyfill": "^0.10.0"
   },
   "devDependencies": {
-    "@types/chrome": "^0.0.246",
-    "@types/react": "^18.2.21",
-    "@types/react-dom": "^18.2.7",
-    "copy-webpack-plugin": "^11.0.0",
-    "css-loader": "^6.8.1",
-    "html-webpack-plugin": "^5.5.3",
-    "style-loader": "^3.3.3",
-    "ts-loader": "^9.4.4",
-    "typescript": "^5.2.2",
-    "webpack": "^5.88.2",
-    "webpack-cli": "^5.1.4",
-    "zip-a-folder": "^2.0.0"
+    "@types/chrome": "^0.0.260",
+    "@types/webextension-polyfill": "^0.10.7",
+    "copy-webpack-plugin": "^12.0.2",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.3.3",
+    "webpack": "^5.90.3",
+    "webpack-cli": "^5.1.4"
   }
-} 
+}

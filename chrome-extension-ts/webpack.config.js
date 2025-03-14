@@ -1,14 +1,13 @@
 const path = require('path');
 const CopyPlugin = require('copy-webpack-plugin');
-const HtmlWebpackPlugin = require('html-webpack-plugin');
 
 module.exports = {
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   entry: {
-    background: './src/background/index.ts',
-    popup: './src/popup/index.tsx',
-    'twitter-content': './src/content/twitter/index.ts',
-    'edge-posting-content': './src/content/edge-posting/index.ts'
+    popup: './src/popup/popup.ts',
+    options: './src/popup/options.ts',
+    content: './src/content/content.ts',
+    background: './src/background/background.ts',
   },
   output: {
     path: path.resolve(__dirname, 'dist'),
@@ -18,30 +17,28 @@ module.exports = {
   module: {
     rules: [
       {
-        test: /\.tsx?$/,
+        test: /\.ts$/,
         use: 'ts-loader',
-        exclude: /node_modules/
+        exclude: /node_modules/,
       },
-      {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
-      }
-    ]
+    ],
   },
   resolve: {
-    extensions: ['.tsx', '.ts', '.js']
+    extensions: ['.ts', '.js']
   },
   plugins: [
     new CopyPlugin({
       patterns: [
-        { from: 'public', to: '.', globOptions: { ignore: ['**/popup.html'] } }
-      ]
+        { 
+          from: 'public',
+          to: '.'
+        },
+        {
+          from: 'src/popup/*.html',
+          to: '[name][ext]'
+        }
+      ],
     }),
-    new HtmlWebpackPlugin({
-      template: './public/popup.html',
-      filename: 'popup.html',
-      chunks: ['popup']
-    })
   ],
   devtool: 'cheap-source-map'
-}; 
+};

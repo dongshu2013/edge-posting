@@ -8,6 +8,7 @@ class SettingsManager {
   private customModelSection: HTMLDivElement;
   private customModelInput: HTMLInputElement;
   private backButton: HTMLButtonElement;
+  private toast: HTMLDivElement;
 
   constructor() {
     this.form = document.getElementById('settingsForm') as HTMLFormElement;
@@ -17,9 +18,19 @@ class SettingsManager {
     this.customModelSection = document.getElementById('customModelSection') as HTMLDivElement;
     this.customModelInput = document.getElementById('customModel') as HTMLInputElement;
     this.backButton = document.getElementById('backButton') as HTMLButtonElement;
+    this.toast = document.getElementById('toast') as HTMLDivElement;
 
     this.initializeForm();
     this.initializeEventListeners();
+  }
+
+  private showToast(message: string, type: 'success' | 'error') {
+    this.toast.textContent = message;
+    this.toast.className = `${type} show`;
+    
+    setTimeout(() => {
+      this.toast.className = type;
+    }, 3000);
   }
 
   private initializeEventListeners() {
@@ -36,6 +47,21 @@ class SettingsManager {
         this.customModelInput.focus();
       }
     });
+
+    // Save settings form submit handler
+    const saveButton = document.getElementById('saveSettings');
+    if (saveButton) {
+      saveButton.addEventListener('click', async (e) => {
+        e.preventDefault();
+        try {
+          await this.saveSettings();
+          this.showToast('Settings saved successfully!', 'success');
+        } catch (error) {
+          this.showToast('Failed to save settings', 'error');
+          console.error('Error saving settings:', error);
+        }
+      });
+    }
   }
 
   private async initializeForm() {
@@ -68,15 +94,7 @@ class SettingsManager {
     });
   }
 
-  private async saveSettings(settings: Settings) {
-    return new Promise<void>((resolve) => {
-      chrome.storage.sync.set({ settings }, resolve);
-    });
-  }
-
-  private async handleSubmit(e: Event) {
-    e.preventDefault();
-
+  private async saveSettings() {
     const settings: Settings = {
       openaiUrl: this.urlInput.value,
       apiKey: this.apiKeyInput.value || undefined,
@@ -85,7 +103,27 @@ class SettingsManager {
       enableAutoSubmit: false,
     };
 
-    await this.saveSettings(settings);
+    return new Promise<void>((resolve, reject) => {
+      chrome.storage.sync.set({ settings }, () => {
+        if (chrome.runtime.lastError) {
+          reject(chrome.runtime.lastError);
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+
+  private async handleSubmit(e: Event) {
+    e.preventDefault();
+
+    try {
+      await this.saveSettings();
+      this.showToast('Settings saved successfully!', 'success');
+    } catch (error) {
+      this.showToast('Failed to save settings', 'error');
+      console.error('Error saving settings:', error);
+    }
 
     // Show success message
     const button = this.form.querySelector('button[type="submit"]') as HTMLButtonElement;

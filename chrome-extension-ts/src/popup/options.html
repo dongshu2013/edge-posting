@@ -82,9 +82,43 @@
     .hidden {
       display: none;
     }
+    .button-primary:active,
+    .modal-button:active,
+    button:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      z-index: 1000;
+    }
+
+    #toast.success {
+      background-color: #34D399;
+      color: white;
+    }
+
+    #toast.error {
+      background-color: #EF4444;
+      color: white;
+    }
+
+    #toast.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body class="p-6 bg-gray-50">
+  <div id="toast"></div>
   <div class="flex items-center gap-4 mb-8">
     <button id="backButton" class="button-back">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

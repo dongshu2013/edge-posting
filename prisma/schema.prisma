@@ -22,6 +22,7 @@ model User {
   nickname    String?
   avatar      String?
   bio         String?      @db.Text
+  mood        String?      @db.Text
   totalEarned Float        @default(0)
   balance     Float        @default(0)
   buzzes      Buzz[]
@@ -110,7 +111,7 @@ model Referral {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  invitedUserId String @unique
+  invitedUserId String  @unique
   invitorUserId String?
 
   @@index([invitedUserId])

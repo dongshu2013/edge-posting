@@ -1,6 +1,5 @@
 import { headers } from "next/headers";
 import { adminAuth } from "./firebase-admin";
-import { NextResponse } from "next/server";
 
 export interface AuthUser {
   uid: string;

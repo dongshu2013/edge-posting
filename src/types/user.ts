@@ -5,7 +5,8 @@ export interface UserInfo {
   nickname: string | null;
   avatar: string | null;
   bio: string | null;
+  mood: string | null;
   totalEarned: number;
   balance: number;
   createdAt: Date;
-} 
+}

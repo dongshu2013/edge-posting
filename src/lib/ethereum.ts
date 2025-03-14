@@ -91,7 +91,7 @@ export async function transferERC20(data: {
         functionName: "transfer",
         args: [data.recipient as `0x${string}`, chainAmount],
       })
-      .catch((err) => (errorMessage = err.message));
+      .catch((err) => (err = err.message));
 
     // console.log("txRequest", txRequest);
     // console.log("txResult", txResult);
@@ -103,7 +103,7 @@ export async function transferERC20(data: {
 
     const txHash = await walletClient
       .writeContract(txRequest)
-      .catch((err) => (errorMessage = err.message));
+      .catch((err) => (err = err.message));
 
     // console.log("txHash", txHash);
 

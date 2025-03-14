@@ -8,21 +8,20 @@ class CharacterBuilder {
   private settingsButton: HTMLButtonElement;
   private characterModal: HTMLDivElement;
   private deleteModal: HTMLDivElement;
+  private detailsModal: HTMLDivElement;
+  private detailsTitle: HTMLHeadingElement;
+  private detailsContent: HTMLDivElement;
+  private closeDetailsButton: HTMLButtonElement;
   private characterForm: HTMLFormElement;
   private cancelCharacterButton: HTMLButtonElement;
   private cancelDeleteButton: HTMLButtonElement;
   private confirmDeleteButton: HTMLButtonElement;
-  private characterNameInput: HTMLInputElement;
   private characterToDelete: Character | null = null;
 
   private readonly DEFAULT_CHARACTER: Character = {
     id: 'default',
     name: 'Default',
-    description: '',
-    traits: [],
-    personality: [],
-    interests: [],
-    background: [],
+    text: '',
     createdAt: 0,
     lastModified: 0,
   };
@@ -35,11 +34,14 @@ class CharacterBuilder {
     this.settingsButton = document.getElementById('settingsButton') as HTMLButtonElement;
     this.characterModal = document.getElementById('characterModal') as HTMLDivElement;
     this.deleteModal = document.getElementById('deleteModal') as HTMLDivElement;
+    this.detailsModal = document.getElementById('detailsModal') as HTMLDivElement;
+    this.detailsTitle = document.getElementById('detailsTitle') as HTMLHeadingElement;
+    this.detailsContent = document.getElementById('detailsContent') as HTMLDivElement;
+    this.closeDetailsButton = document.getElementById('closeDetails') as HTMLButtonElement;
     this.characterForm = document.getElementById('characterForm') as HTMLFormElement;
     this.cancelCharacterButton = document.getElementById('cancelCharacter') as HTMLButtonElement;
     this.cancelDeleteButton = document.getElementById('cancelDelete') as HTMLButtonElement;
     this.confirmDeleteButton = document.getElementById('confirmDelete') as HTMLButtonElement;
-    this.characterNameInput = document.getElementById('characterName') as HTMLInputElement;
 
     this.initializeEventListeners();
     this.loadCharacters();
@@ -55,6 +57,7 @@ class CharacterBuilder {
     this.learnFromPageButton.addEventListener('click', () => this.learnFromCurrentPage());
     this.cancelDeleteButton.addEventListener('click', () => this.hideDeleteModal());
     this.confirmDeleteButton.addEventListener('click', () => this.handleDeleteConfirm());
+    this.closeDetailsButton.addEventListener('click', () => this.hideDetailsModal());
 
     // Close modals when clicking outside
     this.characterModal.addEventListener('click', (e) => {
@@ -65,6 +68,11 @@ class CharacterBuilder {
     this.deleteModal.addEventListener('click', (e) => {
       if (e.target === this.deleteModal) {
         this.hideDeleteModal();
+      }
+    });
+    this.detailsModal.addEventListener('click', (e) => {
+      if (e.target === this.detailsModal) {
+        this.hideDetailsModal();
       }
     });
 
@@ -106,8 +114,7 @@ class CharacterBuilder {
 
   private showCharacterModal() {
     this.characterModal.classList.add('show');
-    this.characterNameInput.value = '';
-    this.characterNameInput.focus();
+    this.characterForm.reset();
   }
 
   private hideCharacterModal() {
@@ -122,6 +129,16 @@ class CharacterBuilder {
   private hideDeleteModal() {
     this.deleteModal.classList.remove('show');
     this.characterToDelete = null;
+  }
+
+  private showDetailsModal(character: Character) {
+    this.detailsTitle.textContent = character.name;
+    this.detailsContent.textContent = character.text || 'No content yet';
+    this.detailsModal.classList.add('show');
+  }
+
+  private hideDetailsModal() {
+    this.detailsModal.classList.remove('show');
   }
 
   private async handleDeleteConfirm() {
@@ -143,14 +160,13 @@ class CharacterBuilder {
   private async handleCharacterSubmit(e: Event) {
     e.preventDefault();
     
+    const form = e.target as HTMLFormElement;
+    const characterNameInput = form.querySelector('input[name="characterName"]') as HTMLInputElement;
+    
     const character: Character = {
       id: crypto.randomUUID(),
-      name: this.characterNameInput.value,
-      description: '', // No description needed
-      traits: [],
-      personality: [],
-      interests: [],
-      background: [],
+      name: characterNameInput.value,
+      text: '',
       createdAt: Date.now(),
       lastModified: Date.now(),
     };
@@ -160,7 +176,7 @@ class CharacterBuilder {
     await this.saveCharacterStore(store);
     
     this.hideCharacterModal();
-    this.renderCharacterList(store.characters);
+    this.loadCharacters();
   }
 
   private renderActiveCharacter(character: Character) {
@@ -171,17 +187,18 @@ class CharacterBuilder {
     this.characterList.innerHTML = '';
     
     // Add default personality first
-    this.renderPersonalityItem(this.DEFAULT_CHARACTER);
+    this.renderCharacterItem(this.DEFAULT_CHARACTER);
     
     // Then add other personalities
     characters.forEach(character => {
-      this.renderPersonalityItem(character);
+      this.renderCharacterItem(character);
     });
   }
 
-  private renderPersonalityItem(character: Character) {
+  private renderCharacterItem(character: Character) {
     const element = document.createElement('div');
-    element.className = 'personality-item bg-white rounded-xl shadow-sm p-6 border border-gray-200';
+    element.className = 'character-item bg-white rounded-xl shadow-sm p-6 border border-gray-200';
+    element.addEventListener('click', () => this.showDetailsModal(character));
     
     const content = document.createElement('div');
     content.className = 'flex justify-between items-center';
@@ -196,10 +213,7 @@ class CharacterBuilder {
     nameSection.appendChild(name);
     
     // Show empty state message when no content
-    if (!character.traits.length && 
-        !character.personality.length && 
-        !character.interests.length && 
-        !character.background.length) {
+    if (!character.text) {
       const emptyMessage = document.createElement('p');
       emptyMessage.className = 'text-sm text-gray-500 mt-2';
       emptyMessage.textContent = 'Learn from current page';
@@ -212,7 +226,8 @@ class CharacterBuilder {
     const switchButton = document.createElement('button');
     switchButton.className = 'switch-button px-3 py-1.5 text-sm text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50';
     switchButton.textContent = 'Switch to';
-    switchButton.onclick = async () => {
+    switchButton.onclick = async (e) => {
+      e.stopPropagation();
       const store = await this.getCharacterStore();
       store.activeCharacterId = character.id === 'default' ? undefined : character.id;
       await this.saveCharacterStore(store);
@@ -224,7 +239,10 @@ class CharacterBuilder {
       const deleteButton = document.createElement('button');
       deleteButton.className = 'delete-button px-3 py-1.5 text-sm text-red-600 hover:text-red-700 border border-red-200 rounded-lg hover:bg-red-50';
       deleteButton.textContent = 'Delete';
-      deleteButton.onclick = () => this.showDeleteModal(character);
+      deleteButton.onclick = (e) => {
+        e.stopPropagation();
+        this.showDeleteModal(character);
+      };
       actions.appendChild(deleteButton);
     }
     
@@ -245,10 +263,7 @@ class CharacterBuilder {
   }
 
   private async updateCharacterFromPageAnalysis(analysis: {
-    traits?: string[];
-    personality?: string[];
-    interests?: string[];
-    background?: string[];
+    text?: string;
   }) {
     const store = await this.getCharacterStore();
     if (!store.activeCharacterId) return;
@@ -257,17 +272,8 @@ class CharacterBuilder {
     if (!character) return;
 
     // Update character with new information
-    if (analysis.traits) {
-      character.traits = [...new Set([...character.traits, ...analysis.traits])];
-    }
-    if (analysis.personality) {
-      character.personality = [...new Set([...character.personality, ...analysis.personality])];
-    }
-    if (analysis.interests) {
-      character.interests = [...new Set([...character.interests, ...analysis.interests])];
-    }
-    if (analysis.background) {
-      character.background = [...new Set([...character.background, ...analysis.background])];
+    if (analysis.text) {
+      character.text = analysis.text;
     }
 
     character.lastModified = Date.now();

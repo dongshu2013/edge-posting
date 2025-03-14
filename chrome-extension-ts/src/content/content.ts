@@ -32,19 +32,12 @@ class ContentAnalyzer {
     // Listen for messages from the popup
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       if (request.type === 'ANALYZE_PAGE') {
-        const content = this.getPageContent();
-        const analysis = this.analyzePage(content);
-        
-        // Send the analysis back to the popup
-        chrome.runtime.sendMessage({
-          type: 'PAGE_ANALYSIS',
-          data: analysis
-        });
+        this.analyzePageContent();
       }
     });
   }
 
-  private getPageContent(): string {
+  private extractPageText(): string {
     // Get the main content, excluding scripts, styles, etc.
     const content = document.body.innerText;
     
@@ -60,62 +53,17 @@ class ContentAnalyzer {
     return [metaDescription, headings, content].join('\n');
   }
 
-  private analyzePage(content: string) {
-    // Split content into paragraphs
-    const paragraphs = content.split('\n').filter(p => p.trim().length > 0);
-    
-    // Initialize character aspects
-    const traits: string[] = [];
-    const personality: string[] = [];
-    const interests: string[] = [];
-    const background: string[] = [];
+  async analyzePageContent() {
+    const pageText = this.extractPageText();
+    if (!pageText) return;
 
-    // Simple keyword-based analysis
-    paragraphs.forEach(paragraph => {
-      const text = paragraph.toLowerCase();
-      
-      // Check for personality traits
-      if (text.includes('personality') || 
-          text.includes('character') || 
-          text.includes('behavior') ||
-          text.includes('attitude')) {
-        personality.push(paragraph);
-      }
-      
-      // Check for interests and hobbies
-      else if (text.includes('interest') || 
-               text.includes('hobby') || 
-               text.includes('passion') ||
-               text.includes('enjoys') ||
-               text.includes('likes')) {
-        interests.push(paragraph);
-      }
-      
-      // Check for background information
-      else if (text.includes('background') || 
-               text.includes('history') || 
-               text.includes('education') ||
-               text.includes('experience') ||
-               text.includes('grew up')) {
-        background.push(paragraph);
-      }
-      
-      // General traits
-      else if (text.includes('skilled') ||
-               text.includes('expert') ||
-               text.includes('professional') ||
-               text.includes('specialist') ||
-               text.includes('trait')) {
-        traits.push(paragraph);
+    // Send message to background script
+    chrome.runtime.sendMessage({
+      type: 'CHARACTER_TRAIT',
+      data: {
+        text: pageText
       }
     });
-
-    return {
-      traits: traits.slice(0, 5),  // Limit to top 5 traits
-      personality: personality.slice(0, 3),  // Limit to top 3 personality traits
-      interests: interests.slice(0, 3),  // Limit to top 3 interests
-      background: background.slice(0, 2),  // Limit to top 2 background items
-    };
   }
 
   private handleTextSelection(e: MouseEvent) {

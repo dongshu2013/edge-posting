@@ -9,11 +9,7 @@ export interface Settings {
 export interface Character {
   id: string;
   name: string;
-  description: string;
-  traits: string[];
-  personality: string[];
-  interests: string[];
-  background: string[];
+  text: string;
   createdAt: number;
   lastModified: number;
 }

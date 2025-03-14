@@ -216,7 +216,7 @@ class ProfileBuilder {
     if (!profile.text) {
       const emptyMessage = document.createElement('p');
       emptyMessage.className = 'text-sm text-gray-500 mt-2';
-      emptyMessage.textContent = 'Learn from current page';
+      emptyMessage.textContent = 'No content yet';
       nameSection.appendChild(emptyMessage);
     }
     

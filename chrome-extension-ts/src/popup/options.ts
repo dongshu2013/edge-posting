@@ -42,20 +42,14 @@ class SettingsManager {
     // Load saved settings
     const settings = await this.getSettings();
     
-    // Check if the saved model is one of the predefined options
-    const isCustomModel = ![
-      'google/gemini-2-flash',
-      'google/gemini-pro',
-      'anthropic/claude-3-opus',
-      'anthropic/claude-3-sonnet',
-      'meta-llama/llama-2-70b-chat',
-      'gpt-4',
-      'custom'
-    ].includes(settings.model);
+    this.loadSettings(settings);
+    
+    // Populate other form fields
+    this.urlInput.value = settings.openaiUrl;
+  }
 
-    // If it's a custom model, select the custom option and show the input
-    if (isCustomModel) {
-      this.modelSelect.value = 'custom';
+  private async loadSettings(settings: Settings) {
+    if (settings.model === 'custom') {
       this.customModelSection.classList.remove('hidden');
       this.customModelInput.value = settings.model;
     } else {
@@ -63,8 +57,6 @@ class SettingsManager {
       this.customModelSection.classList.add('hidden');
     }
     
-    // Populate other form fields
-    this.urlInput.value = settings.openaiUrl;
     this.apiKeyInput.value = settings.apiKey || '';
   }
 

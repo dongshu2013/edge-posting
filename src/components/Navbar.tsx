@@ -7,11 +7,35 @@ import Image from "next/image";
 import { PlusIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "@/hooks/useAuth";
 import { AuthButton } from "@/components/AuthButton";
+import { useUserStore } from "@/store/userStore";
+import { PencilIcon } from "@heroicons/react/24/outline";
+import { fetchApi } from "@/lib/api";
 
 export default function Navbar() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showMoodInput, setShowMoodInput] = useState(false);
+  const [newMood, setNewMood] = useState("");
   const { isAuthenticated } = useAuth();
+  const { userInfo, setUserInfo } = useUserStore();
+
+  const handleMoodUpdate = async () => {
+    if (!newMood.trim()) return;
+    try {
+      const res = await fetchApi(`/api/user/${userInfo?.uid}/mood`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mood: newMood }),
+        auth: true,
+      });
+      // Only update if we have all required user info
+      setUserInfo(res.user);
+      setShowMoodInput(false);
+      setNewMood("");
+    } catch (error) {
+      console.error("Failed to update mood:", error);
+    }
+  };
 
   return (
     <nav className="bg-white shadow">
@@ -71,6 +95,50 @@ export default function Navbar() {
             </div>
           </div>
           <div className="hidden sm:flex sm:items-center sm:ml-6 space-x-4">
+            {isAuthenticated && (
+              <div className="relative">
+                {showMoodInput ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={newMood}
+                      onChange={(e) => setNewMood(e.target.value)}
+                      className="block w-24 px-2 py-1 text-sm border rounded-md"
+                      placeholder="New mood"
+                    />
+                    <button
+                      onClick={handleMoodUpdate}
+                      className="text-sm text-indigo-600 hover:text-indigo-800"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMoodInput(false);
+                        setNewMood("");
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNewMood(userInfo?.mood || "");
+                      setShowMoodInput(true);
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-800 flex items-center space-x-1 group"
+                  >
+                    <span>Mood:</span>
+                    <span className="font-medium group-hover:underline">
+                      {userInfo?.mood || "Set mood"}
+                    </span>
+                    <PencilIcon className="h-3.5 w-3.5 text-gray-400 group-hover:text-gray-600" />
+                  </button>
+                )}
+              </div>
+            )}
             {isAuthenticated && (
               <Link
                 href="/buzz/new"
@@ -180,6 +248,46 @@ export default function Navbar() {
         </div>
         <div className="pt-4 pb-3 border-t border-gray-200">
           <div className="flex items-center px-4">
+            {isAuthenticated && userInfo?.mood && (
+              <div className="relative mb-2">
+                {showMoodInput ? (
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="text"
+                      value={newMood}
+                      onChange={(e) => setNewMood(e.target.value)}
+                      className="block w-24 px-2 py-1 text-sm border rounded-md"
+                      placeholder="New mood"
+                    />
+                    <button
+                      onClick={handleMoodUpdate}
+                      className="text-sm text-indigo-600 hover:text-indigo-800"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowMoodInput(false);
+                        setNewMood("");
+                      }}
+                      className="text-sm text-gray-500 hover:text-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setNewMood(userInfo.mood || "");
+                      setShowMoodInput(true);
+                    }}
+                    className="text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Mood: {userInfo.mood}
+                  </button>
+                )}
+              </div>
+            )}
             <AuthButton />
           </div>
         </div>

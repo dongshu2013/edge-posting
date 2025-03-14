@@ -3,7 +3,8 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { uid, email, username, nickname, avatar } = await request.json();
+    const { uid, email, username, nickname, avatar, bio, mood } =
+      await request.json();
 
     if (!uid) {
       return NextResponse.json(
@@ -28,6 +29,8 @@ export async function POST(request: Request) {
           avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
         totalEarned: 0,
         balance: 0,
+        bio,
+        mood,
       },
     });
 

@@ -13,6 +13,7 @@ import { paymentServiceUrl } from "@/config";
 import FaucetModal from "@/components/FaucetModal";
 import { Copy } from "lucide-react";
 import toast from "react-hot-toast";
+import ProfileEditModal from "@/components/ProfileEditModal";
 
 interface UserProfile {
   email: string | null;
@@ -21,6 +22,7 @@ interface UserProfile {
   totalEarned: number;
   balance: number;
   nickname?: string;
+  bio: string | null;
 }
 
 interface Transaction {
@@ -41,7 +43,7 @@ interface Withdrawal {
 
 export default function ProfilePage() {
   const userInfo = useUserStore((state) => state.userInfo);
-  const setUser = useUserStore((state) => state.setUserInfo);
+  const setUserInfo = useUserStore((state) => state.setUserInfo);
   const params = useParams();
   const router = useRouter();
   const { loading, isAuthenticated } = useAuth();
@@ -52,6 +54,7 @@ export default function ProfilePage() {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [withdrawLoading, setWithdrawLoading] = useState(false);
   const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [showProfileEditModal, setShowProfileEditModal] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [username, setUserName] = useState("");
   const [, setTransactions] = useState<Transaction[]>([]);
@@ -195,7 +198,7 @@ export default function ProfilePage() {
 
       if (response) {
         if (userInfo) {
-          setUser({
+          setUserInfo({
             ...userInfo,
             username,
           });
@@ -314,6 +317,23 @@ export default function ProfilePage() {
               {profile.totalEarned} BUZZ
             </p>
           </div>
+          <div className="col-span-2">
+            <div className="flex justify-between items-center">
+              <div className="space-y-1">
+                <p className="text-sm text-gray-500">Bio</p>
+                <p className="text-lg font-medium text-gray-900">
+                  {profile.bio || "No bio"}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowProfileEditModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 h-fit"
+              >
+                <PencilIcon className="h-4 w-4 mr-1.5" />
+                Edit Profile
+              </button>
+            </div>
+          </div>
           <div>
             <p className="text-sm text-gray-500">My Referral Code</p>
             <div className="flex items-center gap-2">
@@ -331,6 +351,42 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* Profile Edit Modal */}
+      <ProfileEditModal
+        isOpen={showProfileEditModal}
+        onClose={() => setShowProfileEditModal(false)}
+        initialBio={profile.bio}
+        onSubmit={async ({ bio }) => {
+          try {
+            const response = await fetchApi(
+              `/api/user/${userInfo?.uid}/update-bio`,
+              {
+                method: "POST",
+                body: JSON.stringify({ bio }),
+                auth: true,
+              }
+            );
+
+            if (response) {
+              setProfile({
+                ...profile,
+                bio,
+              });
+              if (userInfo) {
+                setUserInfo({
+                  ...userInfo,
+                  bio,
+                });
+              }
+              toast.success("Bio updated successfully!");
+            }
+          } catch (error) {
+            console.error("Error updating bio:", error);
+            toast.error("Failed to update bio");
+          }
+        }}
+      />
 
       {/* Payment History */}
       <div className="bg-white rounded-2xl shadow-sm p-6">

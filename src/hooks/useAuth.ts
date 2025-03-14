@@ -30,8 +30,34 @@ export function useAuth() {
   const [isSyncing, setIsSyncing] = useState(false);
   const authStateInitialized = useRef(false);
 
+  const generateRandomBio = () => {
+    const bios = [
+      "Just exploring the digital frontier",
+      "Sharing thoughts and making connections",
+      "Here to learn and grow",
+      "Building something amazing",
+      "Passionate about web3 and technology",
+      "Creating the future, one post at a time",
+    ];
+    return bios[Math.floor(Math.random() * bios.length)];
+  };
+
+  const generateRandomMood = () => {
+    const moods = [
+      "curious",
+      "excited",
+      "inspired",
+      "focused",
+      "creative",
+      "energetic",
+      "optimistic",
+    ];
+    return moods[Math.floor(Math.random() * moods.length)];
+  };
+
   const generateRandomUsername = () => {
-    const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    const chars =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const timestamp = Date.now().toString(36);
     const randomLength = 6;
     let randomString = "";
@@ -69,21 +95,17 @@ export function useAuth() {
             username: generateRandomUsername(),
             nickname: user.displayName,
             avatar: user.photoURL,
+            bio: generateRandomBio(),
+            mood: generateRandomMood(),
           };
 
-          await fetchApi("/api/user", {
+          const userInfo = await fetchApi("/api/user", {
             method: "POST",
             auth: true,
             body: JSON.stringify(newUser),
           });
 
-          setUserInfo({
-            ...newUser,
-            bio: null,
-            totalEarned: 0,
-            balance: 0,
-            createdAt: new Date(),
-          });
+          setUserInfo(userInfo);
         } else {
           setUserInfo(response);
         }

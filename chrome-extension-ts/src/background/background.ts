@@ -17,7 +17,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 
 // Handle messages from content script to popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'CHARACTER_TRAIT') {
+  if (message.type === 'PROFILE_TRAIT') {
     // Forward the text data to the popup
     chrome.runtime.sendMessage({
       type: 'PAGE_ANALYSIS',

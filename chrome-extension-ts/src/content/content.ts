@@ -59,7 +59,7 @@ class ContentAnalyzer {
 
     // Send message to background script
     chrome.runtime.sendMessage({
-      type: 'CHARACTER_TRAIT',
+      type: 'PROFILE_TRAIT',
       data: {
         text: pageText
       }
@@ -144,7 +144,7 @@ class ContentAnalyzer {
 
       // Send trait to popup
       chrome.runtime.sendMessage({
-        type: 'CHARACTER_TRAIT',
+        type: 'PROFILE_TRAIT',
         trait
       });
 
@@ -152,7 +152,7 @@ class ContentAnalyzer {
       console.error('Failed to analyze text:', error);
       // Send raw text as trait if AI analysis fails
       chrome.runtime.sendMessage({
-        type: 'CHARACTER_TRAIT',
+        type: 'PROFILE_TRAIT',
         trait: this.selectedText
       });
     }

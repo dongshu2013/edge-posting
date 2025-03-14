@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>AI Character Builder</title>
+  <title>AI Profile Builder</title>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
   <style>
     body {
@@ -11,15 +11,15 @@
       max-height: 800px;
       overflow-y: auto;
     }
-    .character-section {
+    .profile-section {
       max-height: 400px;
       overflow-y: auto;
     }
-    .character-item {
+    .profile-item {
       transition: all 0.2s;
       cursor: pointer;
     }
-    .character-item:hover {
+    .profile-item:hover {
       transform: translateX(4px);
     }
     .switch-button,
@@ -102,7 +102,7 @@
 </head>
 <body class="p-6 bg-gray-50">
   <div class="flex justify-between items-center mb-6">
-    <h1 class="text-xl font-bold text-gray-900">Characters</h1>
+    <h1 class="text-xl font-bold text-gray-900">Profiles</h1>
     <button id="settingsButton" class="text-gray-600 hover:text-gray-900">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -111,49 +111,49 @@
     </button>
   </div>
 
-  <!-- Active Character Section -->
+  <!-- Active Profile Section -->
   <div class="mb-8 bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-    <h2 class="text-lg font-semibold text-gray-700 mb-4">Active Character</h2>
+    <h2 class="text-lg font-semibold text-gray-700 mb-4">Active Profile</h2>
     <div class="flex justify-between items-center">
-      <div id="activeCharacter" class="text-xl font-semibold text-gray-900">Default</div>
+      <div id="activeProfile" class="text-xl font-semibold text-gray-900">Default</div>
       <button id="learnFromPage" class="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50">
         Learn from page
       </button>
     </div>
   </div>
 
-  <!-- Your Characters Section -->
-  <div class="character-section">
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">Your Characters</h2>
-    <div id="characterList" class="space-y-3">
-      <!-- Default character will be inserted here first -->
-      <!-- Other characters will follow -->
+  <!-- Your Profiles Section -->
+  <div class="profile-section">
+    <h2 class="text-xl font-semibold text-gray-900 mb-6">Your Profiles</h2>
+    <div id="profileList" class="space-y-3">
+      <!-- Default profile will be inserted here first -->
+      <!-- Other profiles will follow -->
     </div>
-    <button id="createCharacter" class="mt-4 w-full px-4 py-3 text-sm text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center">
-      + Add Character
+    <button id="createProfile" class="mt-4 w-full px-4 py-3 text-sm text-gray-700 hover:text-gray-900 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center">
+      + Add Profile
     </button>
   </div>
 
-  <!-- Create Character Modal -->
-  <div id="characterModal" class="modal-overlay">
+  <!-- Create Profile Modal -->
+  <div id="profileModal" class="modal-overlay">
     <div class="modal-base">
-      <h3 class="modal-title">New Character</h3>
-      <form id="characterForm" class="space-y-6">
+      <h3 class="modal-title">New Profile</h3>
+      <form id="profileForm" class="space-y-6">
         <div>
-          <label for="characterName" class="block text-base font-medium text-gray-700">Name</label>
+          <label for="profileName" class="block text-base font-medium text-gray-700">Name</label>
           <input 
             type="text" 
-            name="characterName"
-            id="characterName" 
+            name="profileName"
+            id="profileName" 
             class="modal-input"
-            placeholder="Enter personality name"
+            placeholder="Enter profile name"
             required
           >
         </div>
         <div class="flex justify-end gap-4 pt-4">
           <button 
             type="button" 
-            id="cancelCharacter" 
+            id="cancelProfile" 
             class="modal-button modal-button-secondary"
           >
             Cancel
@@ -169,11 +169,11 @@
     </div>
   </div>
 
-  <!-- Delete Confirmation Modal -->
+  <!-- Delete Profile Modal -->
   <div id="deleteModal" class="modal-overlay">
     <div class="modal-base">
-      <h3 class="modal-title">Delete Character</h3>
-      <p class="text-gray-600 mb-8">Are you sure you want to delete this character? This action cannot be undone.</p>
+      <h3 class="modal-title">Delete Profile</h3>
+      <p class="text-gray-600 mb-8">Are you sure you want to delete this profile? This action cannot be undone.</p>
       <div class="flex justify-end gap-4">
         <button 
           type="button" 

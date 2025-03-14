@@ -6,7 +6,7 @@ export interface Settings {
   enableAutoSubmit: boolean;
 }
 
-export interface Character {
+export interface Profile {
   id: string;
   name: string;
   text: string;
@@ -14,9 +14,9 @@ export interface Character {
   lastModified: number;
 }
 
-export interface CharacterStore {
-  characters: Character[];
-  activeCharacterId?: string;
+export interface ProfileStore {
+  profiles: Profile[];
+  activeProfileId?: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

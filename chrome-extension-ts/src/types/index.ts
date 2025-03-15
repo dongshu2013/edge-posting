@@ -20,8 +20,8 @@ export interface ProfileStore {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-  openaiUrl: 'http://localhost:11434',
-  model: 'gemma3:12b',
+  openaiUrl: 'https://openrouter.ai/api/v1',
+  model: 'google/gemini-2.0-flash-001',
   enableAutoReply: false,
   enableAutoSubmit: false,
 };

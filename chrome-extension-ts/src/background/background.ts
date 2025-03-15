@@ -1,5 +1,7 @@
+import { summarizeProfile } from '../services/ai';
+import { extractTwitterPosts } from '../twitter/timeline';
+import { convertTwitterPostToMarkdown } from '../twitter/common';
 import { Settings, DEFAULT_SETTINGS } from '../types';
-import { extractTwitterPosts, summarizeProfile } from '../services/ai';
 
 // Initialize extension settings if not already set
 chrome.runtime.onInstalled.addListener(async () => {
@@ -67,19 +69,17 @@ async function handleProfileAnalysis(html: string) {
 
     // Extract posts
     const posts = await extractTwitterPosts(html, settings);
+    
     if (posts.length === 0) {
       throw new Error('No posts found on this profile');
     }
 
     // Get existing profile content
-    const existingContent = await new Promise<string>((resolve) => {
-      chrome.storage.sync.get(['profile'], (result) => {
-        resolve(result.profile || '');
-      });
-    });
+    const existingContent = await getExistingProfile(''); 
 
     // Generate summary
-    const updatedProfile = await summarizeProfile(posts, existingContent, settings);
+    const postsMarkdown = convertTwitterPostToMarkdown(posts).split('\n');
+    const updatedProfile = await summarizeProfile(postsMarkdown, existingContent, settings);
 
     // Save and broadcast the result
     chrome.storage.sync.set({ profile: updatedProfile }, () => {
@@ -97,4 +97,13 @@ async function handleProfileAnalysis(html: string) {
       error: error instanceof Error ? error.message : 'An unknown error occurred'
     });
   }
+}
+
+// Helper function to get existing profile content
+async function getExistingProfile(url: string) {
+  return await new Promise<string>((resolve) => {
+    chrome.storage.sync.get(['profile'], (result) => {
+      resolve(result.profile || '');
+    });
+  });
 }

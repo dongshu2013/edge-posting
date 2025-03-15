@@ -1,5 +1,5 @@
 import { Profile, ProfileStore, Settings } from '../types';
-import { isTwitterProfileUrl } from '../utils/url';
+import { isTwitterProfileUrl } from '../twitter/timeline';
 
 class ProfileBuilder {
   private activeProfileSection: HTMLDivElement;

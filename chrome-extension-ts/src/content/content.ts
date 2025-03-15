@@ -1,5 +1,6 @@
+import browser from 'webextension-polyfill';
+import { isTwitterProfileUrl } from '../twitter/timeline';
 import { Settings, DEFAULT_SETTINGS } from '../types';
-import { isTwitterProfileUrl } from '../utils/url';
 
 class ContentAnalyzer {
   private settings: Settings = DEFAULT_SETTINGS;

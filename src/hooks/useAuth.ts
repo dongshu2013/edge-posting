@@ -30,31 +30,6 @@ export function useAuth() {
   const [isSyncing, setIsSyncing] = useState(false);
   const authStateInitialized = useRef(false);
 
-  // const generateRandomBio = () => {
-  //   const bios = [
-  //     "Just exploring the digital frontier",
-  //     "Sharing thoughts and making connections",
-  //     "Here to learn and grow",
-  //     "Building something amazing",
-  //     "Passionate about web3 and technology",
-  //     "Creating the future, one post at a time",
-  //   ];
-  //   return bios[Math.floor(Math.random() * bios.length)];
-  // };
-
-  // const generateRandomMood = () => {
-  //   const moods = [
-  //     "curious",
-  //     "excited",
-  //     "inspired",
-  //     "focused",
-  //     "creative",
-  //     "energetic",
-  //     "optimistic",
-  //   ];
-  //   return moods[Math.floor(Math.random() * moods.length)];
-  // };
-
   const generateRandomUsername = () => {
     const chars =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -173,7 +148,7 @@ export function useAuth() {
       console.log("Cleaning up auth state listener");
       unsubscribe();
     };
-  }, [saveUserToDatabase, isSyncing, userInfo]);
+  }, [saveUserToDatabase, isSyncing, userInfo, setUserInfo]);
 
   const signInWithGoogle = async () => {
     try {

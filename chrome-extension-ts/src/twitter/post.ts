@@ -1,63 +1,78 @@
-import { Settings } from '../types';
-import { callAiModel } from '../services/ai';
+import { Settings } from "../types";
+import { callAiModel } from "../services/ai";
 import {
-  TwitterAuthor,
   TwitterReply,
   NormalTwitterPost,
   TwitterReplyPost,
-  TwitterRepost
-} from '../types/twitter';
-import { extractAuthorInfo } from './common';
+  TwitterRepost,
+} from "../types/twitter";
+import { extractAuthorInfo } from "./common";
 
 export function isTwitterPostUrl(url: string): boolean {
   // Match twitter.com/username/status/id or x.com/username/status/id
   // Also allow www subdomain
-  return /^https?:\/\/((?:www\.)?twitter\.com|(?:www\.)?x\.com)\/[^/]+\/status\/\d+$/.test(url);
+  return /^https?:\/\/((?:www\.)?twitter\.com|(?:www\.)?x\.com)\/[^/]+\/status\/\d+$/.test(
+    url
+  );
 }
 
-export function extractTwitterPostFromDom(): NormalTwitterPost | TwitterReplyPost | TwitterRepost | null {
+export function extractTwitterPostFromDom():
+  | NormalTwitterPost
+  | TwitterReplyPost
+  | TwitterRepost
+  | null {
   try {
-    console.log('Starting single post DOM extraction...');
-    
+    console.log("Starting single post DOM extraction...");
+
     // Find the main tweet article
     const tweetElement = document.querySelector('article[data-testid="tweet"]');
     if (!tweetElement) {
-      console.log('No tweet element found');
+      console.log("No tweet element found");
       return null;
     }
 
     // Extract common elements
-    const contentElement = tweetElement.querySelector('[data-testid="tweetText"]');
-    const content = contentElement?.textContent || '';
+    const contentElement = tweetElement.querySelector(
+      '[data-testid="tweetText"]'
+    );
+    const content = contentElement?.textContent || "";
     console.log(`Found content: "${content.slice(0, 50)}..."`);
 
     const author = extractAuthorInfo(tweetElement);
     console.log(`Author: ${author.displayName} (@${author.username})`);
 
-    const timeElement = tweetElement.querySelector('time');
-    const timestamp = timeElement?.getAttribute('datetime') || '';
-    console.log(`Timestamp: ${timestamp || 'not found'}`);
+    const timeElement = tweetElement.querySelector("time");
+    const timestamp = timeElement?.getAttribute("datetime") || "";
+    console.log(`Timestamp: ${timestamp || "not found"}`);
 
     const statsContainer = tweetElement.querySelector('[role="group"]');
-    const stats = statsContainer?.querySelectorAll('[data-testid$="count"]') || [];
-    const [repliesCount, retweetsCount, likesCount] = Array.from(stats).map(stat => 
-      parseInt(stat?.textContent || '0', 10)
+    const stats =
+      statsContainer?.querySelectorAll('[data-testid$="count"]') || [];
+    const [repliesCount, retweetsCount, likesCount] = Array.from(stats).map(
+      (stat) => parseInt(stat?.textContent || "0", 10)
     );
-    console.log(`Stats: ${repliesCount} replies, ${retweetsCount} retweets, ${likesCount} likes`);
+    console.log(
+      `Stats: ${repliesCount} replies, ${retweetsCount} retweets, ${likesCount} likes`
+    );
 
     const url = window.location.href;
-    const id = url.split('/status/')?.[1]?.split('?')?.[0] || '';
+    const id = url.split("/status/")?.[1]?.split("?")?.[0] || "";
 
     // Check if it's a reply
-    const replyElement = tweetElement.querySelector('[data-testid="tweet-reply-context"]');
+    const replyElement = tweetElement.querySelector(
+      '[data-testid="tweet-reply-context"]'
+    );
     if (replyElement) {
-      console.log('Tweet is a reply');
+      console.log("Tweet is a reply");
       const replyToAuthor = extractAuthorInfo(replyElement);
-      const replyToContent = replyElement.querySelector('[data-testid="tweetText"]')?.textContent || '';
-      const replyToTime = replyElement.querySelector('time')?.getAttribute('datetime') || '';
+      const replyToContent =
+        replyElement.querySelector('[data-testid="tweetText"]')?.textContent ||
+        "";
+      const replyToTime =
+        replyElement.querySelector("time")?.getAttribute("datetime") || "";
 
       return {
-        type: 'reply',
+        type: "reply",
         id,
         content,
         timestamp,
@@ -67,26 +82,31 @@ export function extractTwitterPostFromDom(): NormalTwitterPost | TwitterReplyPos
         repliesCount,
         url,
         replyTo: {
-          id: '',
+          id: "",
           content: replyToContent,
           timestamp: replyToTime,
-          author: replyToAuthor
-        }
+          author: replyToAuthor,
+        },
       };
     }
 
     // Check if it's a repost/quote
-    const repostElement = tweetElement.querySelector('[data-testid="tweet-repost-context"]');
+    const repostElement = tweetElement.querySelector(
+      '[data-testid="tweet-repost-context"]'
+    );
     if (repostElement) {
-      console.log('Tweet is a repost/quote');
+      console.log("Tweet is a repost/quote");
       const originalAuthor = extractAuthorInfo(repostElement);
-      const quoteContent = tweetElement.querySelector('[data-testid="tweet-quoted"]')?.textContent || '';
-      const quoteTime = repostElement.querySelector('time')?.getAttribute('datetime') || '';
+      const quoteContent =
+        tweetElement.querySelector('[data-testid="tweet-quoted"]')
+          ?.textContent || "";
+      const quoteTime =
+        repostElement.querySelector("time")?.getAttribute("datetime") || "";
       const hasQuote = Boolean(quoteContent);
       const quoteComment = hasQuote ? content : undefined;
 
       return {
-        type: 'repost',
+        type: "repost",
         id,
         content,
         timestamp,
@@ -96,35 +116,41 @@ export function extractTwitterPostFromDom(): NormalTwitterPost | TwitterReplyPos
         repliesCount,
         url,
         originalPost: {
-          id: '',
+          id: "",
           content: quoteContent,
           timestamp: quoteTime,
-          author: originalAuthor
+          author: originalAuthor,
         },
         hasQuote,
-        quoteComment
+        quoteComment,
       };
     }
 
     // Normal post - extract replies
-    console.log('Tweet is a normal post');
+    console.log("Tweet is a normal post");
     const replies: TwitterReply[] = [];
-    const replyElements = document.querySelectorAll('article[data-testid="tweet"][tabindex="-1"]');
+    const replyElements = document.querySelectorAll(
+      'article[data-testid="tweet"][tabindex="-1"]'
+    );
     replyElements.forEach((reply, index) => {
-      const replyContent = reply.querySelector('[data-testid="tweetText"]')?.textContent || '';
+      const replyContent =
+        reply.querySelector('[data-testid="tweetText"]')?.textContent || "";
       const replyAuthor = extractAuthorInfo(reply);
-      const replyTime = reply.querySelector('time')?.getAttribute('datetime') || '';
-      
+      const replyTime =
+        reply.querySelector("time")?.getAttribute("datetime") || "";
+
       replies.push({
         content: replyContent,
         timestamp: replyTime,
-        author: replyAuthor
+        author: replyAuthor,
       });
-      console.log(`Extracted reply ${index + 1} from ${replyAuthor.displayName}`);
+      console.log(
+        `Extracted reply ${index + 1} from ${replyAuthor.displayName}`
+      );
     });
 
     return {
-      type: 'normal',
+      type: "normal",
       id,
       content,
       timestamp,
@@ -133,17 +159,20 @@ export function extractTwitterPostFromDom(): NormalTwitterPost | TwitterReplyPos
       retweetsCount,
       repliesCount,
       url,
-      replies: replies.length > 0 ? replies : undefined
+      replies: replies.length > 0 ? replies : undefined,
     };
   } catch (error) {
-    console.error('Error extracting tweet from DOM:', error);
+    console.error("Error extracting tweet from DOM:", error);
     return null;
   }
 }
 
-export async function extractTwitterPostFromAi(html: string, settings: Settings): Promise<NormalTwitterPost | TwitterReplyPost | TwitterRepost | null> {
+export async function extractTwitterPostFromAi(
+  html: string,
+  settings: Settings
+): Promise<NormalTwitterPost | TwitterReplyPost | TwitterRepost | null> {
   try {
-    console.log('Starting AI-based single post extraction...');
+    console.log("Starting AI-based single post extraction...");
     const prompt = `You are a Twitter HTML parser. Given the HTML content of a single Twitter post page, extract the main tweet. Identify if it's a normal post, reply, or repost/quote. Include:
 
 For normal posts:
@@ -218,25 +247,31 @@ Repost:
 HTML Content:
 ${html}`;
 
-    console.log('Sending request to AI model...');
+    console.log("Sending request to AI model...");
     const result = await callAiModel(prompt, settings);
-    console.log('Received AI response, parsing JSON...');
-    
+    console.log("Received AI response, parsing JSON...");
+
     try {
       const parsedPost = JSON.parse(result);
-      if (parsedPost && typeof parsedPost === 'object' && parsedPost.type) {
-        console.log(`Successfully parsed ${parsedPost.type} tweet from AI response`);
+      if (parsedPost && typeof parsedPost === "object" && parsedPost.type) {
+        console.log(
+          `Successfully parsed ${parsedPost.type} tweet from AI response`
+        );
         return parsedPost;
       }
-      console.error('AI returned invalid format:', result);
+      console.error("AI returned invalid format:", result);
       return null;
     } catch (error) {
-      console.error('Failed to parse AI response:', error);
+      console.error("Failed to parse AI response:", error);
       return null;
     }
   } catch (error: unknown) {
-    console.error('Error in AI extraction:', error);
-    throw new Error(`Failed to extract tweet using AI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error in AI extraction:", error);
+    throw new Error(
+      `Failed to extract tweet using AI: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
 
@@ -245,80 +280,88 @@ export interface ExtractTwitterPostOptions {
 }
 
 export async function extractTwitterPost(
-  html: string, 
-  settings: Settings, 
+  html: string,
+  settings: Settings,
   options: ExtractTwitterPostOptions = { enableAI: true }
 ): Promise<NormalTwitterPost | TwitterReplyPost | TwitterRepost | null> {
   try {
-    console.log('Starting tweet extraction process...');
-    
+    console.log("Starting tweet extraction process...");
+
     // First try DOM extraction
     const domPost = extractTwitterPostFromDom();
     if (domPost) {
-      console.log('Using DOM extraction result');
+      console.log("Using DOM extraction result");
       return domPost;
     }
 
     // If DOM extraction failed and AI is enabled, try AI extraction
     if (options.enableAI) {
-      console.log('DOM extraction failed, falling back to AI extraction...');
+      console.log("DOM extraction failed, falling back to AI extraction...");
       return await extractTwitterPostFromAi(html, settings);
     }
 
-    console.log('DOM extraction failed and AI fallback is disabled');
+    console.log("DOM extraction failed and AI fallback is disabled");
     return null;
   } catch (error: unknown) {
-    console.error('Error extracting tweet:', error);
-    throw new Error(`Failed to extract tweet: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error("Error extracting tweet:", error);
+    throw new Error(
+      `Failed to extract tweet: ${
+        error instanceof Error ? error.message : "Unknown error"
+      }`
+    );
   }
 }
 
-export function convertTwitterPostToMarkdown(post: NormalTwitterPost | TwitterReplyPost | TwitterRepost): string {
-  console.log('Converting post to markdown format');
-  
-  let markdown = `## Tweet by [${post.author.displayName}](${post.author.profileUrl}) ${post.url ? `[🔗](${post.url})` : ''}\n`;
+export function convertTwitterPostToMarkdown(
+  post: NormalTwitterPost | TwitterReplyPost | TwitterRepost
+): string {
+  console.log("Converting post to markdown format");
+
+  let markdown = `## Tweet by [${post.author.displayName}](${
+    post.author.profileUrl
+  }) ${post.url ? `[🔗](${post.url})` : ""}\n`;
   markdown += `${post.content}\n\n`;
-  
+
   // Add metadata if available
   const stats: string[] = [];
   if (post.likesCount) stats.push(`❤️ ${post.likesCount}`);
   if (post.retweetsCount) stats.push(`🔄 ${post.retweetsCount}`);
   if (post.repliesCount) stats.push(`💬 ${post.repliesCount}`);
-  
+
   if (stats.length > 0) {
-    markdown += `*${stats.join(' · ')}*\n`;
+    markdown += `*${stats.join(" · ")}*\n`;
   }
-  
+
   if (post.timestamp) {
     const date = new Date(post.timestamp);
     markdown += `*Posted on ${date.toLocaleDateString()}*\n`;
   }
-  
+
   // Add replies if available
   if (post.replies && post.replies.length > 0) {
-    markdown += '\n### Replies\n';
-    post.replies.forEach(reply => {
+    markdown += "\n### Replies\n";
+    post.replies.forEach((reply) => {
       markdown += `\n**[${reply.author.displayName}](${reply.author.profileUrl})**\n`;
       markdown += `${reply.content}\n`;
       if (reply.timestamp) {
         const replyDate = new Date(reply.timestamp);
         markdown += `*Posted on ${replyDate.toLocaleDateString()}*\n`;
       }
-      markdown += '---\n';
+      markdown += "---\n";
     });
   }
 
   // Add replyTo or originalPost if available
-  if (post.type === 'reply') {
-    markdown += '\n### Original Tweet\n';
+  if (post.type === "reply") {
+    markdown += "\n### Original Tweet\n";
     markdown += `**[${post.replyTo.author.displayName}](${post.replyTo.author.profileUrl})**\n`;
     markdown += `${post.replyTo.content}\n`;
     if (post.replyTo.timestamp) {
       const replyToDate = new Date(post.replyTo.timestamp);
       markdown += `*Posted on ${replyToDate.toLocaleDateString()}*\n`;
     }
-  } else if (post.type === 'repost') {
-    markdown += '\n### Original Tweet\n';
+  } else if (post.type === "repost") {
+    markdown += "\n### Original Tweet\n";
     markdown += `**[${post.originalPost.author.displayName}](${post.originalPost.author.profileUrl})**\n`;
     markdown += `${post.originalPost.content}\n`;
     if (post.originalPost.timestamp) {
@@ -326,11 +369,11 @@ export function convertTwitterPostToMarkdown(post: NormalTwitterPost | TwitterRe
       markdown += `*Posted on ${originalPostDate.toLocaleDateString()}*\n`;
     }
     if (post.hasQuote) {
-      markdown += '\n### Quote Comment\n';
+      markdown += "\n### Quote Comment\n";
       markdown += `${post.quoteComment}\n`;
     }
   }
-  
-  console.log('Markdown conversion complete');
+
+  console.log("Markdown conversion complete");
   return markdown;
 }

@@ -23,6 +23,7 @@ interface Reply {
 interface Buzz {
   id: string;
   tweetLink: string;
+  tweetText?: string;
   instructions: string;
   price: number;
   replyCount: number;
@@ -170,6 +171,7 @@ export default function BuzzDetailPage() {
           <BuzzCard
             id={buzz.id}
             tweetLink={buzz.tweetLink}
+            tweetText={buzz.tweetText}
             instructions={buzz.instructions}
             price={buzz.price}
             replyCount={buzz.replyCount}

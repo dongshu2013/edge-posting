@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BoltIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
+import { COMMISSION_RATE } from "@/config/common";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function NewBuzzPage() {
 
   // 20% commission
   const commissionAmount = useMemo(() => {
-    return (Number(rewardAmount) * 0.2).toFixed(2);
+    return (Number(rewardAmount) * COMMISSION_RATE).toFixed(2);
   }, [rewardAmount]);
 
   const totalDeposit = useMemo(() => {

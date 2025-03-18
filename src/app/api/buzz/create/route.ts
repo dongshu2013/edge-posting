@@ -1,5 +1,7 @@
+import { COMMISSION_RATE } from "@/config/common";
 import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { authTwitter } from "@/utils/xUtils";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
@@ -28,7 +30,7 @@ export async function POST(request: Request) {
 
     // 计算所需总金额
     const rewardAmount = parseFloat(price) * numberOfReplies;
-    const commissionAmount = rewardAmount * 0.2;
+    const commissionAmount = rewardAmount * COMMISSION_RATE;
     const totalAmount = rewardAmount + commissionAmount;
 
     // 检查用户余额
@@ -155,6 +157,39 @@ export async function POST(request: Request) {
     } catch (qstashError) {
       console.error("Failed to schedule QStash job:", qstashError);
       // Continue execution even if QStash scheduling fails
+    }
+
+    // Get twitter text
+    try {
+      const beaerToken = await authTwitter();
+      const twitterId = tweetLink.split("/").pop();
+
+      const twitterResponse = await fetch(
+        `https://api.twitter.com/2/tweets/${twitterId}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: beaerToken,
+          },
+        }
+      );
+
+      if (!twitterResponse.ok) {
+        throw new Error(
+          `Twitter API error: ${twitterResponse.status} ${twitterResponse.statusText}`
+        );
+      }
+
+      const twitterData = await twitterResponse.json();
+      const fullText = twitterData?.data?.text || "";
+      await prisma.buzz.update({
+        where: { id: result.buzz.id },
+        data: { tweetText: fullText },
+      });
+    } catch (twitterError) {
+      console.error("Failed to get twitter text:", twitterError);
     }
 
     return NextResponse.json(result.buzz);

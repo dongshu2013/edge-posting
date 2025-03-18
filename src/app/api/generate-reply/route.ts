@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
 import { getAuthUser } from "@/lib/auth-helpers";
 import { getRateLimiter } from "@/lib/rateLimiter";
+import { prisma } from "@/lib/prisma";
+import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 export async function POST(request: Request) {
   const userData = await getAuthUser();
@@ -21,22 +23,56 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Rate limited" }, { status: 429 });
   }
 
+  const user = await prisma.user.findUnique({
+    where: {
+      uid: userData.uid,
+    },
+  });
+  const userBio = user?.bio;
+  const userMood = user?.mood;
+
   try {
-    const { instructions } = await request.json();
+    const { instructions, tweetText } = await request.json();
+
+    const messages: ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content:
+          "You are a professional social media reply assistant. Based on the given instructions, generate a concise, friendly, and professional response. The reply should be brief, insightful, and include appropriate emojis.",
+      },
+    ];
+
+    if (userBio) {
+      messages.push({
+        role: "user",
+        content: `My bio is: ${userBio}`,
+      });
+    }
+
+    if (userMood) {
+      messages.push({
+        role: "user",
+        content: `My mood today is: ${userMood}`,
+      });
+    }
+
+    if (tweetText) {
+      messages.push({
+        role: "user",
+        content: `Here is the tweet text I wanna reply to: ${tweetText}`,
+      });
+    }
+
+    if (instructions) {
+      messages.push({
+        role: "user",
+        content: `Here is the reply instruction author gave me: ${instructions}`,
+      });
+    }
 
     const completion = await openai.chat.completions.create({
       model: "nousresearch/hermes-3-llama-3.1-70b",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a professional social media reply assistant. Based on the given instructions, generate a concise, friendly, and professional response. The reply should be brief, insightful, and include appropriate emojis.",
-        },
-        {
-          role: "user",
-          content: instructions,
-        },
-      ],
+      messages: messages,
       max_tokens: 150,
       temperature: 0.7,
     });

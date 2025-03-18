@@ -49,6 +49,7 @@ model Buzz {
   replies      Reply[]
   transactions Transaction[]
   user         User          @relation(fields: [createdBy], references: [uid])
+  tweetText String?
 
   @@index([createdBy])
   @@index([createdAt])

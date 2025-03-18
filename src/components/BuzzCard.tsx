@@ -14,6 +14,7 @@ import { getReplyIntentUrl } from "@/lib/twitter";
 export interface BuzzCardProps {
   id: string;
   tweetLink: string;
+  tweetText?: string;
   instructions: string;
   price: number;
   replyCount: number;
@@ -50,6 +51,7 @@ const replyTemplates = [
 export default function BuzzCard({
   id,
   tweetLink,
+  tweetText,
   instructions,
   price,
   replyCount,
@@ -66,7 +68,7 @@ export default function BuzzCard({
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
-
+  const [replyLoading, setReplyLoading] = useState(false);
   // Parse dates and ensure proper comparison
   const deadlineTime = new Date(deadline).getTime();
   const currentTime = Date.now();
@@ -135,8 +137,24 @@ export default function BuzzCard({
     return template;
   };
 
-  const handleDirectReply = () => {
-    const replyText = getRandomReplyText();
+  const handleDirectReply = async () => {
+    setReplyLoading(true);
+    // Get reply text from OpenAI
+    const generateReplyResponse = await fetchApi("/api/generate-reply", {
+      auth: true,
+      method: "POST",
+      body: JSON.stringify({
+        instructions: instructions,
+        tweetText: tweetText,
+      }),
+    }).catch((err) => {
+      console.error("Error generating reply:", err);
+    });
+    const aiReplyText = generateReplyResponse?.text;
+
+    console.log("aiReplyText", aiReplyText);
+
+    const replyText = aiReplyText || getRandomReplyText();
 
     // Configure popup window dimensions
     const width = 600;
@@ -154,6 +172,7 @@ export default function BuzzCard({
     // Open the reply link modal to track the reply
     setGeneratedReplyText(replyText);
     setIsReplyModalOpen(true);
+    setReplyLoading(false);
   };
 
   const renderReplyButton = () => {
@@ -167,9 +186,10 @@ export default function BuzzCard({
       return (
         <button
           onClick={handleDirectReply}
+          disabled={replyLoading}
           className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
         >
-          Reply (No Reward)
+          {replyLoading ? "Generating..." : "Reply (No Reward)"}
         </button>
       );
     }
@@ -193,9 +213,10 @@ export default function BuzzCard({
         {!hasReplied && (
           <button
             onClick={handleDirectReply}
+            disabled={replyLoading}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
           >
-            Reply & Earn {price} BUZZ
+            {replyLoading ? "Generating..." : "Reply & Earn " + price + " BUZZ"}
           </button>
         )}
       </>

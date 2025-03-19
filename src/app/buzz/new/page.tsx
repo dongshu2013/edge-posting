@@ -1,52 +1,110 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { BoltIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
+import { getPublicClient } from "@/lib/ethereum";
 import { useUserStore } from "@/store/userStore";
-import { COMMISSION_RATE } from "@/config/common";
+import { BoltIcon } from "@heroicons/react/24/outline";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { parseEther } from "viem";
+import { useAccount, useSendTransaction, useWalletClient } from "wagmi";
 
 export default function NewBuzzPage() {
   const router = useRouter();
+  const { isConnected, address } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { data: walletClient } = useWalletClient();
+  const { sendTransactionAsync } = useSendTransaction();
   const userInfo = useUserStore((state) => state.userInfo);
   const [formData, setFormData] = useState({
     tweetLink: "",
     instructions: "",
-    pricePerReply: 1,
-    numberOfReplies: 100,
+    totalAmount: 100,
     deadline: 1,
+    paymentToken: "BNB",
+    customTokenAddress: "",
+    paymentMethod: "in-app",
+    transactionHash: "",
   });
 
-  const rewardAmount = useMemo(() => {
-    return (formData.pricePerReply * formData.numberOfReplies).toFixed(2);
-  }, [formData.pricePerReply, formData.numberOfReplies]);
-
-  // 20% commission
-  const commissionAmount = useMemo(() => {
-    return (Number(rewardAmount) * COMMISSION_RATE).toFixed(2);
-  }, [rewardAmount]);
-
-  const totalDeposit = useMemo(() => {
-    return (Number(rewardAmount) + Number(commissionAmount)).toFixed(2);
-  }, [rewardAmount, commissionAmount]);
-
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]:
-        name === "pricePerReply" || name === "numberOfReplies"
-          ? parseFloat(value)
-          : value,
+      [name]: name === "totalAmount" ? parseFloat(value) : value,
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handlePaymentMethodChange = (method: string) => {
+    setFormData({
+      ...formData,
+      paymentMethod: method,
+      transactionHash: method === "in-app" ? "" : formData.transactionHash,
+    });
+  };
 
+  const handleInAppPayment = async () => {
+    if (!isConnected) {
+      openConnectModal?.();
+      return;
+    }
+
+    const publicClient = getPublicClient(
+      Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+    );
+
+    if (!publicClient || !walletClient) {
+      alert("Client not found");
+      return;
+    }
+
+    try {
+      // TODO: Replace with CA
+      const destinationAddress = process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`;
+      let txHash = "";
+      if (formData.paymentToken === "BNB") {
+        // Convert BNB amount to wei
+        const amount =
+          parseEther(formData.totalAmount.toString()) + parseEther("0.01");
+
+        // Send transaction using viem/wagmi
+        console.log("start sendTransactionAsync");
+        const hash = await sendTransactionAsync({
+          to: destinationAddress,
+          value: amount,
+          account: address,
+        });
+        console.log("hash", hash);
+
+        // Wait for transaction receipt
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: hash,
+        });
+
+        if (receipt.status === "success") {
+          txHash = hash;
+        } else {
+          throw new Error("Transaction failed");
+        }
+      }
+
+      if (txHash) {
+        await createBuzzCampaign();
+      }
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      alert(
+        error instanceof Error ? error.message : "Payment processing failed"
+      );
+    }
+  };
+
+  const createBuzzCampaign = async () => {
     const deadline = new Date();
     deadline.setHours(deadline.getHours() + Number(formData.deadline));
 
@@ -56,10 +114,13 @@ export default function NewBuzzPage() {
         body: JSON.stringify({
           tweetLink: formData.tweetLink,
           instructions: formData.instructions,
-          price: formData.pricePerReply,
+          totalAmount: formData.totalAmount,
           createdBy: userInfo?.uid,
           deadline: deadline.toISOString(),
-          numberOfReplies: formData.numberOfReplies,
+          paymentToken: formData.paymentToken,
+          customTokenAddress: formData.customTokenAddress,
+          paymentMethod: formData.paymentMethod,
+          transactionHash: formData.transactionHash,
         }),
       });
 
@@ -67,10 +128,8 @@ export default function NewBuzzPage() {
         throw new Error(buzz.error || "Failed to create buzz");
       }
 
-      // Show success message
       alert("Buzz created successfully!");
 
-      // Redirect to the buzz details page
       router.push(`/buzz/${buzz.id}`);
     } catch (error) {
       console.error("Error creating buzz:", error);
@@ -78,10 +137,24 @@ export default function NewBuzzPage() {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (formData.paymentMethod === "in-app") {
+      await handleInAppPayment();
+    } else {
+      if (!formData.transactionHash || formData.transactionHash.trim() === "") {
+        alert("Please enter a valid transaction hash");
+        return;
+      }
+
+      await createBuzzCampaign();
+    }
+  };
+
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full">
-        {/* Header Section */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
             Create Your Buzz 🐝
@@ -91,11 +164,9 @@ export default function NewBuzzPage() {
           </p>
         </div>
 
-        {/* Main Form Card */}
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
           <div className="px-6 py-6 sm:p-8">
             <form className="space-y-5" onSubmit={handleSubmit}>
-              {/* Tweet Link Input */}
               <div className="space-y-2">
                 <label
                   htmlFor="tweetLink"
@@ -120,7 +191,6 @@ export default function NewBuzzPage() {
                 </div>
               </div>
 
-              {/* Instructions Input */}
               <div className="space-y-2">
                 <label
                   htmlFor="instructions"
@@ -140,61 +210,81 @@ export default function NewBuzzPage() {
                 />
               </div>
 
-              {/* Settings Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {/* Price Input */}
+              <div className="space-y-2">
+                <label
+                  htmlFor="paymentToken"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Payment Token 💸
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <select
+                    name="paymentToken"
+                    id="paymentToken"
+                    className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                    value={formData.paymentToken}
+                    onChange={handleInputChange}
+                  >
+                    <option value="BNB">BNB</option>
+                    <option value="CUSTOM">Custom ERC20 Token</option>
+                  </select>
+
+                  {formData.paymentToken === "CUSTOM" && (
+                    <div className="relative rounded-xl shadow-sm">
+                      <input
+                        type="text"
+                        name="customTokenAddress"
+                        id="customTokenAddress"
+                        className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                        placeholder="0x..."
+                        value={formData.customTokenAddress}
+                        onChange={handleInputChange}
+                        required={formData.paymentToken === "CUSTOM"}
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-green-500 to-green-600 text-white rounded-r-xl">
+                        <span className="text-sm font-medium">ERC20</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 italic">
+                  {formData.paymentToken === "BNB"
+                    ? "Pay with BNB (default)"
+                    : "Enter the contract address of your ERC20 token"}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label
-                    htmlFor="pricePerReply"
+                    htmlFor="totalAmount"
                     className="block text-sm font-medium text-gray-700"
                   >
-                    Price 💰
+                    Total Reward Amount 💰
                   </label>
                   <div className="relative rounded-xl shadow-sm">
                     <input
                       type="number"
-                      name="pricePerReply"
-                      id="pricePerReply"
+                      name="totalAmount"
+                      id="totalAmount"
                       className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       placeholder="0.00"
                       step="0.01"
                       min="0.01"
-                      value={formData.pricePerReply}
+                      value={formData.totalAmount}
                       onChange={handleInputChange}
                     />
                     <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-r-xl">
-                      <span className="text-sm font-medium">BUZZ</span>
+                      <span className="text-sm font-medium">
+                        {formData.paymentToken === "BNB" ? "BNB" : "Token"}
+                      </span>
                     </div>
                   </div>
+                  <p className="text-xs text-gray-500 italic">
+                    Total reward pool for all replies
+                  </p>
                 </div>
 
-                {/* Replies Input */}
-                <div className="space-y-2">
-                  <label
-                    htmlFor="numberOfReplies"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Replies 🎯
-                  </label>
-                  <div className="relative rounded-xl shadow-sm">
-                    <input
-                      type="number"
-                      name="numberOfReplies"
-                      id="numberOfReplies"
-                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                      placeholder="100"
-                      step="1"
-                      min="1"
-                      value={formData.numberOfReplies}
-                      onChange={handleInputChange}
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-r-xl">
-                      <span className="text-sm font-medium">replies</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Deadline Input */}
                 <div className="space-y-2">
                   <label
                     htmlFor="deadline"
@@ -220,33 +310,83 @@ export default function NewBuzzPage() {
                 </div>
               </div>
 
-              {/* Total Deposit Summary */}
-              <div className="mt-6 bg-gray-50 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    Total Deposit Required:
-                  </span>
-                  <span className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                    {totalDeposit} BUZZ
-                  </span>
-                </div>
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method 💳
+                </label>
+                <div className="flex flex-col space-y-4">
+                  <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                    <button
+                      type="button"
+                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.paymentMethod === "in-app"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handlePaymentMethodChange("in-app")}
+                    >
+                      Pay In-App
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.paymentMethod === "manual"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handlePaymentMethodChange("manual")}
+                    >
+                      Manual TX Hash
+                    </button>
+                  </div>
 
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-400">
-                    Reward Amount:
-                  </span>
-                  <span className="text-md font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                    {rewardAmount} BUZZ
-                  </span>
-                </div>
+                  {formData.paymentMethod === "manual" && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="transactionHash"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Transaction Hash
+                      </label>
+                      <div className="relative rounded-xl shadow-sm">
+                        <input
+                          type="text"
+                          name="transactionHash"
+                          id="transactionHash"
+                          className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                          placeholder="0x..."
+                          value={formData.transactionHash}
+                          onChange={handleInputChange}
+                          required={formData.paymentMethod === "manual"}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-r-xl">
+                          <span className="text-sm font-medium">TX</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 italic">
+                        Enter the hash of your payment transaction
+                      </p>
+                    </div>
+                  )}
 
-                <div className="mt-1 flex items-center justify-between">
-                  <span className="text-sm font-medium text-gray-400">
-                    Commission Fee:
-                  </span>
-                  <span className="text-md font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                    {commissionAmount} BUZZ
-                  </span>
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-start justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        Total Payment Required:
+                      </span>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                          {formData.totalAmount}{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                        </span>
+
+                        <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                          + 0.01 BNB
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -256,7 +396,9 @@ export default function NewBuzzPage() {
                   type="submit"
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
-                  Create Buzz Campaign 🚀
+                  {formData.paymentMethod === "in-app"
+                    ? "Pay & Create Buzz Campaign 🚀"
+                    : "Create Buzz Campaign 🚀"}
                 </button>
               </div>
             </form>

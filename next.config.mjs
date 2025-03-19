@@ -3,22 +3,28 @@ const nextConfig = {
   eslint: {
     // Disable ESLint during build
     ignoreDuringBuilds: true,
-    dirs: ['src', 'app', 'pages', 'components', 'lib', 'utils'], // Only run ESLint on these directories
+    dirs: ["src", "app", "pages", "components", "lib", "utils"], // Only run ESLint on these directories
   },
   typescript: {
     // Only type check these directories
-    tsconfigPath: './tsconfig.json',
+    tsconfigPath: "./tsconfig.json",
   },
   reactStrictMode: true,
   images: {
-    domains: ['pbs.twimg.com', 'abs.twimg.com', 'www.google.com', 'lh3.googleusercontent.com'],
+    domains: [
+      "pbs.twimg.com",
+      "abs.twimg.com",
+      "www.google.com",
+      "www.twitter.com",
+      "lh3.googleusercontent.com",
+    ],
   },
   // Add a redirect for favicon.ico
   async redirects() {
     return [
       {
-        source: '/favicon.ico',
-        destination: '/favicon.svg',
+        source: "/favicon.ico",
+        destination: "/favicon.svg",
         permanent: true,
       },
     ];
@@ -27,7 +33,7 @@ const nextConfig = {
   webpack: (config, { isServer }) => {
     config.watchOptions = {
       ...config.watchOptions,
-      ignored: ['**/chrome-extension-ts/**'],
+      ignored: ["**/chrome-extension-ts/**"],
     };
     return config;
   },

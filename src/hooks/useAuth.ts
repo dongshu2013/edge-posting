@@ -11,7 +11,7 @@ import {
   isSignInWithEmailLink,
   signInWithEmailLink,
 } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, twitterProvider } from "@/lib/firebase";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
 
@@ -165,6 +165,21 @@ export function useAuth() {
     }
   };
 
+  const signInWithTwitter = async () => {
+    try {
+      console.log("Signing in with Twitter");
+      setLoading(true);
+      const result = await signInWithPopup(auth!, twitterProvider);
+      console.log("Twitter sign-in successful");
+      return result.user;
+    } catch (error) {
+      console.error("Error signing in with Twitter:", error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const sendMagicLink = async (email: string) => {
     try {
       console.log("Sending magic link to", email);
@@ -245,6 +260,7 @@ export function useAuth() {
     loading: loading || isSyncing,
     isAuthenticated: !!user && authStateInitialized.current,
     signInWithGoogle,
+    signInWithTwitter,
     sendMagicLink,
     verifyMagicLink,
     signOut: signOutUser,

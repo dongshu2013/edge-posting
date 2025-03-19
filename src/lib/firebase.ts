@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, TwitterAuthProvider } from 'firebase/auth';
 import { Analytics, getAnalytics } from 'firebase/analytics';
 
 const firebaseConfig = {
@@ -27,9 +27,14 @@ if (typeof window !== 'undefined') {
 
 export const auth = typeof window !== 'undefined' ? getAuth() : undefined;
 export const googleProvider = new GoogleAuthProvider();
+export const twitterProvider = new TwitterAuthProvider();
 
 // Configure Google Auth Provider
 googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
+
+twitterProvider.setCustomParameters({
   prompt: 'select_account'
 });
 

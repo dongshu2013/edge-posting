@@ -9,4 +9,5 @@ export interface UserInfo {
   totalEarned: number;
   balance: number;
   createdAt: Date;
+  bindedWallet: string | null;
 }

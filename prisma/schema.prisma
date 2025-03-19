@@ -28,6 +28,7 @@ model User {
   buzzes      Buzz[]
   replies     Reply[]
   withdrawals Withdrawal[]
+  bindedWallet String?    @unique
 
   @@index([uid])
   @@index([email])

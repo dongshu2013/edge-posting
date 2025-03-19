@@ -14,6 +14,7 @@ import FaucetModal from "@/components/FaucetModal";
 import { ArrowRight, Copy } from "lucide-react";
 import toast from "react-hot-toast";
 import ProfileEditModal from "@/components/ProfileEditModal";
+import { WalletCard } from "@/components/profile/WalletCard";
 
 interface UserProfile {
   email: string | null;
@@ -396,6 +397,8 @@ export default function ProfilePage() {
           }
         }}
       />
+
+      <WalletCard/>
 
       {/* Payment History */}
       <div className="bg-white rounded-2xl shadow-sm p-6">

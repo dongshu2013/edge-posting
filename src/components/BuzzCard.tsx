@@ -212,11 +212,12 @@ export default function BuzzCard({
       <>
         {!hasReplied && (
           <button
+            id={`replyBuzz-${id}`}
             onClick={handleDirectReply}
             disabled={replyLoading}
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 transition-all duration-200"
           >
-            {replyLoading ? "Generating..." : "Reply & Earn " + price + " BUZZ"}
+            {replyLoading ? "Generating..." : "Reply & Earn"}
           </button>
         )}
       </>

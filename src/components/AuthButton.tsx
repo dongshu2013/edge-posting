@@ -18,7 +18,8 @@ export function AuthButton({
   onSuccess?: () => void;
   variant?: "primary" | "secondary";
 }) {
-  const { signInWithGoogle, sendMagicLink, signOut } = useAuth();
+  const { signInWithGoogle, sendMagicLink, signOut, signInWithTwitter } =
+    useAuth();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -50,6 +51,17 @@ export function AuthButton({
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to sign in with Google"
+      );
+    }
+  };
+
+  const handleTwitterSignIn = async () => {
+    setError(null);
+    try {
+      await signInWithTwitter();
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to sign in with Twitter"
       );
     }
   };
@@ -143,6 +155,20 @@ export function AuthButton({
                             height={16}
                           />
                           Continue with Google
+                        </button>
+
+                        <button
+                          onClick={handleTwitterSignIn}
+                          className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 mb-4"
+                        >
+                          <Image
+                            src="https://www.twitter.com/favicon.ico"
+                            alt="Twitter"
+                            className="w-4 h-4 mr-2"
+                            width={16}
+                            height={16}
+                          />
+                          Continue with Twitter
                         </button>
 
                         <div className="relative my-4">

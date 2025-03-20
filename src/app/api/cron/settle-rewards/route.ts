@@ -121,11 +121,11 @@ export async function POST(request: Request) {
                   userId,
                   tokenAddress: buzz.customTokenAddress,
                   tokenName: buzz.paymentToken,
-                  tokenAmount: amountOnChain,
+                  tokenAmountOnChain: amountOnChain,
                 },
                 // If a record exists, update the tokenAmount
                 update: {
-                  tokenAmount: {
+                  tokenAmountOnChain: {
                     // Increment the existing amount
                     increment: amountOnChain,
                   },

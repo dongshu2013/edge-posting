@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Buzz } from "@prisma/client";
 import { getPublicClient } from "@/lib/ethereum";
 import { formatEther, parseEther } from "viem";
+import { bignumber } from "mathjs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
@@ -96,9 +97,16 @@ export async function POST(request: Request) {
         const addUserBalancesResult = await prisma.$transaction(
           async (tx: any) => {
             replyUserIds.forEach(async (userId: string, index: number) => {
-              const amountOnChain =
-                (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
+              // const amountOnChain =
+              //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
 
+              const amountOnChain = BigInt(
+                bignumber(totalTokenAmountOnChain)
+                  .mul(userWeights[index])
+                  .div(totalWeight)
+                  .floor()
+                  .toString()
+              );
               // Use upsert to either create a new record or update an existing one
               const updatedBalance = await tx.userBalance.upsert({
                 where: {

@@ -55,13 +55,6 @@ export async function POST(request: Request) {
     // Check if the buzz is still active
     const isExpired = !buzz.isActive || new Date() >= buzz.deadline;
 
-    // Check if the buzz has reached its reply limit
-    if (!isExpired && buzz.replyCount >= buzz.totalReplies) {
-      return NextResponse.json(
-        { error: "This buzz has reached its maximum number of replies" },
-        { status: 400 }
-      );
-    }
 
     // Check if the buzz is already settled
     // if (buzz.isSettled) {

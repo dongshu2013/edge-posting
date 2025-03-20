@@ -25,3 +25,10 @@ export const DEFAULT_SETTINGS: Settings = {
   enableAutoReply: false,
   enableAutoSubmit: false,
 };
+
+export interface UserBalance {
+  id: string;
+  tokenAddress: string;
+  tokenName: string;
+  tokenAmountOnChain: string;
+}

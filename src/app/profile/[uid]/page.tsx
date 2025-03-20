@@ -15,6 +15,7 @@ import { ArrowRight, Copy } from "lucide-react";
 import toast from "react-hot-toast";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import { WalletCard } from "@/components/profile/WalletCard";
+import { UserBalanceCard } from "@/components/profile/UserBalanceCard";
 
 interface UserProfile {
   email: string | null;
@@ -398,7 +399,9 @@ export default function ProfilePage() {
         }}
       />
 
-      <WalletCard/>
+      <WalletCard />
+
+      <UserBalanceCard />
 
       {/* Payment History */}
       <div className="bg-white rounded-2xl shadow-sm p-6">

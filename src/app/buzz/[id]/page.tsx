@@ -25,7 +25,9 @@ interface Buzz {
   tweetLink: string;
   tweetText?: string;
   instructions: string;
-  price: number;
+  tokenAmount: string;
+  paymentToken: string;
+  customTokenAddress: string;
   replyCount: number;
   totalReplies: number;
   createdBy: string;
@@ -173,9 +175,10 @@ export default function BuzzDetailPage() {
             tweetLink={buzz.tweetLink}
             tweetText={buzz.tweetText}
             instructions={buzz.instructions}
-            price={buzz.price}
+            tokenAmount={buzz.tokenAmount}
+            paymentToken={buzz.paymentToken}
+            customTokenAddress={buzz.customTokenAddress}
             replyCount={buzz.replyCount}
-            totalReplies={buzz.totalReplies}
             createdBy={buzz.createdBy}
             deadline={buzz.deadline}
             createdAt={buzz.createdAt}

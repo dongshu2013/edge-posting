@@ -9,7 +9,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: {
+        uid: user.uid,
+      },
+    });
+
+    if (!dbUser?.bindedWallet) {
+      return NextResponse.json(
+        { error: "Please bind your wallet first" },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
+
     const { buzzId, replyLink, text } = body;
 
     if (!buzzId || !replyLink || !text) {

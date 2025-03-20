@@ -1,8 +1,10 @@
-import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { Buzz } from '@prisma/client';
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { Buzz } from "@prisma/client";
+import { getPublicClient } from "@/lib/ethereum";
+import { formatEther, parseEther } from "viem";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
 
 interface Reply {
@@ -21,112 +23,145 @@ export async function POST(request: Request) {
     const cronSecret = body.cronSecret;
 
     if (cronSecret !== process.env.CRON_SECRET) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Find all expired, unsettled buzzes
     const expiredBuzzes = await prisma.buzz.findMany({
       where: {
         isSettled: false,
-        OR: [
-          { deadline: { lte: new Date() } },
-          { isActive: false },
-        ],
+        OR: [{ deadline: { lte: new Date() } }, { isActive: false }],
       },
       include: {
         replies: {
-          orderBy: { createdAt: 'asc' },
-          where: { status: 'PENDING' },
+          orderBy: { createdAt: "asc" },
+          where: { status: "PENDING" },
         },
       },
     });
 
     const results = await Promise.all(
       expiredBuzzes.map(async (buzz: BuzzWithReplies) => {
-        // Get the top N non-rejected replies, where N is totalReplies
-        const eligibleReplies = buzz.replies.slice(0, buzz.totalReplies);
-        const remainingSlots = buzz.totalReplies - eligibleReplies.length;
+        const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
+        const dbUsers = await prisma.user.findMany({
+          where: {
+            uid: { in: replyUserIds },
+          },
+        });
+        const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
 
-        // Create transactions in a single transaction
-        const result = await prisma.$transaction(async (tx) => {
-          // Mark all eligible replies as APPROVED
-          await tx.reply.updateMany({
-            where: {
-              id: { in: eligibleReplies.map(reply => reply.id) },
-            },
-            data: {
-              status: 'APPROVED',
-            },
-          });
+        const userWeights = await Promise.all(
+          replyUserIds.map(async (uid: string) => {
+            const user = dbUserMap.get(uid);
+            return await getUserWeight(buzz, user);
+          })
+        );
 
-          // Create reward transactions for approved replies
-          const rewardTransactions = eligibleReplies.map((reply: Reply) => ({
-            amount: buzz.price,
-            type: 'REWARD' as const,
-            status: 'PENDING' as const,
-            fromAddress: buzz.createdBy,
-            toAddress: reply.createdBy,
-            buzzId: buzz.id,
-            replyId: reply.id,
-          }));
+        console.log("userWeights", userWeights);
 
-          // Increase the balance of the user who replied
-          rewardTransactions.forEach(async (transaction) => {
-            await prisma.user.update({
-              where: { uid: transaction.toAddress },
-              data: {
-                balance: { increment: transaction.amount },
-                totalEarned: { increment: transaction.amount },
-              },
-            });
-          });
-
-          if (rewardTransactions.length > 0) {
-            await tx.transaction.createMany({
-              data: rewardTransactions,
-            });
+        let minWeight = 0;
+        userWeights.forEach((weight: number) => {
+          if (weight > 0) {
+            if (minWeight === 0) {
+              minWeight = weight;
+            } else {
+              minWeight = Math.min(minWeight, weight);
+            }
           }
+        });
+        // All users have 0 balance
+        if (minWeight === 0) {
+          minWeight = 1;
+        }
 
-          // If there are remaining slots, create BURN transactions
-          if (remainingSlots > 0) {
-            await tx.transaction.create({
-              data: {
-                amount: buzz.price * remainingSlots,
-                type: 'BURN',
-                status: 'PENDING',
-                fromAddress: buzz.createdBy,
-                toAddress: '0x000000000000000000000000000000000000dEaD', // Burn address
-                buzzId: buzz.id,
-              },
-            });
+        console.log("minWeight", minWeight);
+
+        const refinedUserWeights = userWeights.map((weight: number) => {
+          if (weight === 0) {
+            return minWeight / 10;
           }
-
-          // Mark the buzz as settled
-          await tx.buzz.update({
-            where: { id: buzz.id },
-            data: { isSettled: true },
-          });
-
-          return {
-            buzzId: buzz.id,
-            approvedReplies: eligibleReplies.length,
-            burnedSlots: remainingSlots,
-          };
+          return weight;
         });
 
-        return result;
+        console.log("refinedUserWeights", refinedUserWeights);
+
+        const totalWeight = refinedUserWeights.reduce(
+          (acc: number, weight: number) => acc + weight,
+          0
+        );
+
+        console.log("totalWeight", totalWeight);
+        const totalTokenAmountOnChain = parseEther(buzz.tokenAmount.toString());
+
+        const addUserBalancesResult = await prisma.$transaction(
+          async (tx: any) => {
+            replyUserIds.forEach(async (userId: string, index: number) => {
+              const amountOnChain =
+                (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
+
+              // Use upsert to either create a new record or update an existing one
+              const updatedBalance = await tx.userBalance.upsert({
+                where: {
+                  // Use the unique constraint we defined in the schema
+                  userId_tokenAddress: {
+                    userId: userId,
+                    tokenAddress: buzz.customTokenAddress,
+                  },
+                },
+                // If no record exists, create a new one
+                create: {
+                  userId,
+                  tokenAddress: buzz.customTokenAddress,
+                  tokenName: buzz.paymentToken,
+                  tokenAmount: amountOnChain,
+                },
+                // If a record exists, update the tokenAmount
+                update: {
+                  tokenAmount: {
+                    // Increment the existing amount
+                    increment: amountOnChain,
+                  },
+                },
+              });
+            });
+
+            // Mark the buzz as settled
+            await tx.buzz.update({
+              where: { id: buzz.id },
+              data: { isSettled: true },
+            });
+          }
+        );
       })
     );
 
     return NextResponse.json({
-      message: 'Settlement completed',
+      message: "Settlement completed",
       settledBuzzes: results,
     });
   } catch (error) {
-    console.error('Error in settle rewards job:', error);
+    console.error("Error in settle rewards job:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}
+
+const getUserWeight = async (buzz: any, dbUser: any) => {
+  const publicClient = getPublicClient(
+    Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+  );
+  if (!publicClient) {
+    throw new Error("Public client not found");
+  }
+
+  if (buzz.paymentToken === "BNB") {
+    const userBalance = await publicClient.getBalance({
+      address: dbUser.bindedWallet,
+    });
+    return Number(formatEther(userBalance));
+  } else {
+    return 1;
+  }
+};

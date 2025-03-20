@@ -12,9 +12,10 @@ interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
-  price: number;
+  tokenAmount: string;
+  paymentToken: string;
+  customTokenAddress: string;
   replyCount: number;
-  totalReplies: number;
   createdBy: string;
   deadline: string;
   createdAt: Date;
@@ -169,7 +170,7 @@ function BuzzesPageContent() {
     .sort((a, b) => {
       switch (sortBy) {
         case "price":
-          return b.price - a.price;
+          return Number(b.tokenAmount) - Number(a.tokenAmount);
         case "engagement":
           return b.replyCount - a.replyCount;
         case "newest":
@@ -289,14 +290,15 @@ function BuzzesPageContent() {
                     id={buzz.id}
                     tweetLink={buzz.tweetLink}
                     instructions={buzz.instructions}
-                    price={buzz.price}
                     replyCount={buzz?._count?.replies || 0}
-                    totalReplies={buzz.totalReplies}
                     createdBy={buzz.createdBy}
                     deadline={buzz.deadline}
                     createdAt={buzz.createdAt}
                     isActive={buzz.isActive}
                     username={buzz?.user?.username}
+                    tokenAmount={buzz.tokenAmount}
+                    paymentToken={buzz.paymentToken}
+                    customTokenAddress={buzz.customTokenAddress}
                   />
                 </div>
               ))}

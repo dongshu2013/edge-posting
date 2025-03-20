@@ -12,7 +12,7 @@ interface ReplyLinkModalProps {
     replyLink: string;
     replyText: string;
   }) => Promise<void>;
-  buzzAmount?: number;
+  tokenAmount?: string;
   initialReplyText?: string; // 添加新的 prop
 }
 
@@ -20,7 +20,7 @@ export default function ReplyLinkModal({
   isOpen,
   onClose,
   onSubmit,
-  buzzAmount,
+  tokenAmount,
   initialReplyText = "", // 设置默认值
 }: ReplyLinkModalProps) {
   const [replyLink, setReplyLink] = useState("");
@@ -106,7 +106,7 @@ export default function ReplyLinkModal({
                       <p className="text-sm text-gray-500 mb-4">
                         After posting your reply on Twitter, copy the link to
                         your reply and paste it here
-                        {buzzAmount ? ` to earn ${buzzAmount} BUZZ` : ""}.
+                        {tokenAmount ? ` to earn max ${tokenAmount} BNB` : ""}.
                       </p>
 
                       <form onSubmit={handleSubmit} className="space-y-4">

@@ -16,9 +16,10 @@ export interface BuzzCardProps {
   tweetLink: string;
   tweetText?: string;
   instructions: string;
-  price: number;
+  tokenAmount: string;
+  paymentToken: string;
+  customTokenAddress: string;
   replyCount: number;
-  totalReplies: number;
   createdBy: string;
   deadline: string;
   createdAt?: Date;
@@ -53,9 +54,7 @@ export default function BuzzCard({
   tweetLink,
   tweetText,
   instructions,
-  price,
   replyCount,
-  totalReplies,
   createdBy,
   deadline,
   createdAt,
@@ -63,6 +62,9 @@ export default function BuzzCard({
   isActive = true,
   hasReplied = false,
   username,
+  tokenAmount,
+  paymentToken,
+  customTokenAddress,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -194,18 +196,9 @@ export default function BuzzCard({
       );
     }
 
-    if (replyCount >= totalReplies) {
-      return <span className="text-gray-500">Full</span>;
-    }
-
     // For active buzzes - "Reply & Earn X BUZZ" with colorful gradient
     if (!user) {
-      return (
-        <AuthButton
-          buttonText={`Reply & Earn ${price} BUZZ`}
-          variant="primary"
-        />
-      );
+      return <AuthButton buttonText={`Reply & Earn`} variant="primary" />;
     }
 
     return (
@@ -242,10 +235,8 @@ export default function BuzzCard({
           </div>
           <div className="text-sm font-medium">
             <span className="text-amber-500 font-semibold">
-              {price.toFixed(2)} BUZZ
+              {tokenAmount} BNB
             </span>
-            <span className="text-gray-500 mx-1">×</span>
-            <span className="text-gray-700">{totalReplies}</span>
           </div>
         </div>
 
@@ -296,7 +287,7 @@ export default function BuzzCard({
         isOpen={isReplyModalOpen}
         onClose={() => setIsReplyModalOpen(false)}
         onSubmit={handleReplySubmit}
-        buzzAmount={price}
+        tokenAmount={tokenAmount}
         initialReplyText={generatedReplyText}
       />
 

@@ -1,8 +1,20 @@
-import { COMMISSION_RATE } from "@/config/common";
+import { BNB_COMMISSION_FEE, COMMISSION_RATE } from "@/config/common";
 import { getAuthUser } from "@/lib/auth-helpers";
+import { getPublicClient } from "@/lib/ethereum";
 import { prisma } from "@/lib/prisma";
 import { authTwitter } from "@/utils/xUtils";
 import { NextResponse } from "next/server";
+import { parseEther, zeroAddress } from "viem";
+
+export interface CreateBuzzRequest {
+  tweetLink: string;
+  instructions: string;
+  deadline: string;
+  tokenAmount: number;
+  paymentToken: string;
+  customTokenAddress?: string;
+  transactionHash: string;
+}
 
 export async function POST(request: Request) {
   try {
@@ -15,116 +27,201 @@ export async function POST(request: Request) {
     const {
       tweetLink,
       instructions,
-      price,
       deadline,
-      numberOfReplies = 100,
-    } = body;
+      tokenAmount,
+      paymentToken,
+      customTokenAddress,
+      transactionHash,
+    }: CreateBuzzRequest = body;
 
     // 验证必填字段
-    if (!tweetLink || !instructions || !price || !deadline) {
+    if (
+      !tweetLink ||
+      !instructions ||
+      !deadline ||
+      !transactionHash ||
+      !paymentToken ||
+      !tokenAmount
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // 计算所需总金额
-    const rewardAmount = parseFloat(price) * numberOfReplies;
-    const commissionAmount = rewardAmount * COMMISSION_RATE;
-    const totalAmount = rewardAmount + commissionAmount;
-
-    // 检查用户余额
-    const userBalance = await prisma.user.findUnique({
-      where: { uid: user.uid },
-      select: { balance: true },
-    });
-
-    if (!userBalance || userBalance.balance < totalAmount) {
+    if (paymentToken !== "BNB" && !customTokenAddress) {
       return NextResponse.json(
-        { error: "Insufficient balance" },
+        { error: "Custom token address is required" },
         { status: 400 }
       );
     }
 
+    // Check transaction
+    const publicClient = getPublicClient(
+      Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+    );
+    if (!publicClient) {
+      return NextResponse.json(
+        { error: "Public client not found" },
+        { status: 500 }
+      );
+    }
+
+    const receipt = await publicClient.getTransactionReceipt({
+      hash: transactionHash as `0x${string}`,
+    });
+
+    if (!receipt || receipt.status !== "success") {
+      return NextResponse.json(
+        { error: "Transaction verify failed" },
+        { status: 400 }
+      );
+    }
+
+    const transaction = await publicClient.getTransaction({
+      hash: transactionHash as `0x${string}`,
+    });
+
+    if (!transaction) {
+      return NextResponse.json(
+        { error: "Transaction not found" },
+        { status: 400 }
+      );
+    }
+
+    // Format transaction value from wei to ether for display
+    const transactionValueInEther = (Number(transaction.value) / 1e18).toFixed(
+      6
+    );
+
+    console.log("Transaction Details:", {
+      value: transactionValueInEther + " BNB",
+      from: transaction.from,
+      to: transaction.to,
+      gasUsed: receipt.gasUsed.toString(),
+    });
+
+    // Check transaction amount
+    if (
+      transaction.value <
+      parseEther(tokenAmount.toString()) +
+        parseEther(BNB_COMMISSION_FEE.toString())
+    ) {
+      return NextResponse.json(
+        { error: "Transaction amount mismatch" },
+        { status: 400 }
+      );
+    }
+
+    if (
+      transaction.to?.toLowerCase() !==
+      process.env.NEXT_PUBLIC_BSC_CA?.toLowerCase()
+    ) {
+      return NextResponse.json(
+        { error: "Transaction to address mismatch" },
+        { status: 400 }
+      );
+    }
+
+    // 计算所需总金额
+    // const rewardAmount = parseFloat(price) * numberOfReplies;
+    // const commissionAmount = rewardAmount * COMMISSION_RATE;
+    // const totalAmount = rewardAmount + commissionAmount;
+
+    // 检查用户余额
+    // const userBalance = await prisma.user.findUnique({
+    //   where: { uid: user.uid },
+    //   select: { balance: true },
+    // });
+
+    // if (!userBalance || userBalance.balance < totalAmount) {
+    //   return NextResponse.json(
+    //     { error: "Insufficient balance" },
+    //     { status: 400 }
+    //   );
+    // }
+
     // 创建 buzz、扣除余额并创建交易记录
-    const result = await prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx: any) => {
       // 扣除用户余额
-      await tx.user.update({
-        where: { uid: user.uid },
-        data: { balance: { decrement: totalAmount } },
-      });
+      // await tx.user.update({
+      //   where: { uid: user.uid },
+      //   data: { balance: { decrement: totalAmount } },
+      // });
 
       // 创建 buzz
       const buzz = await tx.buzz.create({
         data: {
           tweetLink,
           instructions,
-          price: parseFloat(price),
           createdBy: user.uid,
           deadline: new Date(deadline),
-          totalReplies: numberOfReplies,
+          tokenAmount: tokenAmount.toString(),
+          paymentToken,
+          customTokenAddress: customTokenAddress || zeroAddress,
+          transactionHash,
         },
       });
 
-      // 创建交易记录
-      const transaction = await tx.transaction.create({
-        data: {
-          amount: rewardAmount,
-          type: "BURN",
-          status: "COMPLETED",
-          fromAddress: user.uid,
-          toAddress: "SYSTEM",
-          buzzId: buzz.id,
-          settledAt: new Date(),
-        },
-      });
+      //   // 创建交易记录
+      //   const transaction = await tx.transaction.create({
+      //     data: {
+      //       amount: rewardAmount,
+      //       type: "BURN",
+      //       status: "COMPLETED",
+      //       fromAddress: user.uid,
+      //       toAddress: "SYSTEM",
+      //       buzzId: buzz.id,
+      //       settledAt: new Date(),
+      //     },
+      //   });
 
-      // Check user referral
-      let txCommissionAmount = commissionAmount;
-      const referral = await tx.referral.findUnique({
-        where: {
-          invitedUserId: user.uid,
-        },
-      });
+      //   // Check user referral
+      //   let txCommissionAmount = commissionAmount;
+      //   const referral = await tx.referral.findUnique({
+      //     where: {
+      //       invitedUserId: user.uid,
+      //     },
+      //   });
 
-      if (referral?.invitorUserId) {
-        const txReferralRewardAmount = Number(
-          (commissionAmount / 2).toFixed(2)
-        );
-        txCommissionAmount = commissionAmount - txReferralRewardAmount;
-        // Create referral reward transaction
-        await tx.transaction.create({
-          data: {
-            amount: txReferralRewardAmount,
-            type: "REFERRAL_REWARD",
-            status: "COMPLETED",
-            fromAddress: user.uid,
-            toAddress: referral.invitorUserId,
-            buzzId: buzz.id,
-            settledAt: new Date(),
-          },
-        });
-        // Send referral reward to invitor
-        await tx.user.update({
-          where: { uid: referral.invitorUserId },
-          data: { balance: { increment: txReferralRewardAmount } },
-        });
-      }
+      //   if (referral?.invitorUserId) {
+      //     const txReferralRewardAmount = Number(
+      //       (commissionAmount / 2).toFixed(2)
+      //     );
+      //     txCommissionAmount = commissionAmount - txReferralRewardAmount;
+      //     // Create referral reward transaction
+      //     await tx.transaction.create({
+      //       data: {
+      //         amount: txReferralRewardAmount,
+      //         type: "REFERRAL_REWARD",
+      //         status: "COMPLETED",
+      //         fromAddress: user.uid,
+      //         toAddress: referral.invitorUserId,
+      //         buzzId: buzz.id,
+      //         settledAt: new Date(),
+      //       },
+      //     });
+      //     // Send referral reward to invitor
+      //     await tx.user.update({
+      //       where: { uid: referral.invitorUserId },
+      //       data: { balance: { increment: txReferralRewardAmount } },
+      //     });
+      //   }
 
-      // Create commission fee transaction
-      await tx.transaction.create({
-        data: {
-          amount: txCommissionAmount,
-          type: "BURN",
-          status: "COMPLETED",
-          fromAddress: user.uid,
-          toAddress: "SYSTEM",
-          buzzId: buzz.id,
-          settledAt: new Date(),
-        },
-      });
+      //   // Create commission fee transaction
+      //   await tx.transaction.create({
+      //     data: {
+      //       amount: txCommissionAmount,
+      //       type: "BURN",
+      //       status: "COMPLETED",
+      //       fromAddress: user.uid,
+      //       toAddress: "SYSTEM",
+      //       buzzId: buzz.id,
+      //       settledAt: new Date(),
+      //     },
+      //   });
 
-      return { buzz, transaction };
+      return { buzz };
     });
 
     // Trigger QStash API to schedule the settle-rewards cron job

@@ -1,5 +1,7 @@
 "use client";
 
+import { CreateBuzzRequest } from "@/app/api/buzz/create/route";
+import { BNB_COMMISSION_FEE } from "@/config/common";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { useUserStore } from "@/store/userStore";
@@ -20,7 +22,7 @@ export default function NewBuzzPage() {
   const [formData, setFormData] = useState({
     tweetLink: "",
     instructions: "",
-    totalAmount: 100,
+    totalAmount: 0.1,
     deadline: 1,
     paymentToken: "BNB",
     customTokenAddress: "",
@@ -65,12 +67,14 @@ export default function NewBuzzPage() {
 
     try {
       // TODO: Replace with CA
-      const destinationAddress = process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`;
+      const destinationAddress = process.env
+        .NEXT_PUBLIC_BSC_CA as `0x${string}`;
       let txHash = "";
       if (formData.paymentToken === "BNB") {
         // Convert BNB amount to wei
         const amount =
-          parseEther(formData.totalAmount.toString()) + parseEther("0.01");
+          parseEther(formData.totalAmount.toString()) +
+          parseEther(BNB_COMMISSION_FEE.toString());
 
         // Send transaction using viem/wagmi
         console.log("start sendTransactionAsync");
@@ -86,6 +90,8 @@ export default function NewBuzzPage() {
           hash: hash,
         });
 
+        console.log("receipt", receipt);
+
         if (receipt.status === "success") {
           txHash = hash;
         } else {
@@ -94,7 +100,7 @@ export default function NewBuzzPage() {
       }
 
       if (txHash) {
-        await createBuzzCampaign();
+        // await createBuzzCampaign(txHash);
       }
     } catch (error) {
       console.error("Payment processing error:", error);
@@ -104,24 +110,27 @@ export default function NewBuzzPage() {
     }
   };
 
-  const createBuzzCampaign = async () => {
+  const createBuzzCampaign = async (txHash: string) => {
+    if (!userInfo?.uid) {
+
+      return;
+    }
     const deadline = new Date();
     deadline.setHours(deadline.getHours() + Number(formData.deadline));
 
     try {
+      const payload: CreateBuzzRequest = {
+        tweetLink: formData.tweetLink,
+        instructions: formData.instructions,
+        tokenAmount: formData.totalAmount,
+        deadline: deadline.toISOString(),
+        paymentToken: formData.paymentToken,
+        customTokenAddress: formData.customTokenAddress,
+        transactionHash: txHash,
+      };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
-        body: JSON.stringify({
-          tweetLink: formData.tweetLink,
-          instructions: formData.instructions,
-          totalAmount: formData.totalAmount,
-          createdBy: userInfo?.uid,
-          deadline: deadline.toISOString(),
-          paymentToken: formData.paymentToken,
-          customTokenAddress: formData.customTokenAddress,
-          paymentMethod: formData.paymentMethod,
-          transactionHash: formData.transactionHash,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!buzz) {
@@ -148,7 +157,7 @@ export default function NewBuzzPage() {
         return;
       }
 
-      await createBuzzCampaign();
+      await createBuzzCampaign(formData.transactionHash);
     }
   };
 
@@ -270,7 +279,7 @@ export default function NewBuzzPage() {
                       className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       placeholder="0.00"
                       step="0.01"
-                      min="0.01"
+                      min="0.0001"
                       value={formData.totalAmount}
                       onChange={handleInputChange}
                     />
@@ -382,7 +391,7 @@ export default function NewBuzzPage() {
                         </span>
 
                         <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                          + 0.01 BNB
+                          + {BNB_COMMISSION_FEE} BNB
                         </span>
                       </div>
                     </div>

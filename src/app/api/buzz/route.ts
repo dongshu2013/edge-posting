@@ -51,13 +51,14 @@ export async function GET(request: NextRequest) {
         id: true,
         tweetLink: true,
         instructions: true,
-        price: true,
         createdAt: true,
         createdBy: true,
         deadline: true,
         replyCount: true,
-        totalReplies: true,
         isActive: true,
+        tokenAmount: true,
+        paymentToken: true,
+        customTokenAddress: true,
         user: {
           select: {
             username: true,

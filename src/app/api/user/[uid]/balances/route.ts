@@ -31,10 +31,12 @@ export async function GET(
       },
     });
 
-    const formattedBalances = balances.map((balance) => ({
-      ...balance,
-      tokenAmountOnChain: balance.tokenAmountOnChain.toString(),
-    }));
+    const formattedBalances = balances
+      .map((balance) => ({
+        ...balance,
+        tokenAmountOnChain: balance.tokenAmountOnChain.toString(),
+      }));
+      // .filter((balance) => BigInt(balance.tokenAmountOnChain) > BigInt(0));
 
     return NextResponse.json({ balances: formattedBalances });
   } catch (error) {

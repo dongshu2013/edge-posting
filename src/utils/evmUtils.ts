@@ -1,12 +1,18 @@
 import {
   PublicClient,
   checksumAddress,
-  zeroAddress
+  encodeAbiParameters,
+  hashMessage,
+  zeroAddress,
+  keccak256,
 } from "viem";
 import { createSiweMessage, generateSiweNonce } from "viem/siwe";
 import { Config } from "wagmi";
 import { SignMessageMutateAsync, WriteContractMutateAsync } from "wagmi/query";
 import { sleep } from "./commonUtils";
+import { signMessage } from "viem/accounts";
+import { getPublicClient } from "@/lib/ethereum";
+import { WithdrawSignatureResult } from "@/types/user";
 
 export function getSiweMessage(address: `0x${string}`, chainId?: number) {
   var current = new Date();
@@ -113,4 +119,63 @@ export async function sendEvmTransaction(
     })) || undefined;
 
   return [hash, errorMessage];
+}
+
+export async function getWithdrawSignature(
+  recipient: `0x${string}`,
+  nonceOnChain: bigint,
+  tokenAddresses: `0x${string}`[],
+  tokenAmountsOnChain: bigint[]
+): Promise<WithdrawSignatureResult | undefined> {
+  const publicClient = getPublicClient(
+    Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+  );
+  if (!publicClient) {
+    return undefined;
+  }
+
+  const currentBlock = await publicClient.getBlock();
+  const expirationBlock = currentBlock.number + BigInt(1000000);
+
+  // const message = `Withdrawal request for ${nonceOnChain}`;
+  const message = solidityKeccak256Encode(
+    tokenAddresses,
+    tokenAmountsOnChain,
+    recipient,
+    expirationBlock
+  );
+  const signature = await signMessage({
+    message: message,
+    privateKey: process.env.ETHEREUM_PRIVATE_KEY as `0x${string}`,
+  });
+  return {
+    expirationBlock: expirationBlock.toString(),
+    tokenAddresses,
+    tokenAmountsOnChain: tokenAmountsOnChain.map((amount) => amount.toString()),
+    recipient,
+    signature,
+  };
+}
+
+function solidityKeccak256Encode(
+  tokens: `0x${string}`[],
+  amounts: bigint[],
+  recipient: `0x${string}`,
+  expirationBlock: bigint
+) {
+  // First encode the parameters according to their Solidity types
+  const encoded = encodeAbiParameters(
+    [
+      { name: "tokens", type: "address[]" },
+      { name: "amounts", type: "uint256[]" },
+      { name: "recipient", type: "address" },
+      { name: "expirationBlock", type: "uint256" },
+    ],
+    [tokens, amounts, recipient, expirationBlock]
+  );
+
+  // Then hash the encoded data
+  const hash = keccak256(encoded);
+
+  return hash;
 }

@@ -1,83 +1,161 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/auth-helpers';
-import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/auth-helpers";
+import { prisma } from "@/lib/prisma";
+import { getPublicClient } from "@/lib/ethereum";
+import { contractAbi } from "@/config/contractAbi";
+import { getWithdrawSignature } from "@/utils/evmUtils";
+
+export interface WithdrawRequest {
+  tokens: {
+    tokenAddress: string;
+  }[];
+}
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser();
     if (!user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
-    const { address, amount } = body;
-
-    if (!address || !amount) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    if (amount <= 0) {
-      return NextResponse.json(
-        { error: 'Amount must be greater than 0' },
-        { status: 400 }
-      );
-    }
-
-    // Get user's balance
-    const userBalance = await prisma.user.findUnique({
+    const dbUser = await prisma.user.findUnique({
       where: { uid: user.uid },
-      select: { balance: true }
+      select: {
+        bindedWallet: true,
+      },
     });
-
-    if (!userBalance) {
+    if (!dbUser?.bindedWallet) {
       return NextResponse.json(
-        { error: 'User not found' },
+        { error: "User binded wallet not found" },
         { status: 404 }
       );
     }
 
-    if (userBalance.balance < amount) {
+    const body: WithdrawRequest = await request.json();
+    const { tokens } = body;
+
+    if (!tokens || tokens.length === 0) {
       return NextResponse.json(
-        { error: 'Insufficient balance' },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Create withdrawal request
-    const withdrawal = await prisma.withdrawal.create({
-      data: {
+    // Get user nonce on chain
+    const publicClient = getPublicClient(
+      Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+    );
+
+    if (!publicClient) {
+      return NextResponse.json(
+        { error: "Failed to get public client" },
+        { status: 500 }
+      );
+    }
+
+    const userNonce = await publicClient?.readContract({
+      address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
+      abi: contractAbi,
+      functionName: "getNonce",
+      args: [dbUser.bindedWallet as `0x${string}`],
+    });
+    console.log("userNonce", userNonce.toString());
+
+    const userBalances = await prisma.userBalance.findMany({
+      where: {
         userId: user.uid,
-        amount,
-        address,
-        status: 'PENDING'
-      }
+        tokenAddress: { in: tokens.map((token) => token.tokenAddress) },
+        tokenAmountOnChain: { gt: 0 },
+      },
     });
 
-    // Update user's balance
-    await prisma.user.update({
-      where: { uid: user.uid },
-      data: {
-        balance: {
-          decrement: amount
-        }
+    const withdrawTokens = userBalances.map((balance) => ({
+      tokenAddress: balance.tokenAddress,
+      tokenAmountOnChain: balance.tokenAmountOnChain,
+    }));
+    console.log("withdrawTokens", withdrawTokens);
+
+    if (withdrawTokens.length === 0) {
+      return NextResponse.json(
+        { error: "No tokens to withdraw" },
+        { status: 400 }
+      );
+    }
+
+    const createdWithdrawRequest = await prisma.$transaction(
+      async (tx: any) => {
+        // Create withdraw request
+        const withdrawRequest = await tx.userWithdrawRequest.create({
+          data: {
+            userId: user.uid,
+            nonceOnChain: userNonce.toString(),
+            tokenAddresses: userBalances.map((balance) => balance.tokenAddress),
+            tokenAmountsOnChain: userBalances.map(
+              (balance) => balance.tokenAmountOnChain
+            ),
+          },
+        });
+
+        // Use Promise.all instead of forEach
+        await Promise.all(
+          withdrawTokens.map(async (token) => {
+            const updateResult = await tx.userBalance.update({
+              where: {
+                userId_tokenAddress: {
+                  userId: user.uid,
+                  tokenAddress: token.tokenAddress,
+                },
+                tokenAmountOnChain: {
+                  gte: token.tokenAmountOnChain,
+                },
+              },
+              data: {
+                tokenAmountOnChain: {
+                  decrement: token.tokenAmountOnChain,
+                },
+              },
+            });
+
+            if (!updateResult) {
+              throw new Error("User balance not found");
+            }
+          })
+        );
+
+        // Transaction completes only after all updates finish
+        return withdrawRequest;
       }
-    });
+    );
+
+    if (!createdWithdrawRequest) {
+      return NextResponse.json(
+        { error: "Failed to create withdraw request" },
+        { status: 500 }
+      );
+    }
+
+    const result = await getWithdrawSignature(
+      dbUser.bindedWallet as `0x${string}`,
+      createdWithdrawRequest.nonceOnChain,
+      createdWithdrawRequest.tokenAddresses,
+      createdWithdrawRequest.tokenAmountsOnChain
+    );
+    if (!result) {
+      return NextResponse.json(
+        { error: "Failed to get withdraw signature" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      message: 'Withdrawal request created successfully',
-      withdrawal
+      message: "Withdrawal signature created successfully",
+      result,
     });
   } catch (error) {
-    console.error('Error processing withdrawal:', error);
+    console.error("Error processing withdrawal:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: "Internal server error" },
       { status: 500 }
     );
   }
-} 
+}

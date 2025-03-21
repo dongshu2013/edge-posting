@@ -11,3 +11,18 @@ export interface UserInfo {
   createdAt: Date;
   bindedWallet: string | null;
 }
+
+export interface UserWithdrawRequest {
+  id: string;
+  userId: string;
+  tokenAddresses: string[];
+  tokenAmountsOnChain: string[];
+}
+
+export interface WithdrawSignatureResult {
+  expirationBlock: string;
+  tokenAddresses: `0x${string}`[];
+  tokenAmountsOnChain: string[];
+  recipient: `0x${string}`;
+  signature: `0x${string}`;
+}

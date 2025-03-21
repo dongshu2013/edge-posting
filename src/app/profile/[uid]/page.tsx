@@ -269,7 +269,7 @@ export default function ProfilePage() {
               <ArrowRight className="w-6 h-6 text-white" strokeWidth={3} />
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="hidden gap-2">
             <span
               className="self-center underline text-white cursor-pointer"
               onClick={() => {
@@ -404,7 +404,7 @@ export default function ProfilePage() {
       <UserBalanceCard />
 
       {/* Payment History */}
-      <div className="bg-white rounded-2xl shadow-sm p-6">
+      <div className="bg-white rounded-2xl shadow-sm p-6 hidden">
         <h2 className="text-xl font-semibold text-gray-900 mb-6">
           Payment History
         </h2>

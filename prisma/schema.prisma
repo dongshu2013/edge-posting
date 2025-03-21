@@ -29,6 +29,7 @@ model User {
   replies     Reply[]
   withdrawals Withdrawal[]
   userBalances UserBalance[]
+  withdrawRequests UserWithdrawRequest[]
   bindedWallet String?    @unique
 
   @@index([uid])
@@ -136,6 +137,19 @@ model UserBalance {
   user      User             @relation(fields: [userId], references: [uid])
 
   @@unique([userId, tokenAddress]) // Each user can have only one balance per token
+}
+
+model UserWithdrawRequest {
+  id String @id @default(cuid())
+
+  userId String
+  nonceOnChain String
+  tokenAddresses String[]
+  tokenAmountsOnChain BigInt[]
+
+  user      User             @relation(fields: [userId], references: [uid])
+
+  @@unique([userId, nonceOnChain]) // Each user can have only one balance per token
 }
 
 enum ReplyStatus {

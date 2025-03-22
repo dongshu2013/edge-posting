@@ -20,12 +20,12 @@ export interface KMS_CONFIG_TYPE {
   }
 
 const KEY_CONFIG : KMS_CONFIG_TYPE = {
-    projectId: process.env.VITE_FIREBASE_PROJECT_ID!,
-    locationId: process.env.GCP_KEY_LOCATION_GLOBAL!,
-    keyRingId: process.env.KEY_RING_ID!,
-    keyId: process.env.KEY_ID!,
-    versionId: process.env.KEY_VERSION_ID,
-    publicAddress: process.env.PUBLIC_ADDRESS,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+    locationId: process.env.GKMS_LOCATION_ID!,
+    keyRingId: process.env.GKMS_KEY_RING_ID!,
+    keyId: process.env.GKMS_KEY_ID!,
+    versionId: process.env.GKMS_VERSION_ID,
+    publicAddress: process.env.GKMS_PUBLIC_ADDRESS,
 };
 
 export const toEthSignedMessageHash = function(messageHex: Hex) {

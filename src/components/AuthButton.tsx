@@ -145,7 +145,7 @@ export function AuthButton({
                       <>
                         <button
                           onClick={handleGoogleSignIn}
-                          className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 mb-4"
+                          className="w-full hidden items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 mb-4"
                         >
                           <Image
                             src="https://www.google.com/favicon.ico"
@@ -171,7 +171,7 @@ export function AuthButton({
                           Continue with Twitter
                         </button>
 
-                        <div className="relative my-4">
+                        <div className="hidden relative my-4">
                           <div className="absolute inset-0 flex items-center">
                             <div className="w-full border-t border-gray-300" />
                           </div>
@@ -182,7 +182,7 @@ export function AuthButton({
                           </div>
                         </div>
 
-                        <form onSubmit={handleEmailLogin} className="space-y-4">
+                        <form onSubmit={handleEmailLogin} className="hidden space-y-4">
                           <div>
                             <label
                               htmlFor="email"
@@ -229,7 +229,7 @@ export function AuthButton({
   return (
     <Menu as="div" className="relative inline-block text-left">
       <Menu.Button className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm bg-white hover:bg-gray-50 transition-all duration-200">
-        <span className="text-gray-900">{userInfo.username}</span>
+        <span className="text-gray-900">{userInfo.nickname}</span>
         <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
       </Menu.Button>
 

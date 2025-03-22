@@ -16,6 +16,7 @@ datasource db {
 model User {
   uid         String       @id // Firebase UID as primary key
   email       String?      @unique
+  twitterUsername String?  @unique
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
   username    String?      @unique

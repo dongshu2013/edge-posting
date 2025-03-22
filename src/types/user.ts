@@ -10,6 +10,7 @@ export interface UserInfo {
   balance: number;
   createdAt: Date;
   bindedWallet: string | null;
+  twitterUsername: string | null;
 }
 
 export interface UserWithdrawRequest {

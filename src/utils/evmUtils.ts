@@ -142,6 +142,7 @@ export async function getWithdrawSignature(
     tokenAddresses,
     tokenAmountsOnChain,
     recipient,
+    nonceOnChain,
     expirationBlock
   );
   const signature = await signMessage({
@@ -161,6 +162,7 @@ function solidityKeccak256Encode(
   tokens: `0x${string}`[],
   amounts: bigint[],
   recipient: `0x${string}`,
+  nonce: bigint,
   expirationBlock: bigint
 ) {
   // First encode the parameters according to their Solidity types
@@ -169,9 +171,10 @@ function solidityKeccak256Encode(
       { name: "tokens", type: "address[]" },
       { name: "amounts", type: "uint256[]" },
       { name: "recipient", type: "address" },
+      { name: "nonce", type: "uint256" },
       { name: "expirationBlock", type: "uint256" },
     ],
-    [tokens, amounts, recipient, expirationBlock]
+    [tokens, amounts, recipient, nonce, expirationBlock]
   );
 
   // Then hash the encoded data

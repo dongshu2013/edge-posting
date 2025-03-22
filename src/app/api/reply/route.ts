@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-helpers";
+import { authTwitter } from "@/utils/xUtils";
 
 export async function POST(request: Request) {
   try {
@@ -55,7 +56,6 @@ export async function POST(request: Request) {
     // Check if the buzz is still active
     const isExpired = !buzz.isActive || new Date() >= buzz.deadline;
 
-
     // Check if the buzz is already settled
     // if (buzz.isSettled) {
     //   return NextResponse.json(
@@ -76,6 +76,45 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: "You have already replied to this buzz" },
         { status: 400 }
+      );
+    }
+
+    try {
+      const beaerToken = await authTwitter();
+      const replyTwitterId = replyLink.split("/").pop();
+      const twitterResponse = await fetch(
+        `https://api.twitter.com/2/tweets/${replyTwitterId}`,
+        {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            Authorization: beaerToken,
+          },
+        }
+      );
+
+      if (!twitterResponse.ok) {
+        return NextResponse.json(
+          { error: "Failed to get reply tweet" },
+          { status: 400 }
+        );
+      }
+
+      const replyTweetData = await twitterResponse.json();
+      console.log(replyTweetData);
+      const replyText = replyTweetData.data.text as string;
+      if (!replyText.endsWith(text.trim())) {
+        return NextResponse.json(
+          { error: "Reply text does not match" },
+          { status: 400 }
+        );
+      }
+    } catch (err) {
+      console.error("Error in reply API:", err);
+      return NextResponse.json(
+        { error: "Internal server error" },
+        { status: 500 }
       );
     }
 

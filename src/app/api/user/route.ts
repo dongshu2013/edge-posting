@@ -3,8 +3,16 @@ import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
-    const { uid, email, username, nickname, avatar, bio, mood } =
-      await request.json();
+    const {
+      uid,
+      email,
+      username,
+      nickname,
+      avatar,
+      bio,
+      mood,
+      twitterUsername,
+    } = await request.json();
 
     if (!uid) {
       return NextResponse.json(
@@ -31,6 +39,7 @@ export async function POST(request: Request) {
         balance: 0,
         bio,
         mood,
+        twitterUsername,
       },
     });
 

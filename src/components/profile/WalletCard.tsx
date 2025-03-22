@@ -67,15 +67,13 @@ export const WalletCard = () => {
     <div className="bg-white rounded-2xl shadow-sm p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-900">Wallet</h1>
-        {!userInfo?.bindedWallet && (
-          <button
-            onClick={handleBindWallet}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <PencilIcon className="h-4 w-4 mr-1.5" />
-            Bind Wallet
-          </button>
-        )}
+        <button
+          onClick={handleBindWallet}
+          className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+        >
+          <PencilIcon className="h-4 w-4 mr-1.5" />
+          Bind Wallet
+        </button>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -85,13 +83,13 @@ export const WalletCard = () => {
             <p className="text-lg font-medium text-gray-900">
               {userInfo?.bindedWallet || "N/A"}
             </p>
-          {userInfo?.bindedWallet && (
-            <Copy
-              className="w-4 h-4 cursor-pointer text-gray-500"
-              onClick={() => {
-                navigator.clipboard.writeText(userInfo?.bindedWallet || "");
-                toast.success("Copied");
-              }}
+            {userInfo?.bindedWallet && (
+              <Copy
+                className="w-4 h-4 cursor-pointer text-gray-500"
+                onClick={() => {
+                  navigator.clipboard.writeText(userInfo?.bindedWallet || "");
+                  toast.success("Copied");
+                }}
               />
             )}
           </div>

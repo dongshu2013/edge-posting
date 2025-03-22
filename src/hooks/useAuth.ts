@@ -64,12 +64,15 @@ export function useAuth() {
         // Only create user if they don't exist
         if (!response) {
           console.log("Creating new user...");
+          console.log("user", user);
+          const twitterUsername = (user as any).reloadUserInfo?.screenName;
           const newUser = {
             uid: user.uid,
             email: user.email,
             username: generateRandomUsername(),
             nickname: user.displayName,
             avatar: user.photoURL,
+            twitterUsername: twitterUsername || null,
             bio: null,
             mood: null,
           };
@@ -170,7 +173,7 @@ export function useAuth() {
       console.log("Signing in with Twitter");
       setLoading(true);
       const result = await signInWithPopup(auth!, twitterProvider);
-      console.log("Twitter sign-in successful");
+      console.log("Twitter sign-in successful", result);
       return result.user;
     } catch (error) {
       console.error("Error signing in with Twitter:", error);

@@ -25,6 +25,7 @@ interface UserProfile {
   balance: number;
   nickname?: string;
   bio: string | null;
+  twitterUsername: string | null;
 }
 
 interface Transaction {
@@ -252,7 +253,7 @@ export default function ProfilePage() {
   return (
     <div className="space-y-6">
       {/* Balance Card */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl p-8">
+      <div className="hidden bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl shadow-xl p-8">
         <div className="flex justify-between items-start">
           <div>
             <h2 className="text-white text-lg font-medium">Total Balance</h2>
@@ -317,15 +318,15 @@ export default function ProfilePage() {
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Email</p>
+            <p className="text-sm text-gray-500">Twitter Username</p>
             <p className="text-lg font-medium text-gray-900">
-              {profile.email || "No email"}
+              {profile.twitterUsername || "Not found"}
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Total Earned</p>
+            <p className="text-sm text-gray-500">Nickname</p>
             <p className="text-lg font-medium text-gray-900">
-              {profile.totalEarned} BUZZ
+              {profile.nickname}
             </p>
           </div>
           <div className="col-span-2">

@@ -2,9 +2,9 @@ export const contractAbi = [
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "recipient",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "referenceId",
+        "type": "uint256"
       }
     ],
     "name": "getNonce",
@@ -29,6 +29,11 @@ export const contractAbi = [
         "internalType": "uint256[]",
         "name": "amounts",
         "type": "uint256[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "referenceId",
+        "type": "uint256"
       },
       {
         "internalType": "address",

@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getPublicClient } from "@/lib/ethereum";
 import { contractAbi } from "@/config/contractAbi";
 import { TicketX } from "lucide-react";
-import { getWithdrawSignature } from "@/utils/evmUtils";
+import { getUserNonce, getWithdrawSignature } from "@/utils/evmUtils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,13 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userNonce = await publicClient?.readContract({
-      address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
-      abi: contractAbi,
-      functionName: "getNonce",
-      args: [dbUser.bindedWallet as `0x${string}`],
-    });
-    console.log("userNonce", userNonce.toString());
+    const userNonce = await getUserNonce(user.uid, publicClient);
 
     const existingWithdrawRequest = await prisma.userWithdrawRequest.findUnique(
       {

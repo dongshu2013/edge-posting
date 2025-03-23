@@ -2,6 +2,7 @@ import { BNB_COMMISSION_FEE, COMMISSION_RATE } from "@/config/common";
 import { getAuthUser } from "@/lib/auth-helpers";
 import { getPublicClient } from "@/lib/ethereum";
 import { prisma } from "@/lib/prisma";
+import { getTokenMetadata } from "@/utils/evmUtils";
 import { authTwitter } from "@/utils/xUtils";
 import { NextResponse } from "next/server";
 import { parseEther, zeroAddress } from "viem";
@@ -56,7 +57,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check transaction
     const publicClient = getPublicClient(
       Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
     );
@@ -70,7 +70,6 @@ export async function POST(request: Request) {
     const receipt = await publicClient.getTransactionReceipt({
       hash: transactionHash as `0x${string}`,
     });
-
     if (!receipt || receipt.status !== "success") {
       return NextResponse.json(
         { error: "Transaction verify failed" },
@@ -80,35 +79,13 @@ export async function POST(request: Request) {
 
     const transaction = await publicClient.getTransaction({
       hash: transactionHash as `0x${string}`,
+      // hash: "0x13c709dbce119393c760e4e195bc8c043de6b475862ecd1f467ddfe408c41b32",
     });
-
+    // console.log("transaction", transaction);
+    // console.log("receipt", receipt);
     if (!transaction) {
       return NextResponse.json(
         { error: "Transaction not found" },
-        { status: 400 }
-      );
-    }
-
-    // Format transaction value from wei to ether for display
-    const transactionValueInEther = (Number(transaction.value) / 1e18).toFixed(
-      6
-    );
-
-    console.log("Transaction Details:", {
-      value: transactionValueInEther + " BNB",
-      from: transaction.from,
-      to: transaction.to,
-      gasUsed: receipt.gasUsed.toString(),
-    });
-
-    // Check transaction amount
-    if (
-      transaction.value <
-      parseEther(tokenAmount.toString()) +
-        parseEther(BNB_COMMISSION_FEE.toString())
-    ) {
-      return NextResponse.json(
-        { error: "Transaction amount mismatch" },
         { status: 400 }
       );
     }
@@ -119,6 +96,120 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json(
         { error: "Transaction to address mismatch" },
+        { status: 400 }
+      );
+    }
+
+    //
+
+    // Check transaction
+    if (paymentToken === "BNB") {
+      // Format transaction value from wei to ether for display
+      const transactionValueInEther = (
+        Number(transaction.value) / 1e18
+      ).toFixed(6);
+
+      console.log("Transaction Details:", {
+        value: transactionValueInEther + " BNB",
+        from: transaction.from,
+        to: transaction.to,
+        gasUsed: receipt.gasUsed.toString(),
+      });
+
+      // Check transaction amount
+      if (
+        transaction.value <
+        parseEther(tokenAmount.toString()) +
+          parseEther(BNB_COMMISSION_FEE.toString())
+      ) {
+        return NextResponse.json(
+          { error: "Transaction amount mismatch" },
+          { status: 400 }
+        );
+      }
+    } else {
+      // Check commission amount
+      if (transaction.value < parseEther(BNB_COMMISSION_FEE.toString())) {
+        return NextResponse.json(
+          { error: "Transaction amount not enough" },
+          { status: 400 }
+        );
+      }
+
+      // Check BEP20 transfer amount
+      // Standard ERC20/BEP20 Transfer event topic
+      const transferEventTopic =
+        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
+
+      // Find the Transfer event log
+      const transferLog = receipt.logs.find(
+        (log) =>
+          log.topics[0] === transferEventTopic &&
+          log.address.toLowerCase() === customTokenAddress?.toLowerCase()
+      );
+
+      if (!transferLog) {
+        return NextResponse.json(
+          { error: "BEP20 token transfer not found in transaction" },
+          { status: 400 }
+        );
+      }
+
+      // Extract transfer details
+      // topics[1] is the from address (padded to 32 bytes)
+      // topics[2] is the to address (padded to 32 bytes)
+      // data is the amount (as a hex string)
+      const fromAddress = `0x${transferLog.topics[1]?.slice(-40) || ""}`;
+      const toAddress = `0x${transferLog.topics[2]?.slice(-40) || ""}`;
+      const amountHex = transferLog.data;
+
+      // Convert hex amount to decimal
+      const tokenTransferAmount = BigInt(amountHex);
+
+      console.log("BEP20 Token Transfer Details:", {
+        token: customTokenAddress,
+        from: fromAddress,
+        to: toAddress,
+        amount: tokenTransferAmount.toString(),
+      });
+
+      // Verify sender
+      if (fromAddress.toLowerCase() !== transaction.from.toLowerCase()) {
+        return NextResponse.json(
+          { error: "Token sender address mismatch" },
+          { status: 400 }
+        );
+      }
+
+      // Verify recipient
+      if (
+        toAddress.toLowerCase() !==
+        process.env.NEXT_PUBLIC_BSC_CA?.toLowerCase()
+      ) {
+        return NextResponse.json(
+          { error: "Token recipient address mismatch" },
+          { status: 400 }
+        );
+      }
+
+      // Verify amount - need to convert expected amount to BigInt for comparison
+      // Note: You may need to adjust the decimal places based on the token's decimals
+      const expectedAmount = BigInt(parseEther(tokenAmount.toString()));
+      if (tokenTransferAmount < expectedAmount) {
+        return NextResponse.json(
+          { error: "Token transfer amount is less than required" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Get token metadata
+    const tokenMetadata = await getTokenMetadata(
+      customTokenAddress || zeroAddress
+    );
+    if (!tokenMetadata) {
+      return NextResponse.json(
+        { error: "Token metadata not found" },
         { status: 400 }
       );
     }
@@ -157,7 +248,8 @@ export async function POST(request: Request) {
           createdBy: user.uid,
           deadline: new Date(deadline),
           tokenAmount: tokenAmount.toString(),
-          paymentToken,
+          tokenDecimals: tokenMetadata.decimals,
+          paymentToken: tokenMetadata.symbol || paymentToken,
           customTokenAddress: customTokenAddress || zeroAddress,
           transactionHash,
         },

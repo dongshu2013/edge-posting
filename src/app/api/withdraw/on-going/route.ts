@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { contractAbi } from "@/config/contractAbi";
 import { getPublicClient } from "@/lib/ethereum";
+import { getUserNonce } from "@/utils/evmUtils";
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
       },
     });
     if (!dbUser?.bindedWallet) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return NextResponse.json({ error: "User not binded wallet" }, { status: 404 });
     }
 
     const publicClient = getPublicClient(
@@ -30,12 +31,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const userNonce = await publicClient?.readContract({
-      address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
-      abi: contractAbi,
-      functionName: "getNonce",
-      args: [dbUser.bindedWallet as `0x${string}`],
-    });
+    const userNonce = await getUserNonce(user.uid, publicClient);
 
     const existingWithdrawRequest = await prisma.userWithdrawRequest.findUnique({
       where: {

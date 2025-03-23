@@ -56,6 +56,7 @@ model Buzz {
   tokenAmount String
   paymentToken String // BNB CUSTOM
   customTokenAddress String // 0x0000000000000
+  tokenDecimals Int
   transactionHash String @unique
 
 
@@ -134,6 +135,7 @@ model UserBalance {
   tokenAmountOnChain BigInt
   tokenName String
   tokenAddress String
+  tokenDecimals Int
 
   user      User             @relation(fields: [userId], references: [uid])
 
@@ -147,6 +149,7 @@ model UserWithdrawRequest {
   nonceOnChain String
   tokenAddresses String[]
   tokenAmountsOnChain BigInt[]
+  tokenDecimals Int[]
 
   user      User             @relation(fields: [userId], references: [uid])
 

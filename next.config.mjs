@@ -35,6 +35,21 @@ const nextConfig = {
       ...config.watchOptions,
       ignored: ["**/chrome-extension-ts/**"],
     };
+    
+    // Provide fallbacks for Node.js modules when in browser environment
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        crypto: false,
+        stream: false,
+        buffer: false,
+        util: false,
+        path: false,
+        os: false,
+      };
+    }
+    
     return config;
   },
 };

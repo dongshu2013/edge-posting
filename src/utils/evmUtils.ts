@@ -5,14 +5,18 @@ import {
   hashMessage,
   zeroAddress,
   keccak256,
+  erc20Abi,
 } from "viem";
 import { createSiweMessage, generateSiweNonce } from "viem/siwe";
 import { Config } from "wagmi";
 import { SignMessageMutateAsync, WriteContractMutateAsync } from "wagmi/query";
-import { sleep } from "./commonUtils";
+import { getSha256Hash, getUserIdInt, sleep } from "./commonUtils";
 import { signMessage } from "viem/accounts";
 import { getPublicClient } from "@/lib/ethereum";
 import { WithdrawSignatureResult } from "@/types/user";
+import { ITokenMetadata } from "@/types/common";
+import { contractAbi } from "@/config/contractAbi";
+import { toEthSignedMessageHash } from "@/lib/google-kms";
 
 export function getSiweMessage(address: `0x${string}`, chainId?: number) {
   var current = new Date();
@@ -122,6 +126,7 @@ export async function sendEvmTransaction(
 }
 
 export async function getWithdrawSignature(
+  userId: string,
   recipient: `0x${string}`,
   nonceOnChain: bigint,
   tokenAddresses: `0x${string}`[],
@@ -137,18 +142,23 @@ export async function getWithdrawSignature(
   const currentBlock = await publicClient.getBlock();
   const expirationBlock = currentBlock.number + BigInt(1000000);
 
+  const userIdInt = await getUserIdInt(userId);
   // const message = `Withdrawal request for ${nonceOnChain}`;
   const message = solidityKeccak256Encode(
+    userIdInt,
     tokenAddresses,
     tokenAmountsOnChain,
     recipient,
     nonceOnChain,
     expirationBlock
   );
-  const signature = await signMessage({
-    message: message,
-    privateKey: process.env.ETHEREUM_PRIVATE_KEY as `0x${string}`,
-  });
+
+  const signature = toEthSignedMessageHash(message);
+
+  // const signature = await signMessage({
+  //   message: message,
+  //   privateKey: process.env.ETHEREUM_PRIVATE_KEY as `0x${string}`,
+  // });
   return {
     expirationBlock: expirationBlock.toString(),
     tokenAddresses,
@@ -159,6 +169,7 @@ export async function getWithdrawSignature(
 }
 
 function solidityKeccak256Encode(
+  userIdInt: bigint,
   tokens: `0x${string}`[],
   amounts: bigint[],
   recipient: `0x${string}`,
@@ -170,15 +181,72 @@ function solidityKeccak256Encode(
     [
       { name: "tokens", type: "address[]" },
       { name: "amounts", type: "uint256[]" },
+      { name: "referenceId", type: "uint256" },
       { name: "recipient", type: "address" },
       { name: "nonce", type: "uint256" },
       { name: "expirationBlock", type: "uint256" },
     ],
-    [tokens, amounts, recipient, nonce, expirationBlock]
+    [tokens, amounts, userIdInt, recipient, nonce, expirationBlock]
   );
 
   // Then hash the encoded data
   const hash = keccak256(encoded);
-
   return hash;
+}
+
+export const getTokenMetadata = async (
+  tokenAddress: string
+): Promise<ITokenMetadata | undefined> => {
+  if (tokenAddress === zeroAddress) {
+    return {
+      decimals: 18,
+      name: "BNB",
+      symbol: "BNB",
+    };
+  }
+  const publicClient = getPublicClient(
+    Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+  );
+  if (!publicClient) {
+    return undefined;
+  }
+  try {
+    const [decimals, name, symbol] = await Promise.all([
+      publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "decimals",
+      }),
+      publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "name",
+      }),
+      publicClient.readContract({
+        address: tokenAddress as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "symbol",
+      }),
+    ]);
+
+    console.log(decimals, name, symbol);
+    return {
+      decimals: Number(decimals),
+      name: String(name),
+      symbol: String(symbol),
+    };
+  } catch (err) {}
+  return undefined;
+};
+
+export async function getUserNonce(userId: string, publicClient: PublicClient) {
+  const userIdInt = await getUserIdInt(userId);
+
+  const nonce = await publicClient.readContract({
+    address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
+    abi: contractAbi,
+    functionName: "getNonce",
+    args: [userIdInt],
+  });
+  return nonce;
 }

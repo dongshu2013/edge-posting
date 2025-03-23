@@ -122,6 +122,7 @@ export async function POST(request: Request) {
                   tokenAddress: buzz.customTokenAddress,
                   tokenName: buzz.paymentToken,
                   tokenAmountOnChain: amountOnChain,
+                  tokenDecimals: buzz.tokenDecimals,
                 },
                 // If a record exists, update the tokenAmount
                 update: {

@@ -3,7 +3,7 @@ import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getPublicClient } from "@/lib/ethereum";
 import { contractAbi } from "@/config/contractAbi";
-import { getWithdrawSignature } from "@/utils/evmUtils";
+import { getUserNonce, getWithdrawSignature } from "@/utils/evmUtils";
 
 export interface WithdrawRequest {
   tokens: {
@@ -53,12 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const userNonce = await publicClient?.readContract({
-      address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
-      abi: contractAbi,
-      functionName: "getNonce",
-      args: [dbUser.bindedWallet as `0x${string}`],
-    });
+    const userNonce = await getUserNonce(user.uid, publicClient);
     console.log("userNonce", userNonce.toString());
 
     const userBalances = await prisma.userBalance.findMany({
@@ -93,6 +88,7 @@ export async function POST(request: NextRequest) {
             tokenAmountsOnChain: userBalances.map(
               (balance) => balance.tokenAmountOnChain
             ),
+            tokenDecimals: userBalances.map((balance) => balance.tokenDecimals),
           },
         });
 

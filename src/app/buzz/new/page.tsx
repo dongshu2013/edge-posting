@@ -5,12 +5,19 @@ import { BNB_COMMISSION_FEE } from "@/config/common";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { useUserStore } from "@/store/userStore";
+import { getTokenMetadata } from "@/utils/evmUtils";
 import { BoltIcon } from "@heroicons/react/24/outline";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { parseEther } from "viem";
-import { useAccount, useSendTransaction, useWalletClient } from "wagmi";
+import { erc20Abi, parseEther } from "viem";
+import * as math from "mathjs";
+import {
+  useAccount,
+  useSendTransaction,
+  useWalletClient,
+  useWriteContract,
+} from "wagmi";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -18,6 +25,7 @@ export default function NewBuzzPage() {
   const { openConnectModal } = useConnectModal();
   const { data: walletClient } = useWalletClient();
   const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
   const userInfo = useUserStore((state) => state.userInfo);
   const [formData, setFormData] = useState({
     tweetLink: "",
@@ -66,7 +74,6 @@ export default function NewBuzzPage() {
     }
 
     try {
-      // TODO: Replace with CA
       const destinationAddress = process.env
         .NEXT_PUBLIC_BSC_CA as `0x${string}`;
       let txHash = "";
@@ -97,10 +104,28 @@ export default function NewBuzzPage() {
         } else {
           throw new Error("Transaction failed");
         }
+      } else {
+        const metadata = await getTokenMetadata(
+          formData.customTokenAddress as `0x${string}`
+        );
+        if (!metadata) {
+          throw new Error("Token metadata not found");
+        }
+        const chainAmount = math
+          .bignumber(formData.totalAmount)
+          .times(math.bignumber(10).pow(metadata.decimals))
+          .toString();
+        // Create bep20 transfer
+        const hash = await writeContractAsync({
+          abi: erc20Abi,
+          address: formData.customTokenAddress as `0x${string}`,
+          functionName: "transfer",
+          args: [destinationAddress, BigInt(chainAmount)],
+        });
       }
 
       if (txHash) {
-        // await createBuzzCampaign(txHash);
+        await createBuzzCampaign(txHash);
       }
     } catch (error) {
       console.error("Payment processing error:", error);
@@ -112,7 +137,6 @@ export default function NewBuzzPage() {
 
   const createBuzzCampaign = async (txHash: string) => {
     if (!userInfo?.uid) {
-
       return;
     }
     const deadline = new Date();
@@ -279,8 +303,6 @@ export default function NewBuzzPage() {
                       id="totalAmount"
                       className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                       placeholder="0.00"
-                      step="0.01"
-                      min="0.0001"
                       value={formData.totalAmount}
                       onChange={handleInputChange}
                     />

@@ -5,6 +5,8 @@ import { getAuthUser } from "@/lib/auth-helpers";
 
 export async function GET(request: NextRequest) {
   try {
+    const authUser = await getAuthUser();
+
     const searchParams = request.nextUrl.searchParams;
     const createdBy = searchParams.get("createdBy");
     const cursor = searchParams.get("cursor");
@@ -13,11 +15,11 @@ export async function GET(request: NextRequest) {
       (searchParams.get("sortBy") as "newest" | "price" | "engagement") ||
       "newest";
     const onlyActive = searchParams.get("onlyActive") === "true";
+    const filterToken = searchParams.get("filterToken") === "true";
     const excludeReplied = searchParams.get("excludeReplied") === "true";
 
     let excludedBuzzIds: string[] = [];
     if (excludeReplied) {
-      const authUser = await getAuthUser();
       // Get user replied buzz ids
       if (authUser) {
         const repliedBuzzes = await prisma.reply.findMany({
@@ -33,6 +35,22 @@ export async function GET(request: NextRequest) {
     }
     console.log(excludedBuzzIds);
 
+    const filterWithTokenAddress = !!authUser && filterToken;
+    let filterTokenAddresses: string[] = [];
+    if (filterToken && authUser) {
+      const userBalances = await prisma.userBalance.findMany({
+        where: {
+          userId: authUser?.uid,
+        },
+        select: {
+          tokenAddress: true,
+        },
+      });
+      filterTokenAddresses = userBalances.map(
+        (balance: any) => balance.tokenAddress
+      );
+    }
+
     // Build the query
     const query: Prisma.BuzzFindManyArgs = {
       where: {
@@ -40,6 +58,9 @@ export async function GET(request: NextRequest) {
         ...(onlyActive && { deadline: { gt: new Date() } }),
         ...(excludeReplied &&
           excludedBuzzIds.length > 0 && { id: { notIn: excludedBuzzIds } }),
+        ...(filterWithTokenAddress && {
+          customTokenAddress: { in: filterTokenAddresses },
+        }),
       },
       take: limit + 1, // Take one extra to know if there are more items
       orderBy: {

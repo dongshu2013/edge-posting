@@ -7,6 +7,8 @@ import { fetchApi } from "@/lib/api";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import FilterTokenBuzzesToggle from "@/components/FilterTokenBuzzesToggle";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Buzz {
   id: string;
@@ -44,6 +46,7 @@ export default function BuzzesPage() {
 
 function BuzzesPageContent() {
   const router = useRouter();
+  const { isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -54,6 +57,7 @@ function BuzzesPageContent() {
   const observer = useRef<IntersectionObserver | null>(null);
 
   const showAll = searchParams.get("showAll") === "true";
+  const filterToken = searchParams.get("filterToken") === "true";
   const sortBy = useMemo(() => {
     const sortByParam = searchParams.get("sortBy");
     switch (sortByParam) {
@@ -81,6 +85,9 @@ function BuzzesPageContent() {
         if (!showAll) {
           url.searchParams.append("onlyActive", "true");
         }
+        if (filterToken) {
+          url.searchParams.append("filterToken", "true");
+        }
         // Only show buzzes that the user hasn't replied to
         url.searchParams.append("excludeReplied", "true");
 
@@ -89,7 +96,7 @@ function BuzzesPageContent() {
         throw err;
       }
     },
-    [showAll, sortBy]
+    [showAll, sortBy, filterToken]
   );
 
   const loadMore = useCallback(async () => {
@@ -222,14 +229,30 @@ function BuzzesPageContent() {
             <option value="engagement">🔥 Most Engagement</option>
           </select>
 
-          <ActiveBuzzesToggle
-            isActive={!showAll}
-            onToggle={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("showAll", (!showAll).toString());
-              router.push(url.toString());
-            }}
-          />
+          <div className="flex gap-4 items-center">
+            {isAuthenticated && (
+              <FilterTokenBuzzesToggle
+                isActive={filterToken}
+                onToggle={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set(
+                    "filterToken",
+                    (!filterToken).toString()
+                  );
+                  router.push(url.toString());
+                }}
+              />
+            )}
+
+            <ActiveBuzzesToggle
+              isActive={!showAll}
+              onToggle={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("showAll", (!showAll).toString());
+                router.push(url.toString());
+              }}
+            />
+          </div>
         </div>
         <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
           <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />

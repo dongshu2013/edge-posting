@@ -3,7 +3,6 @@
 import * as kms from "@google-cloud/kms";
 import * as asn1 from "asn1.js";
 import * as BN from "bn.js";
-// import crc32 from "@chainsafe/fast-crc32c";
 import {
   recoverAddress,
   encodePacked,
@@ -12,7 +11,8 @@ import {
   Hex,
 } from "viem";
 
-const client = new kms.KeyManagementServiceClient();
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON!);
+const client = new kms.KeyManagementServiceClient({ credentials });
 
 const KEY_CONFIG = {
   projectId: process.env.GKMS_PROJECT_ID!,

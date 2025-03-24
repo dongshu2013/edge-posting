@@ -6,6 +6,7 @@ import { getPublicClient } from "@/lib/ethereum";
 import { UserWithdrawRequest, WithdrawSignatureResult } from "@/types/user";
 import { getUserIdInt } from "@/utils/commonUtils";
 import { fetchTransactionReceipt } from "@/utils/evmUtils";
+import { formatChainAmount } from "@/utils/numberUtils";
 import { UserBalance } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
@@ -177,34 +178,63 @@ export const UserBalanceCard = () => {
         recipient,
         expirationBlock,
         signatureLength: signature.length,
-        signature
+        signature,
       });
 
-      const tx = await writeContractAsync({
-        address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
-        abi: contractAbi,
-        functionName: "withdraw",
-        args: [
-          tokenAddresses,
-          tokenAmountsOnChain.map((amount) => BigInt(amount)),
-          userIdInt,
-          recipient,
-          BigInt(expirationBlock),
-          signature,
-        ],
-      });
+      try {
+        const tx = await writeContractAsync({
+          address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
+          abi: contractAbi,
+          functionName: "withdraw",
+          args: [
+            tokenAddresses,
+            tokenAmountsOnChain.map((amount: string) => BigInt(amount)),
+            userIdInt,
+            recipient,
+            BigInt(expirationBlock),
+            signature,
+          ],
+        });
 
-      const publicClient = getPublicClient(
-        Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
-      );
-      const receipt = await fetchTransactionReceipt(publicClient, tx);
-      if (receipt?.status === "success") {
-        toast.success("Withdrawal successful");
-      } else {
-        toast.error("Withdrawal failed");
+        const publicClient = getPublicClient(
+          Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+        );
+        const receipt = await fetchTransactionReceipt(publicClient, tx);
+        if (receipt?.status === "success") {
+          toast.success("Withdrawal successful");
+        } else {
+          toast.error("Withdrawal failed: Transaction reverted");
+        }
+      } catch (txError: any) {
+        console.error("Transaction error:", txError);
+        
+        // Extract detailed error message if available
+        let errorMessage = "Withdrawal failed";
+        
+        if (txError.message) {
+          errorMessage += `: ${txError.message}`;
+        }
+        
+        // Check for rejection reason in the error
+        if (txError.cause?.reason) {
+          errorMessage += ` - ${txError.cause.reason}`;
+        }
+        
+        // Check for data in the error that might contain the revert reason
+        if (txError.data) {
+          errorMessage += ` - ${JSON.stringify(txError.data)}`;
+        }
+        
+        // Check for Solidity custom errors in the details
+        if (txError.details) {
+          errorMessage += ` - ${txError.details}`;
+        }
+
+        toast.error(errorMessage);
       }
-    } catch (err) {
-      console.log("err", err);
+    } catch (err: any) {
+      console.error("Outer error:", err);
+      toast.error(`Withdrawal preparation failed: ${err.message || "Unknown error"}`);
     }
   };
 
@@ -269,7 +299,7 @@ export const UserBalanceCard = () => {
 
             <p className="font-medium text-gray-900">
               <span className="opacity-40">Available Balance:</span>{" "}
-              {formatEther(token.tokenAmountOnChain)}
+              {formatChainAmount(token.tokenAmountOnChain, token.tokenDecimals)}
             </p>
           </div>
         ))}

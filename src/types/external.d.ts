@@ -13,6 +13,8 @@ declare module 'asn1.js' {
   };
 }
 
-declare module 'fast-crc32c' {
-  export function calculate(input: string | Buffer): number;
-}
+// declare module "fast-crc32c" {
+//   export function calculate(input: string | Buffer): number;
+//   export const hardware: boolean;
+//   export const table: number[];
+// }

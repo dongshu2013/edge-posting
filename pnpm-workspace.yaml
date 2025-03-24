@@ -1,0 +1,3 @@
+packages:
+  - "**"  # Include everything
+  - "!chrome-extension-ts"  # Exclude chrome-extension-ts

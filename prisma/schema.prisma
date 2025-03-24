@@ -13,23 +13,52 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  uid         String       @id // Firebase UID as primary key
+  email       String?      @unique
+  twitterUsername String?  @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  username    String?      @unique
+  nickname    String?
+  avatar      String?
+  bio         String?      @db.Text
+  mood        String?      @db.Text
+  totalEarned Float        @default(0)
+  balance     Float        @default(0)
+  buzzes      Buzz[]
+  replies     Reply[]
+  withdrawals Withdrawal[]
+  userBalances UserBalance[]
+  withdrawRequests UserWithdrawRequest[]
+  bindedWallet String?    @unique
+
+  @@index([uid])
+  @@index([email])
+  @@index([username])
+}
+
 model Buzz {
   id           String        @id @default(cuid())
   tweetLink    String
   instructions String        @db.Text
-  context      String        @db.Text
-  credit       Float
   createdAt    DateTime      @default(now())
-  createdBy    String // wallet address
+  createdBy    String // Firebase UID
   deadline     DateTime
   replyCount   Int           @default(0)
-  totalReplies Int           @default(0)
   isActive     Boolean       @default(true)
   isSettled    Boolean       @default(false)
   replies      Reply[]
   transactions Transaction[]
-  userId       String?
-  user         User?         @relation(fields: [userId], references: [id])
+  user         User          @relation(fields: [createdBy], references: [uid])
+  tweetText String?
+
+  tokenAmount String
+  paymentToken String // BNB CUSTOM
+  customTokenAddress String // 0x0000000000000
+  tokenDecimals Int
+  transactionHash String @unique
+
 
   @@index([createdBy])
   @@index([createdAt])
@@ -39,15 +68,14 @@ model Buzz {
 model Reply {
   id          String       @id @default(cuid())
   replyLink   String
-  text        String       @db.Text // Adding text field for reply content
+  text        String       @db.Text
   createdAt   DateTime     @default(now())
-  createdBy   String // wallet address
+  createdBy   String // Firebase UID
   status      ReplyStatus  @default(PENDING)
   buzz        Buzz         @relation(fields: [buzzId], references: [id])
   buzzId      String
   transaction Transaction?
-  userId      String?
-  user        User?        @relation(fields: [userId], references: [id])
+  user        User         @relation(fields: [createdBy], references: [uid])
 
   @@index([buzzId])
   @@index([createdBy])
@@ -74,6 +102,60 @@ model Transaction {
   @@index([toAddress])
 }
 
+model Withdrawal {
+  id        String           @id @default(cuid())
+  userId    String
+  amount    Float
+  address   String
+  status    WithdrawalStatus @default(PENDING)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  user      User             @relation(fields: [userId], references: [uid])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Referral {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  invitedUserId String  @unique
+  invitorUserId String?
+
+  @@index([invitedUserId])
+  @@index([invitorUserId])
+}
+
+model UserBalance {
+  id String @id @default(cuid())
+
+  userId    String
+  tokenAmountOnChain BigInt
+  tokenName String
+  tokenAddress String
+  tokenDecimals Int
+
+  user      User             @relation(fields: [userId], references: [uid])
+
+  @@unique([userId, tokenAddress]) // Each user can have only one balance per token
+}
+
+model UserWithdrawRequest {
+  id String @id @default(cuid())
+
+  userId String
+  nonceOnChain String
+  tokenAddresses String[]
+  tokenAmountsOnChain BigInt[]
+  tokenDecimals Int[]
+
+  user      User             @relation(fields: [userId], references: [uid])
+
+  @@unique([userId, nonceOnChain]) // Each user can have only one balance per token
+}
+
 enum ReplyStatus {
   PENDING
   APPROVED
@@ -83,6 +165,7 @@ enum ReplyStatus {
 enum TransactionType {
   REWARD
   BURN
+  REFERRAL_REWARD
 }
 
 enum TransactionStatus {
@@ -91,21 +174,8 @@ enum TransactionStatus {
   FAILED
 }
 
-model User {
-  id          String    @id @default(cuid())
-  address     String    @unique
-  nonce       String    @default(uuid())
-  lastLoginAt DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  username    String?
-  avatar      String?
-  bio         String?   @db.Text
-  totalEarned Float     @default(0)
-  reputation  Int       @default(0)
-  buzzes      Buzz[]    @relation()
-  replies     Reply[]   @relation()
-
-  @@index([address])
-  @@index([reputation])
+enum WithdrawalStatus {
+  PENDING
+  COMPLETED
+  FAILED
 }

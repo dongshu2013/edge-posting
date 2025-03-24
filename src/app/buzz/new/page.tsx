@@ -1,82 +1,194 @@
-'use client';
+"use client";
 
-import { useState, useMemo } from 'react';
-import { useAccount } from 'wagmi';
-import { useRouter } from 'next/navigation';
-import { BoltIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { CreateBuzzRequest } from "@/app/api/buzz/create/route";
+import { BNB_COMMISSION_FEE } from "@/config/common";
+import { fetchApi } from "@/lib/api";
+import { getPublicClient } from "@/lib/ethereum";
+import { useUserStore } from "@/store/userStore";
+import { getTokenMetadata } from "@/utils/evmUtils";
+import { BoltIcon } from "@heroicons/react/24/outline";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { erc20Abi, parseEther } from "viem";
+import * as math from "mathjs";
+import {
+  useAccount,
+  useSendTransaction,
+  useWalletClient,
+  useWriteContract,
+} from "wagmi";
 
 export default function NewBuzzPage() {
-  const { isConnected, address } = useAccount();
   const router = useRouter();
+  const { isConnected, address } = useAccount();
+  const { openConnectModal } = useConnectModal();
+  const { data: walletClient } = useWalletClient();
+  const { sendTransactionAsync } = useSendTransaction();
+  const { writeContractAsync } = useWriteContract();
+  const userInfo = useUserStore((state) => state.userInfo);
   const [formData, setFormData] = useState({
-    tweetLink: '',
-    context: '',
-    instructions: '',
-    pricePerReply: 0.01,
-    numberOfReplies: 100,
-    deadline: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // Default to 7 days from now
+    tweetLink: "",
+    instructions: "",
+    totalAmount: 0.1,
+    deadline: 1,
+    paymentToken: "BNB",
+    customTokenAddress: "",
+    paymentMethod: "in-app",
+    transactionHash: "",
   });
 
-  const totalDeposit = useMemo(() => {
-    return (formData.pricePerReply * formData.numberOfReplies).toFixed(2);
-  }, [formData.pricePerReply, formData.numberOfReplies]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
-      [name]: name === 'pricePerReply' || name === 'numberOfReplies' ? parseFloat(value) : value
+      [name]: name === "totalAmount" ? parseFloat(value) : value,
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handlePaymentMethodChange = (method: string) => {
+    setFormData({
+      ...formData,
+      paymentMethod: method,
+      transactionHash: method === "in-app" ? "" : formData.transactionHash,
+    });
+  };
+
+  const handleInAppPayment = async () => {
     if (!isConnected) {
-      alert('Please connect your wallet first');
+      openConnectModal?.();
+      return;
+    }
+
+    const publicClient = getPublicClient(
+      Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+    );
+
+    if (!publicClient || !walletClient) {
+      alert("Client not found");
       return;
     }
 
     try {
-      const response = await fetch('/api/buzz', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tweetLink: formData.tweetLink,
-          instructions: formData.instructions,
-          context: formData.context,
-          credit: formData.pricePerReply,
-          createdBy: address, // from useAccount
-          deadline: new Date(formData.deadline + 'T23:59:59Z').toISOString(),
-          numberOfReplies: formData.numberOfReplies,
-        }),
-      });
+      const destinationAddress = process.env
+        .NEXT_PUBLIC_BSC_CA as `0x${string}`;
+      let txHash = "";
+      if (formData.paymentToken === "BNB") {
+        // Convert BNB amount to wei
+        const amount =
+          parseEther(formData.totalAmount.toString()) +
+          parseEther(BNB_COMMISSION_FEE.toString());
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create buzz');
+        // Send transaction using viem/wagmi
+        console.log("start sendTransactionAsync");
+        const hash = await sendTransactionAsync({
+          to: destinationAddress,
+          value: amount,
+          account: address,
+        });
+        console.log("hash", hash);
+
+        // Wait for transaction receipt
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: hash,
+        });
+
+        console.log("receipt", receipt);
+
+        if (receipt.status === "success") {
+          txHash = hash;
+        } else {
+          throw new Error("Transaction failed");
+        }
+      } else {
+        const metadata = await getTokenMetadata(
+          formData.customTokenAddress as `0x${string}`
+        );
+        if (!metadata) {
+          throw new Error("Token metadata not found");
+        }
+        const chainAmount = math
+          .bignumber(formData.totalAmount)
+          .times(math.bignumber(10).pow(metadata.decimals))
+          .toString();
+        // Create bep20 transfer
+        const hash = await writeContractAsync({
+          abi: erc20Abi,
+          address: formData.customTokenAddress as `0x${string}`,
+          functionName: "transfer",
+          args: [destinationAddress, BigInt(chainAmount)],
+        });
       }
 
-      const buzz = await response.json();
-      console.log('Created buzz:', buzz);
-      
-      // Show success message
-      alert('Buzz created successfully!');
-      
-      // Redirect to the buzz details page
+      if (txHash) {
+        await createBuzzCampaign(txHash);
+      }
+    } catch (error) {
+      console.error("Payment processing error:", error);
+      alert(
+        error instanceof Error ? error.message : "Payment processing failed"
+      );
+    }
+  };
+
+  const createBuzzCampaign = async (txHash: string) => {
+    if (!userInfo?.uid) {
+      return;
+    }
+    const deadline = new Date();
+    deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    // deadline.setMinutes(deadline.getMinutes() + 2);
+
+    try {
+      const payload: CreateBuzzRequest = {
+        tweetLink: formData.tweetLink,
+        instructions: formData.instructions,
+        tokenAmount: formData.totalAmount,
+        deadline: deadline.toISOString(),
+        paymentToken: formData.paymentToken,
+        customTokenAddress: formData.customTokenAddress,
+        transactionHash: txHash,
+      };
+      const buzz = await fetchApi("/api/buzz/create", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      if (!buzz) {
+        throw new Error(buzz.error || "Failed to create buzz");
+      }
+
+      alert("Buzz created successfully!");
+
       router.push(`/buzz/${buzz.id}`);
     } catch (error) {
-      console.error('Error creating buzz:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create buzz');
+      console.error("Error creating buzz:", error);
+      alert(error instanceof Error ? error.message : "Failed to create buzz");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (formData.paymentMethod === "in-app") {
+      await handleInAppPayment();
+    } else {
+      if (!formData.transactionHash || formData.transactionHash.trim() === "") {
+        alert("Please enter a valid transaction hash");
+        return;
+      }
+
+      await createBuzzCampaign(formData.transactionHash);
     }
   };
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl w-full">
-        {/* Header Section */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
             Create Your Buzz 🐝
@@ -84,193 +196,241 @@ export default function NewBuzzPage() {
           <p className="mt-2 text-sm text-gray-600">
             Let&apos;s make some noise in the meme-verse! 🚀
           </p>
-          <p className="mt-2 text-sm text-gray-600">
-            Don&apos;t have a tweet to share? Browse our curated list of tweets and earn BUZZ by contributing thoughtful replies!
-          </p>
         </div>
 
-        {/* Main Form Card */}
         <div className="bg-white shadow-2xl rounded-2xl overflow-hidden backdrop-blur-xl bg-white/90 border border-gray-100">
-          <div className="px-6 py-8 sm:p-10">
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* Tweet Link Input */}
-              <div className="space-y-1">
-                <label htmlFor="tweetLink" className="block text-sm font-medium text-gray-700">
-                  Drop Your Tweet 🎯
+          <div className="px-6 py-6 sm:p-8">
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label
+                  htmlFor="tweetLink"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Tweet URL 🔗
                 </label>
-                <div className="mt-1 relative rounded-xl shadow-sm">
+                <div className="relative rounded-xl shadow-sm">
                   <input
                     type="url"
                     name="tweetLink"
                     id="tweetLink"
-                    className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                    className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
                     placeholder="https://twitter.com/..."
                     required
                     value={formData.tweetLink}
                     onChange={handleInputChange}
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <BoltIcon className="h-5 w-5 text-indigo-500" />
+                  <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-r-xl">
+                    <BoltIcon className="h-5 w-5 text-white" />
                   </div>
                 </div>
               </div>
 
-              {/* Context Input */}
-              <div className="space-y-1">
-                <label htmlFor="context" className="block text-sm font-medium text-gray-700">
-                  Context ☕️
-                </label>
-                <div className="mt-1">
-                  <textarea
-                    id="context"
-                    name="context"
-                    rows={2}
-                    className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                    placeholder="Provide context about the tweet and what you're looking for..."
-                    required
-                    value={formData.context}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-
-              {/* Instructions Input */}
-              <div className="space-y-1">
-                <label htmlFor="instructions" className="block text-sm font-medium text-gray-700">
-                  Spill the Tea ☕️
+              <div className="space-y-2">
+                <label
+                  htmlFor="instructions"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Reply Instructions 📝
                 </label>
                 <textarea
                   name="instructions"
                   id="instructions"
-                  rows={3}
-                  className="mt-1 block w-full px-4 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                  placeholder="How should the AI squad engage with your tweet?"
+                  rows={2}
+                  className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                  placeholder="Share context about your tweet and how we should reply to it"
                   required
                   value={formData.instructions}
                   onChange={handleInputChange}
                 />
               </div>
 
-              {/* Price and Replies Grid */}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                {/* Price Input */}
-                <div className="relative group">
-                  <label htmlFor="pricePerReply" className="block text-sm font-medium text-gray-700">
-                    Price per Reply 💰
-                  </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
-                    <input
-                      type="number"
-                      name="pricePerReply"
-                      id="pricePerReply"
-                      className="block w-full pl-4 pr-16 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                      placeholder="0.00"
-                      step="0.01"
-                      min="0.01"
-                      value={formData.pricePerReply}
-                      onChange={handleInputChange}
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-r-xl">
-                      <span className="text-sm font-medium">BUZZ</span>
+              <div className="space-y-2">
+                <label
+                  htmlFor="paymentToken"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Payment Token 💸
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <select
+                    name="paymentToken"
+                    id="paymentToken"
+                    className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                    value={formData.paymentToken}
+                    onChange={handleInputChange}
+                  >
+                    <option value="BNB">BNB</option>
+                    <option value="CUSTOM">Custom ERC20 Token</option>
+                  </select>
+
+                  {formData.paymentToken === "CUSTOM" && (
+                    <div className="relative rounded-xl shadow-sm">
+                      <input
+                        type="text"
+                        name="customTokenAddress"
+                        id="customTokenAddress"
+                        className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                        placeholder="0x..."
+                        value={formData.customTokenAddress}
+                        onChange={handleInputChange}
+                        required={formData.paymentToken === "CUSTOM"}
+                      />
+                      <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-green-500 to-green-600 text-white rounded-r-xl">
+                        <span className="text-sm font-medium">ERC20</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
-
-                {/* Replies Input */}
-                <div className="relative group">
-                  <label htmlFor="numberOfReplies" className="block text-sm font-medium text-gray-700">
-                    Number of Replies 🎯
-                  </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
-                    <input
-                      type="number"
-                      name="numberOfReplies"
-                      id="numberOfReplies"
-                      className="block w-full pl-4 pr-20 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                      placeholder="100"
-                      step="1"
-                      min="1"
-                      value={formData.numberOfReplies}
-                      onChange={handleInputChange}
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-r-xl">
-                      <span className="text-sm font-medium">replies</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Deadline Input */}
-                <div className="relative group sm:col-span-2">
-                  <label htmlFor="deadline" className="block text-sm font-medium text-gray-700">
-                    Campaign Deadline ⏰
-                  </label>
-                  <div className="mt-1 relative rounded-xl shadow-sm">
-                    <input
-                      type="date"
-                      name="deadline"
-                      id="deadline"
-                      min={new Date().toISOString().split('T')[0]}
-                      className="block w-full pl-4 pr-12 py-3 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                      value={formData.deadline}
-                      onChange={handleInputChange}
-                      required
-                    />
-                    <div className="absolute inset-y-0 right-0 flex items-center px-4">
-                      <span className="text-sm text-gray-500">
-                        Campaign ends at 23:59 UTC
-                      </span>
-                    </div>
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    After this date, no more replies will be rewarded with BUZZ
-                  </p>
-                </div>
-              </div>
-
-              {/* Total Deposit Section */}
-              <div className="relative mt-8">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-gray-200"></div>
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="px-3 bg-white text-sm text-gray-500">deposit summary</span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 transform transition-all duration-200 hover:scale-[1.02]">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700 flex items-center">
-                    <SparklesIcon className="h-5 w-5 mr-2 text-amber-500" />
-                    Total Deposit Required
-                  </span>
-                  <span className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
-                    {totalDeposit} BUZZ
-                  </span>
-                </div>
-                <p className="mt-2 text-xs text-gray-500">
-                  Covering {formData.numberOfReplies} replies at {formData.pricePerReply} BUZZ each
+                <p className="text-xs text-gray-500 italic">
+                  {formData.paymentToken === "BNB"
+                    ? "Pay with BNB (default)"
+                    : "Enter the contract address of your ERC20 token"}
                 </p>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-end space-x-4 pt-6">
-                <button
-                  type="button"
-                  onClick={() => router.push('/buzz')}
-                  className="px-6 py-3 border border-gray-300 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
-                >
-                  Never Mind
-                </button>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="totalAmount"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Total Reward Amount 💰
+                  </label>
+                  <div className="relative rounded-xl shadow-sm">
+                    <input
+                      type="number"
+                      name="totalAmount"
+                      id="totalAmount"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      placeholder="0.00"
+                      value={formData.totalAmount}
+                      onChange={handleInputChange}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-r-xl">
+                      <span className="text-sm font-medium">
+                        {formData.paymentToken === "BNB" ? "BNB" : "Token"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 italic">
+                    Total reward pool for all replies
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label
+                    htmlFor="deadline"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Expires in ⏰
+                  </label>
+                  <div className="relative rounded-xl shadow-sm">
+                    <input
+                      type="number"
+                      name="deadline"
+                      id="deadline"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      placeholder="1"
+                      min="1"
+                      value={formData.deadline}
+                      onChange={handleInputChange}
+                    />
+                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-r-xl">
+                      <span className="text-sm font-medium">hours</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Method 💳
+                </label>
+                <div className="flex flex-col space-y-4">
+                  <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                    <button
+                      type="button"
+                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.paymentMethod === "in-app"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handlePaymentMethodChange("in-app")}
+                    >
+                      Pay In-App
+                    </button>
+                    <button
+                      type="button"
+                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.paymentMethod === "manual"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handlePaymentMethodChange("manual")}
+                    >
+                      Manual TX Hash
+                    </button>
+                  </div>
+
+                  {formData.paymentMethod === "manual" && (
+                    <div className="space-y-2">
+                      <label
+                        htmlFor="transactionHash"
+                        className="block text-sm font-medium text-gray-700"
+                      >
+                        Transaction Hash
+                      </label>
+                      <div className="relative rounded-xl shadow-sm">
+                        <input
+                          type="text"
+                          name="transactionHash"
+                          id="transactionHash"
+                          className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                          placeholder="0x..."
+                          value={formData.transactionHash}
+                          onChange={handleInputChange}
+                          required={formData.paymentMethod === "manual"}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-gray-500 to-gray-600 text-white rounded-r-xl">
+                          <span className="text-sm font-medium">TX</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-gray-500 italic">
+                        Enter the hash of your payment transaction
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-start justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        Total Payment Required:
+                      </span>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                          {formData.totalAmount}{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                        </span>
+
+                        <span className="text-sm font-semibold text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">
+                          + {BNB_COMMISSION_FEE} BNB
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <div className="mt-6">
                 <button
                   type="submit"
-                  disabled={!isConnected}
-                  className={`px-6 py-3 rounded-xl text-sm font-medium text-white shadow-xl
-                    ${isConnected 
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500'
-                      : 'bg-gray-300 cursor-not-allowed'
-                    } transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500`}
+                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
-                  Create Buzz 🚀
+                  {formData.paymentMethod === "in-app"
+                    ? "Pay & Create Buzz Campaign 🚀"
+                    : "Create Buzz Campaign 🚀"}
                 </button>
               </div>
             </form>
@@ -279,4 +439,4 @@ export default function NewBuzzPage() {
       </div>
     </div>
   );
-} 
+}

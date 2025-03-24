@@ -1,157 +1,155 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
-import { useAccount } from "wagmi";
-import Link from "next/link";
-import { SparklesIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import BuzzCard from "@/components/BuzzCard";
-import { useRouter } from "next/navigation";
-import { PaymentModal } from "@/components/PaymentModal";
-import { paymentServiceApplicationId } from "@/config";
-import { useQuery } from "@tanstack/react-query";
-import { paymentServiceUrl } from "@/config";
+import { SparklesIcon } from "@heroicons/react/24/outline";
+import { fetchApi } from "@/lib/api";
+import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
+import { Suspense } from "react";
 
 interface Buzz {
   id: string;
   tweetLink: string;
   instructions: string;
-  context: string;
-  credit: number;
-  createdAt: Date;
-  createdBy: string;
-  deadline: string;
+  tokenAmount: string;
+  paymentToken: string;
+  customTokenAddress: string;
   replyCount: number;
   totalReplies: number;
+  createdBy: string;
+  deadline: string;
+  createdAt: Date;
   isActive: boolean;
-}
-
-interface BuzzResponse {
-  items: Buzz[];
-  nextCursor?: string;
-  hasMore: boolean;
+  user: {
+    username: string;
+  };
+  _count: {
+    replies: number;
+  };
 }
 
 export default function MyBuzzesPage() {
-  const { isConnected, address } = useAccount();
-  const router = useRouter();
+  return (
+    <Suspense fallback={<div className="py-8">Loading your buzzes...</div>}>
+      <MyBuzzesPageContent />
+    </Suspense>
+  );
+}
+
+function MyBuzzesPageContent() {
+  const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<"newest" | "engagement">("newest");
-  const [hasMore, setHasMore] = useState(true);
-  const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [onlyActive, setOnlyActive] = useState(true);
-  const observer = useRef<IntersectionObserver | null>(null);
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | undefined>();
+  const { user, loading } = useAuth();
+  const router = useRouter();
 
-  const fetchBuzzes = useCallback(
-    async (cursor?: string): Promise<BuzzResponse | null> => {
-      if (!address) return null;
+  const showAll = searchParams.get("showAll") === "true";
+  const sortBy = useMemo(() => {
+    const sortByParam = searchParams.get("sortBy");
+    switch (sortByParam) {
+      case "newest":
+        return "newest";
+      case "price":
+        return "price";
+      case "engagement":
+        return "engagement";
+      default:
+        return "newest";
+    }
+  }, [searchParams]);
+
+  const fetchUserBuzzes = useCallback(
+    async (cursor?: string) => {
+      if (!user) return null;
 
       try {
-        const url = new URL("/api/buzz", window.location.origin);
-        url.searchParams.append("createdBy", address);
+        const url = new URL(`/api/buzz`, window.location.origin);
+        url.searchParams.append("createdBy", user.uid);
         if (cursor) {
           url.searchParams.append("cursor", cursor);
         }
-
-        const response = await fetch(url.toString());
-        if (!response.ok) {
-          throw new Error("Failed to fetch buzzes");
+        if (sortBy) {
+          url.searchParams.append("sortBy", sortBy);
         }
-        const data = await response.json();
-        console.log("Fetched buzzes:", data);
-        return data;
+        if (!showAll) {
+          url.searchParams.append("onlyActive", "true");
+        }
+
+        return await fetchApi(url.toString());
       } catch (err) {
-        console.error("Error in fetchBuzzes:", err);
         throw err;
       }
     },
-    [address]
-  );
-
-  const loadMore = useCallback(async () => {
-    if (!hasMore || isLoadingMore || !isConnected) return;
-
-    setIsLoadingMore(true);
-    try {
-      const data = await fetchBuzzes(nextCursor);
-      if (data) {
-        setBuzzes((prev) => [...prev, ...data.items]);
-        setHasMore(data.hasMore);
-        setNextCursor(data.nextCursor);
-      }
-    } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to fetch more buzzes"
-      );
-      console.error("Error fetching more buzzes:", err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  }, [hasMore, isLoadingMore, isConnected, nextCursor, fetchBuzzes]);
-
-  const lastBuzzElementRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (isLoadingMore) return;
-
-      if (observer.current) {
-        observer.current.disconnect();
-      }
-
-      if (node) {
-        observer.current = new IntersectionObserver((entries) => {
-          if (entries[0].isIntersecting && hasMore) {
-            loadMore();
-          }
-        });
-        observer.current.observe(node);
-      }
-    },
-    [isLoadingMore, hasMore, loadMore]
+    [user, sortBy, showAll]
   );
 
   useEffect(() => {
-    if (!isConnected) {
-      router.push("/");
-      return;
-    }
+    if (loading) return;
 
     const initialFetch = async () => {
-      setIsLoading(true);
       try {
-        const data = await fetchBuzzes();
+        setIsLoading(true);
+        setError(null);
+
+        if (!user) {
+          router.push("/buzz");
+          return;
+        }
+
+        const data = await fetchUserBuzzes();
         if (data) {
           setBuzzes(data.items);
-          setHasMore(data.hasMore);
           setNextCursor(data.nextCursor);
+          setHasMore(data.hasMore);
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to fetch buzzes");
         console.error("Error fetching buzzes:", err);
+        setError(err instanceof Error ? err.message : "Failed to fetch buzzes");
       } finally {
         setIsLoading(false);
       }
     };
 
     initialFetch();
-  }, [isConnected, router, fetchBuzzes]);
+  }, [user, loading, router, fetchUserBuzzes]);
 
-  useEffect(() => {
-    return () => {
-      if (observer.current) {
-        observer.current.disconnect();
+  const loadMore = async () => {
+    if (!nextCursor || !hasMore || !user) return;
+
+    try {
+      const data = await fetchUserBuzzes(nextCursor);
+      if (data) {
+        setBuzzes((prev) => [...prev, ...data.items]);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
       }
-    };
-  }, []);
+    } catch (err) {
+      console.error("Error fetching more buzzes:", err);
+      setError(
+        err instanceof Error ? err.message : "Failed to fetch more buzzes"
+      );
+    }
+  };
 
+  // Sort and filter buzzes
   const sortedBuzzes = [...buzzes]
-    .filter((buzz) => (onlyActive ? buzz.isActive : true))
+    .filter((buzz) => {
+      if (showAll) return true;
+      const deadlineTime = new Date(buzz.deadline).getTime();
+      const currentTime = Date.now();
+      return buzz.isActive && currentTime < deadlineTime;
+    })
     .sort((a, b) => {
       switch (sortBy) {
+        case "price":
+          return Number(b.tokenAmount) - Number(a.tokenAmount);
         case "engagement":
-          return b.replyCount - a.replyCount;
+          return b._count.replies - a._count.replies;
         case "newest":
         default:
           return (
@@ -160,27 +158,16 @@ export default function MyBuzzesPage() {
       }
     });
 
-  const userOrdersQuery = useQuery({
-    queryKey: ["payment-user-orders", address],
-    queryFn: async () => {
-      const resJson = await fetch(
-        `${paymentServiceUrl}/user-orders?payerId=${address}&applicationId=${paymentServiceApplicationId}`
-      ).then((res) => res.json());
-
-      return resJson?.data?.orders || [];
-    },
-  });
-
-  if (!isConnected) {
+  if (!user) {
     return null;
   }
 
   if (isLoading) {
     return (
       <div className="py-8">
-        <div className="animate-pulse space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="bg-white rounded-2xl h-64" />
+            <div key={i} className="bg-white rounded-xl h-64 animate-pulse" />
           ))}
         </div>
       </div>
@@ -204,122 +191,77 @@ export default function MyBuzzesPage() {
           <select
             id="sortBy"
             value={sortBy}
-            onChange={(e) =>
-              setSortBy(e.target.value as "newest" | "engagement")
-            }
-            className="text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 px-4"
+            onChange={(e) => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("sortBy", e.target.value);
+              router.push(url.toString());
+            }}
+            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
           >
             <option value="newest">✨ Newest First</option>
-            <option value="engagement">🔥 Highest Engagement</option>
+            <option value="price">💰 Highest Price</option>
+            <option value="engagement">🔥 Most Engagement</option>
           </select>
 
-          <div
-            className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto cursor-pointer"
-            onClick={() => setPaymentModalOpen(true)}
-          >
-            Deposit
-          </div>
-
-          <div className="flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-full sm:w-auto">
-            <span className="text-base sm:text-lg text-gray-700 font-medium">
-              Only active buzzes
-            </span>
-            <button
-              role="switch"
-              id="onlyActive"
-              aria-checked={onlyActive}
-              onClick={() => setOnlyActive(!onlyActive)}
-              className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                onlyActive ? "bg-indigo-600" : "bg-gray-200"
-              }`}
-            >
-              <span
-                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform shadow-sm ${
-                  onlyActive ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
+          <ActiveBuzzesToggle
+            isActive={!showAll}
+            onToggle={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("showAll", (!showAll).toString());
+              router.push(url.toString());
+            }}
+          />
         </div>
 
         <div className="space-y-6">
           {sortedBuzzes.length > 0 ? (
-            <>
-              {sortedBuzzes.map((buzz, index) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedBuzzes.map((buzz) => (
                 <div
                   key={buzz.id}
-                  ref={
-                    index === sortedBuzzes.length - 1
-                      ? lastBuzzElementRef
-                      : undefined
-                  }
+                  className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 overflow-hidden"
                 >
                   <BuzzCard
                     id={buzz.id}
+                    tokenAmount={buzz.tokenAmount}
+                    paymentToken={buzz.paymentToken}
+                    customTokenAddress={buzz.customTokenAddress}
                     tweetLink={buzz.tweetLink}
                     instructions={buzz.instructions}
-                    context={buzz.context}
-                    credit={buzz.credit}
-                    replyCount={buzz.replyCount}
-                    totalReplies={buzz.totalReplies}
+                    replyCount={buzz._count.replies}
                     createdBy={buzz.createdBy}
                     deadline={buzz.deadline}
-                    createdAt={new Date(buzz.createdAt)}
+                    createdAt={buzz.createdAt}
+                    showViewReplies={true}
                     isActive={buzz.isActive}
+                    username={buzz.user.username}
                   />
                 </div>
               ))}
-
-              {isLoadingMore && (
-                <div className="animate-pulse space-y-6">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="bg-white rounded-2xl h-64" />
-                  ))}
-                </div>
-              )}
-            </>
+            </div>
           ) : (
-            <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="bg-white rounded-2xl shadow-xl p-9 text-center">
               <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-lg font-medium text-gray-900">
                 No buzzes yet
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                Create your first buzz to start getting AI-powered engagement!
+                Create your first buzz to start earning rewards! 🚀
               </p>
-              <div className="mt-6">
-                <Link
-                  href="/buzz/new"
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
-                >
-                  <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-                  Create Your First Buzz
-                </Link>
-              </div>
+            </div>
+          )}
+          {hasMore && (
+            <div className="flex justify-center mt-6">
+              <button
+                onClick={loadMore}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-xl shadow-sm text-white bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
+              >
+                Load More
+              </button>
             </div>
           )}
         </div>
       </div>
-
-      <div className="mt-5 bg-white rounded-2xl shadow-xl p-12 text-center">
-        My orders
-        {userOrdersQuery.data?.map((order: any) => (
-          <div key={order.id} className="flex items-center">
-            <div className="flex-1">id: {order.id}</div>
-            <div className="flex-1">
-              amount: {Number(order.transfer_amount_on_chain) / Math.pow(10, 6)}
-            </div>
-            <div className="flex-1">status: {order.status}</div>
-          </div>
-        ))}
-      </div>
-
-      <PaymentModal
-        isOpen={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        onSubmit={async (amount: number) => {}}
-        buzzAmount={2}
-      />
     </div>
   );
 }

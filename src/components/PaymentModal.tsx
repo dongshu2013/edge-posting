@@ -1,61 +1,62 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useQuery } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
 import { paymentServiceApplicationId, paymentServiceUrl } from "@/config";
+import { useAuth } from "@/hooks/useAuth";
+import { sleep } from "openai/core.mjs";
 
 interface PaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (amount: number) => Promise<void>;
-  buzzAmount?: number;
+  onSuccess: () => void;
 }
 
 export const PaymentModal = ({
   isOpen,
   onClose,
-  onSubmit,
-  buzzAmount = 0,
+  onSuccess,
 }: PaymentModalProps) => {
-  const [amount, setAmount] = useState<number>(buzzAmount);
+  const { user } = useAuth();
+  const [amount, setAmount] = useState<number>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const ongoingOrderQuery = useQuery({
+    queryKey: ["payment-user-ongoing-order", user?.uid],
+    staleTime: Infinity, // Prevent automatic refetching
+    refetchOnWindowFocus: false, // Prevent refetching when window regains focus
+    enabled: !!user?.uid && !!paymentServiceUrl,
+    queryFn: async () => {
+      if (!user?.uid || !paymentServiceUrl) {
+        return null;
+      }
 
-  const { address } = useAccount();
+      try {
+        const resJson = await fetch(
+          `${paymentServiceUrl}/user-ongoing-order?payerId=${user.uid}&applicationId=${paymentServiceApplicationId}`
+        ).then((res) => res.json());
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || amount <= 0) {
-      setError("Please enter a valid amount");
+        return resJson?.data?.order;
+      } catch (error) {
+        console.error("Error fetching ongoing order:", error);
+        return null;
+      }
+    },
+  });
+
+  useEffect(() => {
+    ongoingOrderQuery.refetch();
+  }, [isOpen]);
+
+  const createOrder = async () => {
+    if (!amount) {
+      setError("Please enter an amount");
       return;
     }
 
     setIsSubmitting(true);
-    setError(null);
-
-    try {
-      await onSubmit(amount);
-      onClose();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Payment failed");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const ongoingOrderQuery = useQuery({
-    queryKey: ["payment-user-ongoing-order", address],
-    queryFn: async () => {
-      const resJson = await fetch(
-        `${paymentServiceUrl}/user-ongoing-order?payerId=${address}&applicationId=${paymentServiceApplicationId}`
-      ).then((res) => res.json());
-
-      return resJson?.data?.order;
-    },
-  });
-
-  const createOrder = async () => {
     const resJson = await fetch(`${paymentServiceUrl}/create-order`, {
       method: "POST",
       headers: {
@@ -63,26 +64,65 @@ export const PaymentModal = ({
       },
       body: JSON.stringify({
         chainId: 84532,
-        amount: buzzAmount,
-        payerId: address,
+        amount: amount,
+        payerId: user?.uid,
         applicationId: paymentServiceApplicationId,
       }),
     }).then((res) => res.json());
 
     ongoingOrderQuery.refetch();
+    setError(null);
+    setIsSubmitting(false);
   };
 
   const checkOrder = async (orderId: string) => {
-    const resJson = await fetch(
-      `${paymentServiceUrl}/order-detail?orderId=${orderId}`
-    ).then((res) => res.json());
+    setIsChecking(true);
+    let retryTimes = 5;
+    while (true) {
+      const resJson = await fetch(
+        `${paymentServiceUrl}/order-detail?orderId=${orderId}`
+      ).then((res) => res.json());
 
-    console.log(resJson);
+      console.log(resJson);
 
-    if (resJson?.data?.order?.status === 1) {
-      onClose();
-    } else {
-      setError("Order is not paid");
+      if (resJson?.data?.order?.status === 1) {
+        setError(null);
+        onSuccess();
+        break;
+      } else if (retryTimes <= 0) {
+        setError("Order is not paid");
+        break;
+      }
+
+      retryTimes--;
+      await sleep(6000);
+    }
+    setIsChecking(false);
+  };
+
+  const cancelOrder = async (orderId: string) => {
+    try {
+      setIsCancelling(true);
+      const resJson = await fetch(`${paymentServiceUrl}/cancel-order`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+        }),
+      }).then((res) => res.json());
+
+      console.log(resJson);
+      if (resJson.status === 0) {
+        onClose();
+      } else {
+        setError(resJson.message || "Failed to cancel order");
+      }
+    } catch (err) {
+      setError("Failed to cancel order");
+    } finally {
+      setIsCancelling(false);
     }
   };
 
@@ -148,7 +188,6 @@ export const PaymentModal = ({
                           </label>
                           <div className="mt-1 relative rounded-xl shadow-sm">
                             <input
-                              disabled
                               type="number"
                               name="amount"
                               id="amount"
@@ -160,7 +199,6 @@ export const PaymentModal = ({
                               }
                               min="0.01"
                               step="0.01"
-                              required
                             />
                             <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-r-xl">
                               <span className="text-sm font-medium">BUZZ</span>
@@ -181,34 +219,71 @@ export const PaymentModal = ({
                               before paying again.
                             </p>
 
-                            <div className="mt-5 sm:mt-4">
-                              Transfer Address:
+                            <div className="mt-5 sm:mt-2">
+                              <span className="font-bold opacity-60">
+                                ChainId:
+                              </span>
+                              <br />
+                              {ongoingOrderQuery.data.chain_id}
+                            </div>
+
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">
+                                Token Address:
+                              </span>
+                              <br />
+                              {ongoingOrderQuery.data.token_address}
+                            </div>
+
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">
+                                Transfer To:
+                              </span>
                               <br />
                               {ongoingOrderQuery.data.transfer_address}
                             </div>
 
-                            <div className="mt-5 sm:mt-4">
-                              Transfer Amount:
+                            <div className="mt-3 sm:mt-2">
+                              <span className="font-bold opacity-60">
+                                Transfer Amount:
+                              </span>
                               <br />
                               {Number(
                                 ongoingOrderQuery.data.transfer_amount_on_chain
                               ) / Math.pow(10, 6)}
                             </div>
 
-                            <button
-                              disabled={isSubmitting}
-                              className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-                              onClick={() => {
-                                checkOrder(ongoingOrderQuery.data.id);
-                              }}
-                            >
-                              I have paid
-                            </button>
+                            <div className="mt-5 sm:mt-4">
+                              <button
+                                disabled={
+                                  isSubmitting || isCancelling || isChecking
+                                }
+                                className="mt-3 inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
+                                onClick={() => {
+                                  checkOrder(ongoingOrderQuery.data.id);
+                                }}
+                              >
+                                {isChecking ? "Checking..." : "I have paid"}
+                              </button>
+
+                              <button
+                                type="button"
+                                className="mt-3 ml-3 inline-flex justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:w-auto"
+                                onClick={() => {
+                                  cancelOrder(ongoingOrderQuery.data.id);
+                                }}
+                                disabled={isCancelling || isSubmitting}
+                              >
+                                {isCancelling
+                                  ? "Cancelling..."
+                                  : "Cancel Order"}
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                             <button
-                              disabled={isSubmitting}
+                              disabled={isSubmitting || !amount}
                               className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                               onClick={() => {
                                 createOrder();

@@ -165,8 +165,20 @@ export const UserBalanceCard = () => {
         expirationBlock,
         signature,
       } = request;
-
       const userIdInt = await getUserIdInt(userInfo?.uid);
+
+      // Log the parameters for debugging
+      console.log("Withdraw tx parameters:", {
+        tokenAddresses,
+        tokenAmountsOnChain: tokenAmountsOnChain.map((amount) =>
+          amount.toString()
+        ),
+        userIdInt: userIdInt.toString(),
+        recipient,
+        expirationBlock,
+        signatureLength: signature.length,
+        signature
+      });
 
       const tx = await writeContractAsync({
         address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
@@ -191,7 +203,9 @@ export const UserBalanceCard = () => {
       } else {
         toast.error("Withdrawal failed");
       }
-    } catch (err) {}
+    } catch (err) {
+      console.log("err", err);
+    }
   };
 
   const selectedCount = selectedTokenIds.length;

@@ -6,6 +6,7 @@ import { getTokenMetadata } from "@/utils/evmUtils";
 import { authTwitter } from "@/utils/xUtils";
 import { NextResponse } from "next/server";
 import { parseEther, zeroAddress } from "viem";
+import * as math from "mathjs";
 
 export interface CreateBuzzRequest {
   tweetLink: string;
@@ -100,7 +101,16 @@ export async function POST(request: Request) {
       );
     }
 
-    //
+    // Get token metadata
+    const tokenMetadata = await getTokenMetadata(
+      customTokenAddress || zeroAddress
+    );
+    if (!tokenMetadata) {
+      return NextResponse.json(
+        { error: "Token metadata not found" },
+        { status: 400 }
+      );
+    }
 
     // Check transaction
     if (paymentToken === "BNB") {
@@ -194,24 +204,18 @@ export async function POST(request: Request) {
 
       // Verify amount - need to convert expected amount to BigInt for comparison
       // Note: You may need to adjust the decimal places based on the token's decimals
-      const expectedAmount = BigInt(parseEther(tokenAmount.toString()));
+      const expectedAmount = BigInt(
+        math
+          .bignumber(tokenAmount)
+          .times(math.bignumber(10).pow(tokenMetadata.decimals))
+          .toString()
+      );
       if (tokenTransferAmount < expectedAmount) {
         return NextResponse.json(
           { error: "Token transfer amount is less than required" },
           { status: 400 }
         );
       }
-    }
-
-    // Get token metadata
-    const tokenMetadata = await getTokenMetadata(
-      customTokenAddress || zeroAddress
-    );
-    if (!tokenMetadata) {
-      return NextResponse.json(
-        { error: "Token metadata not found" },
-        { status: 400 }
-      );
     }
 
     // 计算所需总金额

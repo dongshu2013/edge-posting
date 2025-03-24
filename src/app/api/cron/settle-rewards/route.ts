@@ -100,13 +100,11 @@ export async function POST(request: Request) {
               // const amountOnChain =
               //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
 
-              const amountOnChain = BigInt(
-                bignumber(totalTokenAmountOnChain)
-                  .mul(userWeights[index])
-                  .div(totalWeight)
-                  .floor()
-                  .toString()
-              );
+              const amountOnChain = bignumber(totalTokenAmountOnChain)
+                .mul(userWeights[index])
+                .div(totalWeight)
+                .floor()
+                .toString();
               // Use upsert to either create a new record or update an existing one
               const updatedBalance = await tx.userBalance.upsert({
                 where: {

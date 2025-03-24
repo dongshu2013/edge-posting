@@ -140,10 +140,8 @@ export async function getWithdrawSignature(
   const currentBlock = await publicClient.getBlock();
   const expirationBlock = currentBlock.number + BigInt(1000000);
 
-  const userIdInt = await getUserIdInt(userId);
   // const message = `Withdrawal request for ${nonceOnChain}`;
   const message = solidityKeccak256Encode(
-    userIdInt,
     tokenAddresses,
     tokenAmountsOnChain,
     recipient,
@@ -167,7 +165,6 @@ export async function getWithdrawSignature(
 }
 
 function solidityKeccak256Encode(
-  userIdInt: bigint,
   tokens: `0x${string}`[],
   amounts: bigint[],
   recipient: `0x${string}`,
@@ -177,14 +174,13 @@ function solidityKeccak256Encode(
   // First encode the parameters according to their Solidity types
   const encoded = encodeAbiParameters(
     [
-      { name: "tokens", type: "address[]" },
-      { name: "amounts", type: "uint256[]" },
-      { name: "referenceId", type: "uint256" },
-      { name: "recipient", type: "address" },
-      { name: "nonce", type: "uint256" },
-      { name: "expirationBlock", type: "uint256" },
+      { type: "address[]" },
+      { type: "uint256[]" },
+      { type: "address" },
+      { type: "uint256" },
+      { type: "uint256" },
     ],
-    [tokens, amounts, userIdInt, recipient, nonce, expirationBlock]
+    [tokens, amounts, recipient, nonce, expirationBlock]
   );
 
   // Then hash the encoded data

@@ -18,6 +18,7 @@ import {
   useWalletClient,
   useWriteContract,
 } from "wagmi";
+import { contractAbi } from "@/config/contractAbi";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -59,7 +60,7 @@ export default function NewBuzzPage() {
   };
 
   const handleInAppPayment = async () => {
-    if (!isConnected) {
+    if (!isConnected || !address) {
       openConnectModal?.();
       return;
     }
@@ -74,14 +75,14 @@ export default function NewBuzzPage() {
     }
 
     try {
+      const bnbFeeAmount = parseEther(BNB_COMMISSION_FEE.toString());
       const destinationAddress = process.env
         .NEXT_PUBLIC_BSC_CA as `0x${string}`;
       let txHash = "";
       if (formData.paymentToken === "BNB") {
         // Convert BNB amount to wei
         const amount =
-          parseEther(formData.totalAmount.toString()) +
-          parseEther(BNB_COMMISSION_FEE.toString());
+          parseEther(formData.totalAmount.toString()) + bnbFeeAmount;
 
         // Send transaction using viem/wagmi
         console.log("start sendTransactionAsync");
@@ -115,13 +116,54 @@ export default function NewBuzzPage() {
           .bignumber(formData.totalAmount)
           .times(math.bignumber(10).pow(metadata.decimals))
           .toString();
+
+        // Check token allowance
+        const allowance = await publicClient.readContract({
+          address: formData.customTokenAddress as `0x${string}`,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [address, destinationAddress],
+        });
+
+        if (allowance < BigInt(chainAmount)) {
+          const approveHash = await writeContractAsync({
+            abi: erc20Abi,
+            address: formData.customTokenAddress as `0x${string}`,
+            functionName: "approve",
+            args: [destinationAddress, BigInt(chainAmount)],
+          });
+          const approveReceipt = await publicClient.waitForTransactionReceipt({
+            hash: approveHash,
+          });
+          if (approveReceipt.status !== "success") {
+            throw new Error("Token allowance approval failed");
+          }
+        }
+
         // Create bep20 transfer
         const hash = await writeContractAsync({
-          abi: erc20Abi,
-          address: formData.customTokenAddress as `0x${string}`,
-          functionName: "transfer",
-          args: [destinationAddress, BigInt(chainAmount)],
+          abi: contractAbi,
+          address: destinationAddress,
+          functionName: "deposit",
+          args: [
+            formData.customTokenAddress as `0x${string}`,
+            BigInt(chainAmount),
+          ],
+          value: bnbFeeAmount,
         });
+
+        // Wait for transaction receipt
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: hash,
+        });
+
+        console.log("receipt", receipt);
+
+        if (receipt.status === "success") {
+          txHash = hash;
+        } else {
+          throw new Error("Transaction failed");
+        }
       }
 
       if (txHash) {
@@ -140,8 +182,8 @@ export default function NewBuzzPage() {
       return;
     }
     const deadline = new Date();
-    deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    // deadline.setMinutes(deadline.getMinutes() + 2);
+    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       const payload: CreateBuzzRequest = {

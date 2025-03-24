@@ -11,7 +11,6 @@ import {
   keccak256,
   Hex,
 } from "viem";
-import { calculateCRC32 } from "./_crc32c";
 
 const client = new kms.KeyManagementServiceClient();
 

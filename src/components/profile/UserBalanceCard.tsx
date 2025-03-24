@@ -13,6 +13,7 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { formatEther } from "viem";
 import { useWriteContract } from "wagmi";
+import TransactionLoadingModal from "../TransactionLoadingModal";
 
 interface UserBalanceWithSelected extends UserBalance {
   selected: boolean;
@@ -24,6 +25,14 @@ export const UserBalanceCard = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
+
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<
+    "pending" | "success" | "error"
+  >("pending");
+  const [transactionTitle, setTransactionTitle] = useState("");
+  const [transactionDescription, setTransactionDescription] = useState("");
+  const [transactionHash, setTransactionHash] = useState("");
 
   const { writeContractAsync } = useWriteContract();
 
@@ -159,6 +168,12 @@ export const UserBalanceCard = () => {
       return;
     }
     try {
+      setIsTransactionLoading(true);
+      setTransactionStatus("pending");
+      setTransactionTitle("Processing Transaction");
+      setTransactionDescription(
+        "Please wait while your transaction is being processed."
+      );
       const {
         tokenAddresses,
         tokenAmountsOnChain,
@@ -181,60 +196,40 @@ export const UserBalanceCard = () => {
         signature,
       });
 
-      try {
-        const tx = await writeContractAsync({
-          address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
-          abi: contractAbi,
-          functionName: "withdraw",
-          args: [
-            tokenAddresses,
-            tokenAmountsOnChain.map((amount: string) => BigInt(amount)),
-            userIdInt,
-            recipient,
-            BigInt(expirationBlock),
-            signature,
-          ],
-        });
+      const tx = await writeContractAsync({
+        address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
+        abi: contractAbi,
+        functionName: "withdraw",
+        args: [
+          tokenAddresses,
+          tokenAmountsOnChain.map((amount: string) => BigInt(amount)),
+          userIdInt,
+          recipient,
+          BigInt(expirationBlock),
+          signature,
+        ],
+      });
 
-        const publicClient = getPublicClient(
-          Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+      const publicClient = getPublicClient(
+        Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+      );
+      const receipt = await fetchTransactionReceipt(publicClient, tx);
+      if (receipt?.status === "success") {
+        setTransactionStatus("success");
+        setTransactionTitle("Transaction Successful");
+        setTransactionDescription(
+          "Your withdrawal has been processed successfully."
         );
-        const receipt = await fetchTransactionReceipt(publicClient, tx);
-        if (receipt?.status === "success") {
-          toast.success("Withdrawal successful");
-        } else {
-          toast.error("Withdrawal failed: Transaction reverted");
-        }
-      } catch (txError: any) {
-        console.error("Transaction error:", txError);
-        
-        // Extract detailed error message if available
-        let errorMessage = "Withdrawal failed";
-        
-        if (txError.message) {
-          errorMessage += `: ${txError.message}`;
-        }
-        
-        // Check for rejection reason in the error
-        if (txError.cause?.reason) {
-          errorMessage += ` - ${txError.cause.reason}`;
-        }
-        
-        // Check for data in the error that might contain the revert reason
-        if (txError.data) {
-          errorMessage += ` - ${JSON.stringify(txError.data)}`;
-        }
-        
-        // Check for Solidity custom errors in the details
-        if (txError.details) {
-          errorMessage += ` - ${txError.details}`;
-        }
-
-        toast.error(errorMessage);
+        setTransactionHash(tx);
+      } else {
+        throw new Error("Withdrawal failed: Transaction reverted");
       }
     } catch (err: any) {
-      console.error("Outer error:", err);
-      toast.error(`Withdrawal preparation failed: ${err.message || "Unknown error"}`);
+      setTransactionStatus("error");
+      setTransactionTitle("Transaction Failed");
+      setTransactionDescription(
+        err instanceof Error ? err.message : "Withdrawal preparation failed"
+      );
     }
   };
 
@@ -322,6 +317,14 @@ export const UserBalanceCard = () => {
             }`
           : "Select Tokens to Withdraw"}
       </button>
+
+      <TransactionLoadingModal
+        isOpen={isTransactionLoading}
+        onClose={() => setIsTransactionLoading(false)}
+        status={transactionStatus}
+        title={transactionTitle}
+        description={transactionDescription}
+      />
     </div>
   );
 };

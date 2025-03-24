@@ -44,6 +44,9 @@ export async function POST(request: Request) {
     const results = await Promise.all(
       expiredBuzzes.map(async (buzz: BuzzWithReplies) => {
         const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
+        if (replyUserIds.length === 0) {
+          return;
+        }
         const dbUsers = await prisma.user.findMany({
           where: {
             uid: { in: replyUserIds },

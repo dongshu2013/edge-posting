@@ -19,6 +19,7 @@ import {
   useWriteContract,
 } from "wagmi";
 import { contractAbi } from "@/config/contractAbi";
+import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -38,6 +39,13 @@ export default function NewBuzzPage() {
     paymentMethod: "in-app",
     transactionHash: "",
   });
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<
+    "pending" | "success" | "error"
+  >("pending");
+  const [transactionTitle, setTransactionTitle] = useState("");
+  const [transactionDescription, setTransactionDescription] = useState("");
+  const [transactionHash, setTransactionHash] = useState("");
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -75,6 +83,12 @@ export default function NewBuzzPage() {
     }
 
     try {
+      setIsTransactionLoading(true);
+      setTransactionStatus("pending");
+      setTransactionTitle("Processing Transaction");
+      setTransactionDescription(
+        "Please wait while your transaction is being processed."
+      );
       const bnbFeeAmount = parseEther(BNB_COMMISSION_FEE.toString());
       const destinationAddress = process.env
         .NEXT_PUBLIC_BSC_CA as `0x${string}`;
@@ -167,11 +181,21 @@ export default function NewBuzzPage() {
       }
 
       if (txHash) {
+        setTransactionHash(txHash);
+        setTransactionStatus("success");
+        setTransactionTitle("Transaction Successful");
+        setTransactionDescription("Your transaction has been processed successfully.");
         await createBuzzCampaign(txHash);
       }
     } catch (error) {
       console.error("Payment processing error:", error);
-      alert(
+      // alert(
+      //   error instanceof Error ? error.message : "Payment processing failed"
+      // );
+
+      setTransactionStatus("error");
+      setTransactionTitle("Transaction Failed");
+      setTransactionDescription(
         error instanceof Error ? error.message : "Payment processing failed"
       );
     }
@@ -182,8 +206,8 @@ export default function NewBuzzPage() {
       return;
     }
     const deadline = new Date();
-    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    deadline.setMinutes(deadline.getMinutes() + 5);
+    deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    // deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       const payload: CreateBuzzRequest = {
@@ -479,6 +503,15 @@ export default function NewBuzzPage() {
           </div>
         </div>
       </div>
+
+      <TransactionLoadingModal
+        isOpen={isTransactionLoading}
+        onClose={() => setIsTransactionLoading(false)}
+        status={transactionStatus}
+        title={transactionTitle}
+        description={transactionDescription}
+        transactionHash={transactionHash}
+      />
     </div>
   );
 }

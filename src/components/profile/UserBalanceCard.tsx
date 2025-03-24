@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { UserWithdrawRequest, WithdrawSignatureResult } from "@/types/user";
+import { getUserIdInt } from "@/utils/commonUtils";
 import { fetchTransactionReceipt } from "@/utils/evmUtils";
 import { UserBalance } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
@@ -152,6 +153,10 @@ export const UserBalanceCard = () => {
   };
 
   const sendWithdrawTx = async (request: WithdrawSignatureResult) => {
+    if (!userInfo?.uid) {
+      toast.error("Please login first");
+      return;
+    }
     try {
       const {
         tokenAddresses,
@@ -161,6 +166,8 @@ export const UserBalanceCard = () => {
         signature,
       } = request;
 
+      const userIdInt = await getUserIdInt(userInfo?.uid);
+
       const tx = await writeContractAsync({
         address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
         abi: contractAbi,
@@ -168,6 +175,7 @@ export const UserBalanceCard = () => {
         args: [
           tokenAddresses,
           tokenAmountsOnChain.map((amount) => BigInt(amount)),
+          userIdInt,
           recipient,
           BigInt(expirationBlock),
           signature,

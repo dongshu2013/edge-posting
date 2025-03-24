@@ -107,7 +107,7 @@ const calculateRecoveryParam = async (
   throw new Error("Failed to calculate recovery param");
 };
 
-export const toEthSignedMessageHash = (messageHex: Hex) => {
+export const toEthSignedMessageHash = async (messageHex: Hex) => {
   return keccak256(
     encodePacked(["string", "bytes32"],
       ["\x19Ethereum Signed Message:\n32", messageHex]) as Hex);
@@ -121,7 +121,7 @@ export const signMessage = async (nameType: string, name: string, message: strin
     )
   );
 
-  const messageHash = toEthSignedMessageHash(toSign);
+  const messageHash = await toEthSignedMessageHash(toSign);
   const digestBuffer = Buffer.from(messageHash.slice(2));
   const address = KEY_CONFIG.publicAddress!;
 

@@ -131,6 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await getWithdrawSignature(
+      user.uid,
       dbUser.bindedWallet as `0x${string}`,
       createdWithdrawRequest.nonceOnChain,
       createdWithdrawRequest.tokenAddresses,

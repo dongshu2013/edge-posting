@@ -151,7 +151,7 @@ export async function getWithdrawSignature(
     expirationBlock
   );
 
-  const signature = toEthSignedMessageHash(message);
+  const signature = await toEthSignedMessageHash(message);
 
   // const signature = await signMessage({
   //   message: message,

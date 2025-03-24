@@ -1,3 +1,5 @@
+"use server";
+
 import * as kms from "@google-cloud/kms";
 import * as asn1 from "asn1.js";
 import * as crc32c from "fast-crc32c";

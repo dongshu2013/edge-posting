@@ -2,7 +2,6 @@ import {
   PublicClient,
   checksumAddress,
   encodeAbiParameters,
-  hashMessage,
   zeroAddress,
   keccak256,
   erc20Abi,
@@ -10,13 +9,12 @@ import {
 import { createSiweMessage, generateSiweNonce } from "viem/siwe";
 import { Config } from "wagmi";
 import { SignMessageMutateAsync, WriteContractMutateAsync } from "wagmi/query";
-import { getSha256Hash, getUserIdInt, sleep } from "./commonUtils";
-import { signMessage } from "viem/accounts";
+import { getUserIdInt, sleep } from "./commonUtils";
 import { getPublicClient } from "@/lib/ethereum";
 import { WithdrawSignatureResult } from "@/types/user";
 import { ITokenMetadata } from "@/types/common";
 import { contractAbi } from "@/config/contractAbi";
-import { toEthSignedMessageHash } from "@/lib/google-kms";
+import { toEthSignedMessageHash } from "@/lib/server/kms";
 
 export function getSiweMessage(address: `0x${string}`, chainId?: number) {
   var current = new Date();

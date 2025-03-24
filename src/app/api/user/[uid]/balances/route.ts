@@ -28,6 +28,7 @@ export async function GET(
         tokenAddress: true,
         tokenName: true,
         tokenAmountOnChain: true,
+        tokenDecimals: true,
       },
     });
 

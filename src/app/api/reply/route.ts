@@ -104,7 +104,7 @@ export async function POST(request: Request) {
       const replyTweetData = await twitterResponse.json();
       console.log(replyTweetData);
       const replyText = replyTweetData.data.text as string;
-      if (!replyText.endsWith(text.trim())) {
+      if (!replyText.trim().includes(text.trim())) {
         return NextResponse.json(
           { error: "Reply text does not match" },
           { status: 400 }

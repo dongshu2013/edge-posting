@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Buzz } from "@prisma/client";
 import { getPublicClient } from "@/lib/ethereum";
 import { formatEther, parseEther } from "viem";
-import { bignumber } from "mathjs";
+import * as math from "mathjs";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
@@ -44,6 +44,9 @@ export async function POST(request: Request) {
     const results = await Promise.all(
       expiredBuzzes.map(async (buzz: BuzzWithReplies) => {
         const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
+        if (replyUserIds.length === 0) {
+          return;
+        }
         const dbUsers = await prisma.user.findMany({
           where: {
             uid: { in: replyUserIds },
@@ -92,7 +95,9 @@ export async function POST(request: Request) {
         );
 
         console.log("totalWeight", totalWeight);
-        const totalTokenAmountOnChain = parseEther(buzz.tokenAmount.toString());
+        const totalTokenAmountOnChain = math
+          .bignumber(buzz.tokenAmount)
+          .times(math.bignumber(10).pow(buzz.tokenDecimals));
 
         const addUserBalancesResult = await prisma.$transaction(
           async (tx: any) => {
@@ -100,13 +105,11 @@ export async function POST(request: Request) {
               // const amountOnChain =
               //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
 
-              const amountOnChain = BigInt(
-                bignumber(totalTokenAmountOnChain)
-                  .mul(userWeights[index])
-                  .div(totalWeight)
-                  .floor()
-                  .toString()
-              );
+              const amountOnChain = totalTokenAmountOnChain
+                .mul(math.bignumber(userWeights[index]))
+                .div(math.bignumber(totalWeight))
+                .floor()
+                .toString();
               // Use upsert to either create a new record or update an existing one
               const updatedBalance = await tx.userBalance.upsert({
                 where: {

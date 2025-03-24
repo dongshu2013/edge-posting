@@ -2,14 +2,20 @@
 
 import * as kms from "@google-cloud/kms";
 import * as asn1 from "asn1.js";
-import * as crc32c from "fast-crc32c";
 import * as BN from "bn.js";
-import { recoverAddress, encodePacked, encodeAbiParameters, keccak256, Hex } from 'viem';
+import {
+  recoverAddress,
+  encodePacked,
+  encodeAbiParameters,
+  keccak256,
+  Hex,
+} from "viem";
 
-const client = new kms.KeyManagementServiceClient();
+const credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON!);
+const client = new kms.KeyManagementServiceClient({ credentials });
 
 const KEY_CONFIG = {
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  projectId: process.env.GKMS_PROJECT_ID!,
   locationId: "global",
   keyRingId: "buzzz",
   keyId: process.env.GKMS_KEY_ID!,
@@ -34,11 +40,15 @@ const EcdsaSigAsnParse: {
 });
 
 const shouldRetrySigning = (r: BN, s: BN, retry: number) => {
-  return (r.toString("hex").length % 2 == 1 || s.toString("hex").length % 2 == 1) && (retry < 3);
+  return (
+    (r.toString("hex").length % 2 == 1 || s.toString("hex").length % 2 == 1) &&
+    retry < 3
+  );
 };
 
 const getKmsSignature = async (digestBuffer: Buffer) => {
-  const digestCrc32c = crc32c.calculate(digestBuffer);
+  console.log("digestBuffer", digestBuffer.length);
+  // const digestCrc32c = calculateCRC32(digestBuffer);
   const versionName = await getVersionName();
 
   const [signResponse] = await client.asymmetricSign({
@@ -46,20 +56,22 @@ const getKmsSignature = async (digestBuffer: Buffer) => {
     digest: {
       sha256: digestBuffer,
     },
-    digestCrc32c: {
-      value: digestCrc32c,
-    },
+    // digestCrc32c: {
+    // value: digestCrc32c,
+    // },
   });
 
   if (signResponse.name !== versionName) {
     throw new Error("AsymmetricSign: request corrupted in-transit");
   }
-  if (!signResponse.verifiedDigestCrc32c) {
-    throw new Error("AsymmetricSign: request corrupted in-transit");
-  }
-  if (!signResponse.signature || !signResponse.signatureCrc32c ||
-    crc32c.calculate(Buffer.from(signResponse.signature as Uint8Array)) !==
-    Number(signResponse.signatureCrc32c.value)
+  // if (!signResponse.verifiedDigestCrc32c) {
+  //   throw new Error("AsymmetricSign: request corrupted in-transit");
+  // }
+  if (
+    !signResponse.signature
+    // !signResponse.signatureCrc32c ||
+    // calculateCRC32(Buffer.from(signResponse.signature as Uint8Array)) !==
+    //   Number(signResponse.signatureCrc32c.value)
   ) {
     throw new Error("AsymmetricSign: response corrupted in-transit");
   }
@@ -94,7 +106,7 @@ const calculateRecoveryParam = async (
         r: `0x${r.toString("hex")}` as Hex,
         s: `0x${s.toString("hex")}` as Hex,
         v: BigInt(v + 27),
-      }
+      },
     });
 
     if (recoveredAddr.toLowerCase() !== address.toLowerCase()) {
@@ -109,25 +121,29 @@ const calculateRecoveryParam = async (
 
 export const toEthSignedMessageHash = async (messageHex: Hex) => {
   return keccak256(
-    encodePacked(["string", "bytes32"],
-      ["\x19Ethereum Signed Message:\n32", messageHex]) as Hex);
+    encodePacked(
+      ["string", "bytes32"],
+      ["\x19Ethereum Signed Message:\n32", messageHex]
+    ) as Hex
+  );
 };
 
-export const signMessage = async (nameType: string, name: string, message: string): Promise<Hex> => {
-  const toSign = keccak256(
-    encodeAbiParameters(
-      [{ type: "bytes32" }, { type: "bytes32" }, { type: "bytes32" }],
-      [nameType as Hex, name as Hex, message as Hex]
-    )
-  );
+export const signMessage = async (messageHash: Hex): Promise<Hex> => {
+  // const toSign = keccak256(
+  //   encodeAbiParameters(
+  //     [{ type: "bytes32" }, { type: "bytes32" }, { type: "bytes32" }],
+  //     [nameType as Hex, name as Hex, message as Hex]
+  //   )
+  // );
 
-  const messageHash = await toEthSignedMessageHash(toSign);
-  const digestBuffer = Buffer.from(messageHash.slice(2));
+  // const messageHash = await toEthSignedMessageHash(toSign);
+  console.log("messageHash", messageHash);
+  const digestBuffer = Buffer.from(messageHash.slice(2), "hex");
   const address = KEY_CONFIG.publicAddress!;
 
   let signature = await getKmsSignature(digestBuffer);
   let [r, s] = await calculateRS(signature as Buffer);
-  
+
   let retry = 0;
   while (shouldRetrySigning(r, s, retry)) {
     signature = await getKmsSignature(digestBuffer);
@@ -135,12 +151,7 @@ export const signMessage = async (nameType: string, name: string, message: strin
     retry += 1;
   }
 
-  const v = await calculateRecoveryParam(
-    digestBuffer,
-    r,
-    s,
-    address
-  );
+  const v = await calculateRecoveryParam(digestBuffer, r, s, address);
 
   return `0x${r.toString("hex")}${s.toString("hex")}${v.toString(16)}` as Hex;
 };

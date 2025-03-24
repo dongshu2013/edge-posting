@@ -14,7 +14,8 @@ import { getPublicClient } from "@/lib/ethereum";
 import { WithdrawSignatureResult } from "@/types/user";
 import { ITokenMetadata } from "@/types/common";
 import { contractAbi } from "@/config/contractAbi";
-import { toEthSignedMessageHash } from "@/lib/server/kms";
+import { signMessage, toEthSignedMessageHash } from "@/lib/server/kms";
+import { utils } from "ethers";
 
 export function getSiweMessage(address: `0x${string}`, chainId?: number) {
   var current = new Date();
@@ -140,18 +141,16 @@ export async function getWithdrawSignature(
   const currentBlock = await publicClient.getBlock();
   const expirationBlock = currentBlock.number + BigInt(1000000);
 
-  const userIdInt = await getUserIdInt(userId);
   // const message = `Withdrawal request for ${nonceOnChain}`;
-  const message = solidityKeccak256Encode(
-    userIdInt,
+  const message = await solidityKeccak256Encode(
     tokenAddresses,
     tokenAmountsOnChain,
     recipient,
     nonceOnChain,
     expirationBlock
   );
-
-  const signature = await toEthSignedMessageHash(message);
+  // const signature = await toEthSignedMessageHash(message);
+  const signature = await signMessage(message);
 
   // const signature = await signMessage({
   //   message: message,
@@ -166,30 +165,42 @@ export async function getWithdrawSignature(
   };
 }
 
-function solidityKeccak256Encode(
-  userIdInt: bigint,
+async function solidityKeccak256Encode(
   tokens: `0x${string}`[],
   amounts: bigint[],
   recipient: `0x${string}`,
   nonce: bigint,
   expirationBlock: bigint
 ) {
-  // First encode the parameters according to their Solidity types
-  const encoded = encodeAbiParameters(
-    [
-      { name: "tokens", type: "address[]" },
-      { name: "amounts", type: "uint256[]" },
-      { name: "referenceId", type: "uint256" },
-      { name: "recipient", type: "address" },
-      { name: "nonce", type: "uint256" },
-      { name: "expirationBlock", type: "uint256" },
-    ],
-    [tokens, amounts, userIdInt, recipient, nonce, expirationBlock]
-  );
+  // const encoded = encodeAbiParameters(
+  //   [
+  //     { type: "address[]" },
+  //     { type: "uint256[]" },
+  //     { type: "address" },
+  //     { type: "uint256" },
+  //     { type: "uint256" },
+  //   ],
+  //   [tokens, amounts, recipient, nonce, expirationBlock]
+  // );
+  // const hash = keccak256(encoded);
+  // return hash;
 
-  // Then hash the encoded data
-  const hash = keccak256(encoded);
-  return hash;
+  console.log("sign signature params:", {
+    tokens,
+    amounts,
+    recipient,
+    nonce,
+    expirationBlock,
+  });
+
+  const hash = utils.keccak256(
+    utils.defaultAbiCoder.encode(
+      ["address[]", "uint256[]", "address", "uint256", "uint256"],
+      [tokens, amounts, recipient, nonce, expirationBlock]
+    )
+  );
+  const messageHash = await toEthSignedMessageHash(hash as `0x${string}`);
+  return messageHash as `0x${string}`;
 }
 
 export const getTokenMetadata = async (

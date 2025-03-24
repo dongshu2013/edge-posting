@@ -6,12 +6,14 @@ import { getPublicClient } from "@/lib/ethereum";
 import { UserWithdrawRequest, WithdrawSignatureResult } from "@/types/user";
 import { getUserIdInt } from "@/utils/commonUtils";
 import { fetchTransactionReceipt } from "@/utils/evmUtils";
+import { formatChainAmount } from "@/utils/numberUtils";
 import { UserBalance } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { formatEther } from "viem";
 import { useWriteContract } from "wagmi";
+import TransactionLoadingModal from "../TransactionLoadingModal";
 
 interface UserBalanceWithSelected extends UserBalance {
   selected: boolean;
@@ -23,6 +25,14 @@ export const UserBalanceCard = () => {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
   const [isContinuing, setIsContinuing] = useState(false);
+
+  const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [transactionStatus, setTransactionStatus] = useState<
+    "pending" | "success" | "error"
+  >("pending");
+  const [transactionTitle, setTransactionTitle] = useState("");
+  const [transactionDescription, setTransactionDescription] = useState("");
+  const [transactionHash, setTransactionHash] = useState("");
 
   const { writeContractAsync } = useWriteContract();
 
@@ -158,6 +168,12 @@ export const UserBalanceCard = () => {
       return;
     }
     try {
+      setIsTransactionLoading(true);
+      setTransactionStatus("pending");
+      setTransactionTitle("Processing Transaction");
+      setTransactionDescription(
+        "Please wait while your transaction is being processed."
+      );
       const {
         tokenAddresses,
         tokenAmountsOnChain,
@@ -165,8 +181,20 @@ export const UserBalanceCard = () => {
         expirationBlock,
         signature,
       } = request;
-
       const userIdInt = await getUserIdInt(userInfo?.uid);
+
+      // Log the parameters for debugging
+      console.log("Withdraw tx parameters:", {
+        tokenAddresses,
+        tokenAmountsOnChain: tokenAmountsOnChain.map((amount) =>
+          amount.toString()
+        ),
+        userIdInt: userIdInt.toString(),
+        recipient,
+        expirationBlock,
+        signatureLength: signature.length,
+        signature,
+      });
 
       const tx = await writeContractAsync({
         address: process.env.NEXT_PUBLIC_BSC_CA as `0x${string}`,
@@ -174,7 +202,7 @@ export const UserBalanceCard = () => {
         functionName: "withdraw",
         args: [
           tokenAddresses,
-          tokenAmountsOnChain.map((amount) => BigInt(amount)),
+          tokenAmountsOnChain.map((amount: string) => BigInt(amount)),
           userIdInt,
           recipient,
           BigInt(expirationBlock),
@@ -187,11 +215,22 @@ export const UserBalanceCard = () => {
       );
       const receipt = await fetchTransactionReceipt(publicClient, tx);
       if (receipt?.status === "success") {
-        toast.success("Withdrawal successful");
+        setTransactionStatus("success");
+        setTransactionTitle("Transaction Successful");
+        setTransactionDescription(
+          "Your withdrawal has been processed successfully."
+        );
+        setTransactionHash(tx);
       } else {
-        toast.error("Withdrawal failed");
+        throw new Error("Withdrawal failed: Transaction reverted");
       }
-    } catch (err) {}
+    } catch (err: any) {
+      setTransactionStatus("error");
+      setTransactionTitle("Transaction Failed");
+      setTransactionDescription(
+        err instanceof Error ? err.message : "Withdrawal preparation failed"
+      );
+    }
   };
 
   const selectedCount = selectedTokenIds.length;
@@ -255,7 +294,7 @@ export const UserBalanceCard = () => {
 
             <p className="font-medium text-gray-900">
               <span className="opacity-40">Available Balance:</span>{" "}
-              {formatEther(token.tokenAmountOnChain)}
+              {formatChainAmount(token.tokenAmountOnChain, token.tokenDecimals)}
             </p>
           </div>
         ))}
@@ -278,6 +317,14 @@ export const UserBalanceCard = () => {
             }`
           : "Select Tokens to Withdraw"}
       </button>
+
+      <TransactionLoadingModal
+        isOpen={isTransactionLoading}
+        onClose={() => setIsTransactionLoading(false)}
+        status={transactionStatus}
+        title={transactionTitle}
+        description={transactionDescription}
+      />
     </div>
   );
 };

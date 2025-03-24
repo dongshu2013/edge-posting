@@ -1,7 +1,6 @@
 /* eslint-disable require-jsdoc */
 import * as kms from "@google-cloud/kms";
 import * as asn1 from "asn1.js";
-import * as crypto from "crypto";
 import * as crc32c from "fast-crc32c";
 import * as BN from "bn.js";
 import { recoverAddress, encodePacked, encodeAbiParameters, keccak256, Hex } from 'viem';
@@ -11,73 +10,37 @@ const MAX_RETRY = 3;
 const client = new kms.KeyManagementServiceClient();
 
 export interface KMS_CONFIG_TYPE {
-    projectId: string,
-    locationId: string,
-    keyRingId: string,
-    keyId: string,
-    versionId?: string,
-    publicAddress?: string
-  }
+  projectId: string,
+  locationId: string,
+  keyRingId: string,
+  keyId: string,
+  versionId?: string,
+  publicAddress?: string
+}
 
-const KEY_CONFIG : KMS_CONFIG_TYPE = {
-    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
-    locationId: process.env.GKMS_LOCATION_ID!,
-    keyRingId: process.env.GKMS_KEY_RING_ID!,
-    keyId: process.env.GKMS_KEY_ID!,
-    versionId: process.env.GKMS_VERSION_ID,
-    publicAddress: process.env.GKMS_PUBLIC_ADDRESS,
+const KEY_CONFIG: KMS_CONFIG_TYPE = {
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID!,
+  locationId: "global",
+  keyRingId: "buzzz",
+  keyId: process.env.GKMS_KEY_ID!,
+  versionId: "1",
+  publicAddress: process.env.GKMS_PUBLIC_ADDRESS,
 };
 
-export const toEthSignedMessageHash = function(messageHex: Hex) {
-    return keccak256(
-        encodePacked(["string", "bytes32"],
-            ["\x19Ethereum Signed Message:\n32", messageHex]) as Hex);
+export const toEthSignedMessageHash = function (messageHex: Hex) {
+  return keccak256(
+    encodePacked(["string", "bytes32"],
+      ["\x19Ethereum Signed Message:\n32", messageHex]) as Hex);
 };
 
-const getPublicKey = async function(versionName: string) {
-  const [publicKey] = await client.getPublicKey({
-    name: versionName,
-  });
-
-  if (publicKey.name !== versionName) {
-    throw new Error("GetPublicKey: request corrupted in-transit");
-  }
-  if (publicKey.pemCrc32c &&
-    crc32c.calculate(publicKey.pem || "") !== Number(publicKey.pemCrc32c.value)
-  ) {
-    throw new Error("GetPublicKey: response corrupted in-transit");
-  }
-
-  return publicKey;
-};
-
-const getVersionName = async function() {
+const getVersionName = async function () {
   return client.cryptoKeyVersionPath(
-      KEY_CONFIG.projectId,
-      KEY_CONFIG.locationId,
-      KEY_CONFIG.keyRingId,
-      KEY_CONFIG.keyId,
-      KEY_CONFIG.versionId!
+    KEY_CONFIG.projectId,
+    KEY_CONFIG.locationId,
+    KEY_CONFIG.keyRingId,
+    KEY_CONFIG.keyId,
+    KEY_CONFIG.versionId!
   );
-};
-
-export const getEthAddressFromPublicKey = async function() {
-  const versionName = client.cryptoKeyVersionPath(
-      KEY_CONFIG.projectId,
-      KEY_CONFIG.locationId,
-      KEY_CONFIG.keyRingId,
-      KEY_CONFIG.keyId,
-      KEY_CONFIG.versionId!
-  );
-  const publicKey = await getPublicKey(versionName);
-  const publicKeyPem = publicKey.pem || "";
-  const publicKeyDer = crypto.createPublicKey(publicKeyPem)
-      .export({format: "der", type: "spki"});
-  const rawXY = publicKeyDer.subarray(-64);
-  const hashXY = keccak256(`0x${rawXY.toString('hex')}` as Hex);
-  const address = hashXY.slice(0, -40) as Hex;
-
-  return address;
 };
 
 type ViemSignature = { r: Hex; s: Hex; v: number };
@@ -93,16 +56,16 @@ const EcdsaSigAsnParse: {
   this.seq().obj(this.key("r").int(), this.key("s").int());
 });
 
-export const signRaw = async function(
-    message: Hex,
-    returnHex = true
-) : Promise<ViemSignature | Hex> {
+export const signRaw = async function (
+  message: Hex,
+  returnHex = true
+): Promise<ViemSignature | Hex> {
   const digestBuffer = Buffer.from(message.slice(2));
   const address = KEY_CONFIG.publicAddress!;
 
   let signature = await getKmsSignature(digestBuffer);
   let [r, s] = await calculateRS(signature as Buffer);
-  
+
   let retry = 0;
   while (shouldRetrySigning(r, s, retry)) {
     signature = await getKmsSignature(digestBuffer);
@@ -111,24 +74,24 @@ export const signRaw = async function(
   }
 
   const v = await calculateRecoveryParam(
-      digestBuffer,
-      r,
-      s,
-      address);
+    digestBuffer,
+    r,
+    s,
+    address);
 
   const sig = {
-    r: `0x${r.toString("hex")}` as Hex, 
-    s: `0x${s.toString("hex")}` as Hex, 
+    r: `0x${r.toString("hex")}` as Hex,
+    s: `0x${s.toString("hex")}` as Hex,
     v
   } as ViemSignature;
   return returnHex ? hex(sig) : sig;
 };
 
-const shouldRetrySigning = function(r: BN, s: BN, retry: number) {
-  return (r.toString("hex").length % 2 == 1 || s.toString("hex").length % 2 == 1) && (retry < MAX_RETRY); 
+const shouldRetrySigning = function (r: BN, s: BN, retry: number) {
+  return (r.toString("hex").length % 2 == 1 || s.toString("hex").length % 2 == 1) && (retry < MAX_RETRY);
 }
 
-const getKmsSignature = async function(digestBuffer: Buffer) {
+const getKmsSignature = async function (digestBuffer: Buffer) {
   const digestCrc32c = crc32c.calculate(digestBuffer);
   const versionName = await getVersionName();
 
@@ -158,24 +121,24 @@ const getKmsSignature = async function(digestBuffer: Buffer) {
   return Buffer.from(signResponse.signature as Uint8Array);
 };
 
-const calculateRS = async function(signature: Buffer) {
+const calculateRS = async function (signature: Buffer) {
   const decoded = EcdsaSigAsnParse.decode(signature, "der");
   const { r, s } = decoded;
 
   const secp256k1N = new BN.BN(
-      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
-      16
+    "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+    16
   );
   const secp256k1halfN = secp256k1N.div(new BN.BN(2));
-  
+
   return [r, s.gt(secp256k1halfN) ? secp256k1N.sub(s) : s];
 };
 
 const calculateRecoveryParam = async (
-    msg: Buffer,
-    r: BN,
-    s: BN,
-    address: string
+  msg: Buffer,
+  r: BN,
+  s: BN,
+  address: string
 ) => {
   let v: number;
   for (v = 0; v <= 1; v++) {
@@ -200,13 +163,13 @@ const calculateRecoveryParam = async (
 
 export const sign = async (nameType: string, name: string, message: string) => {
   const toSign = keccak256(
-      encodeAbiParameters(
-          [{ type: "bytes32" }, { type: "bytes32" }, { type: "bytes32" }],
-          [nameType as Hex, name as Hex, message as Hex]
-      )
+    encodeAbiParameters(
+      [{ type: "bytes32" }, { type: "bytes32" }, { type: "bytes32" }],
+      [nameType as Hex, name as Hex, message as Hex]
+    )
   );
   const signature = await signRaw(
-      toEthSignedMessageHash(toSign)
+    toEthSignedMessageHash(toSign)
   ) as Hex;
   return signature;
 };

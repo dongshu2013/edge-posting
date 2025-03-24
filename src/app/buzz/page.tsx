@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import FilterTokenBuzzesToggle from "@/components/FilterTokenBuzzesToggle";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserStore } from "@/store/userStore";
 
 interface Buzz {
   id: string;
@@ -46,7 +47,7 @@ export default function BuzzesPage() {
 
 function BuzzesPageContent() {
   const router = useRouter();
-  const { isAuthenticated } = useAuth();
+  const { userInfo } = useUserStore();
   const searchParams = useSearchParams();
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +56,8 @@ function BuzzesPageContent() {
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
+
+  console.log("🍷", userInfo);
 
   const showAll = searchParams.get("showAll") === "true";
   const filterToken = searchParams.get("filterToken") === "true";
@@ -230,7 +233,7 @@ function BuzzesPageContent() {
           </select>
 
           <div className="flex gap-4 items-center">
-            {isAuthenticated && (
+            {!!userInfo?.uid && (
               <FilterTokenBuzzesToggle
                 isActive={filterToken}
                 onToggle={() => {
@@ -286,14 +289,30 @@ function BuzzesPageContent() {
             <option value="engagement">🔥 Most Engagement</option>
           </select>
 
-          <ActiveBuzzesToggle
-            isActive={!showAll}
-            onToggle={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("showAll", (!showAll).toString());
-              router.push(url.toString());
-            }}
-          />
+          <div className="flex gap-4 items-center">
+            {!!userInfo?.uid && (
+              <FilterTokenBuzzesToggle
+                isActive={filterToken}
+                onToggle={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set(
+                    "filterToken",
+                    (!filterToken).toString()
+                  );
+                  router.push(url.toString());
+                }}
+              />
+            )}
+
+            <ActiveBuzzesToggle
+              isActive={!showAll}
+              onToggle={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("showAll", (!showAll).toString());
+                router.push(url.toString());
+              }}
+            />
+          </div>
         </div>
 
         {/* Grid layout for BuzzCards */}

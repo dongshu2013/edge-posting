@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getAuthUser } from "@/lib/auth-helpers";
+import { zeroAddress } from "viem";
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,6 +50,7 @@ export async function GET(request: NextRequest) {
       filterTokenAddresses = userBalances.map(
         (balance: any) => balance.tokenAddress
       );
+      filterTokenAddresses.push(zeroAddress);
     }
 
     // Build the query

@@ -1,6 +1,8 @@
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
+import BindWalletModal from "./BindWalletModal";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ReplyLinkModalProps {
   isOpen: boolean;
@@ -23,19 +25,30 @@ export default function ReplyLinkModal({
   tokenAmount,
   initialReplyText = "", // 设置默认值
 }: ReplyLinkModalProps) {
-  const [replyLink, setReplyLink] = useState("");
-  const [replyText, setReplyText] = useState(initialReplyText); // 使用初始值
+  const { userInfo } = useAuth();
+  const replyLinkRef = useRef<HTMLInputElement>(null);
+  const replyTextRef = useRef<HTMLInputElement>(null);
 
-  // 当 initialReplyText 改变时更新 replyText
+  // 当 initialReplyText 改变时更新 replyText input 的值
   useEffect(() => {
-    setReplyText(initialReplyText);
+    if (replyTextRef.current) {
+      replyTextRef.current.value = initialReplyText;
+    }
   }, [initialReplyText]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userInfo?.bindedWallet) {
+      setIsWalletModalOpen(true);
+      return;
+    }
+    const replyLink = replyLinkRef.current?.value || "";
+    const replyText = replyTextRef.current?.value || "";
+
     if (!replyLink.trim()) {
       setError("Please enter a reply link");
       return;
@@ -46,13 +59,19 @@ export default function ReplyLinkModal({
 
     try {
       await onSubmit({ replyLink, replyText });
-      setReplyLink("");
+      if (replyLinkRef.current) {
+        replyLinkRef.current.value = "";
+      }
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit reply");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleBindWallet = async (walletAddress: string) => {
+    // Your wallet binding logic here
   };
 
   return (
@@ -118,13 +137,12 @@ export default function ReplyLinkModal({
                             Reply Link
                           </label>
                           <input
+                            id="replyLink"
                             type="url"
                             name="replyLink"
-                            id="replyLink"
+                            ref={replyLinkRef}
                             className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             placeholder="https://twitter.com/..."
-                            value={replyLink}
-                            onChange={(e) => setReplyLink(e.target.value)}
                             required
                           />
                         </div>
@@ -139,10 +157,10 @@ export default function ReplyLinkModal({
                             type="text"
                             name="replyText"
                             id="replyText"
+                            ref={replyTextRef}
                             className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
                             placeholder="Hey, check out this reply!"
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
+                            defaultValue={initialReplyText}
                             required
                           />
                         </div>
@@ -155,6 +173,7 @@ export default function ReplyLinkModal({
 
                         <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                           <button
+                            id="comfirmReply"
                             type="submit"
                             disabled={isSubmitting}
                             className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
@@ -178,6 +197,15 @@ export default function ReplyLinkModal({
           </div>
         </div>
       </Dialog>
+
+      <BindWalletModal
+        isOpen={isWalletModalOpen}
+        onClose={() => setIsWalletModalOpen(false)}
+        onBind={handleBindWallet}
+        onSuccess={() => {
+          setIsWalletModalOpen(false);
+        }}
+      />
     </Transition.Root>
   );
 }

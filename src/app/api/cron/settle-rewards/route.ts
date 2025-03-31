@@ -43,107 +43,11 @@ export async function POST(request: Request) {
 
     const results = await Promise.all(
       expiredBuzzes.map(async (buzz: BuzzWithReplies) => {
-        const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
-        if (replyUserIds.length === 0) {
-          return;
+        if (buzz.rewardSettleType === "fixed") {
+          await settleFixedTypeRewards(buzz);
+        } else {
+          await settleDefaultTypeRewards(buzz);
         }
-        const dbUsers = await prisma.user.findMany({
-          where: {
-            uid: { in: replyUserIds },
-          },
-        });
-        const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
-
-        const userWeights = await Promise.all(
-          replyUserIds.map(async (uid: string) => {
-            const user = dbUserMap.get(uid);
-            return await getUserWeight(buzz, user);
-          })
-        );
-
-        console.log("userWeights", userWeights);
-
-        let minWeight = 0;
-        userWeights.forEach((weight: number) => {
-          if (weight > 0) {
-            if (minWeight === 0) {
-              minWeight = weight;
-            } else {
-              minWeight = Math.min(minWeight, weight);
-            }
-          }
-        });
-        // All users have 0 balance
-        if (minWeight === 0) {
-          minWeight = 1;
-        }
-
-        console.log("minWeight", minWeight);
-
-        const refinedUserWeights = userWeights.map((weight: number) => {
-          if (weight === 0) {
-            return minWeight / 10;
-          }
-          return weight;
-        });
-
-        console.log("refinedUserWeights", refinedUserWeights);
-
-        const totalWeight = refinedUserWeights.reduce(
-          (acc: number, weight: number) => acc + weight,
-          0
-        );
-
-        console.log("totalWeight", totalWeight);
-        const totalTokenAmountOnChain = math
-          .bignumber(buzz.tokenAmount)
-          .times(math.bignumber(10).pow(buzz.tokenDecimals));
-
-        const addUserBalancesResult = await prisma.$transaction(
-          async (tx: any) => {
-            replyUserIds.forEach(async (userId: string, index: number) => {
-              // const amountOnChain =
-              //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
-
-              const amountOnChain = totalTokenAmountOnChain
-                .mul(math.bignumber(userWeights[index]))
-                .div(math.bignumber(totalWeight))
-                .floor()
-                .toString();
-              // Use upsert to either create a new record or update an existing one
-              const updatedBalance = await tx.userBalance.upsert({
-                where: {
-                  // Use the unique constraint we defined in the schema
-                  userId_tokenAddress: {
-                    userId: userId,
-                    tokenAddress: buzz.customTokenAddress,
-                  },
-                },
-                // If no record exists, create a new one
-                create: {
-                  userId,
-                  tokenAddress: buzz.customTokenAddress,
-                  tokenName: buzz.paymentToken,
-                  tokenAmountOnChain: amountOnChain,
-                  tokenDecimals: buzz.tokenDecimals,
-                },
-                // If a record exists, update the tokenAmount
-                update: {
-                  tokenAmountOnChain: {
-                    // Increment the existing amount
-                    increment: amountOnChain,
-                  },
-                },
-              });
-            });
-
-            // Mark the buzz as settled
-            await tx.buzz.update({
-              where: { id: buzz.id },
-              data: { isSettled: true },
-            });
-          }
-        );
       })
     );
 
@@ -159,6 +63,190 @@ export async function POST(request: Request) {
     );
   }
 }
+
+const settleDefaultTypeRewards = async (buzz: any) => {
+  const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
+  if (replyUserIds.length === 0) {
+    return;
+  }
+  const dbUsers = await prisma.user.findMany({
+    where: {
+      uid: { in: replyUserIds },
+    },
+  });
+  const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
+
+  const userWeights = await Promise.all(
+    replyUserIds.map(async (uid: string) => {
+      const user = dbUserMap.get(uid);
+      return await getUserWeight(buzz, user);
+    })
+  );
+
+  console.log("userWeights", userWeights);
+
+  let minWeight = 0;
+  userWeights.forEach((weight: number) => {
+    if (weight > 0) {
+      if (minWeight === 0) {
+        minWeight = weight;
+      } else {
+        minWeight = Math.min(minWeight, weight);
+      }
+    }
+  });
+  // All users have 0 balance
+  if (minWeight === 0) {
+    minWeight = 1;
+  }
+
+  console.log("minWeight", minWeight);
+
+  const refinedUserWeights = userWeights.map((weight: number) => {
+    if (weight === 0) {
+      return minWeight / 10;
+    }
+    return weight;
+  });
+
+  console.log("refinedUserWeights", refinedUserWeights);
+
+  const totalWeight = refinedUserWeights.reduce(
+    (acc: number, weight: number) => acc + weight,
+    0
+  );
+
+  console.log("totalWeight", totalWeight);
+  const totalTokenAmountOnChain = math
+    .bignumber(buzz.tokenAmount)
+    .times(math.bignumber(10).pow(buzz.tokenDecimals));
+
+  const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
+    replyUserIds.forEach(async (userId: string, index: number) => {
+      // const amountOnChain =
+      //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
+
+      const amountOnChain = totalTokenAmountOnChain
+        .mul(math.bignumber(userWeights[index]))
+        .div(math.bignumber(totalWeight))
+        .floor()
+        .toString();
+      // Use upsert to either create a new record or update an existing one
+      const updatedBalance = await tx.userBalance.upsert({
+        where: {
+          // Use the unique constraint we defined in the schema
+          userId_tokenAddress: {
+            userId: userId,
+            tokenAddress: buzz.customTokenAddress,
+          },
+        },
+        // If no record exists, create a new one
+        create: {
+          userId,
+          tokenAddress: buzz.customTokenAddress,
+          tokenName: buzz.paymentToken,
+          tokenAmountOnChain: amountOnChain,
+          tokenDecimals: buzz.tokenDecimals,
+        },
+        // If a record exists, update the tokenAmount
+        update: {
+          tokenAmountOnChain: {
+            // Increment the existing amount
+            increment: amountOnChain,
+          },
+        },
+      });
+    });
+
+    // Mark the buzz as settled
+    await tx.buzz.update({
+      where: { id: buzz.id },
+      data: { isSettled: true },
+    });
+  });
+};
+
+const settleFixedTypeRewards = async (buzz: any) => {
+  const totalTokenAmountOnChain = math
+    .bignumber(buzz.tokenAmount)
+    .times(math.bignumber(10).pow(buzz.tokenDecimals));
+
+  const userRewardAmountOnChain = totalTokenAmountOnChain
+    .div(math.bignumber(buzz.maxParticipants))
+    .floor()
+    .toString();
+
+  let remainingTokenAmountOnChain = math.bignumber(totalTokenAmountOnChain);
+
+  const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
+
+  const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
+    replyUserIds.forEach(async (userId: string, index: number) => {
+      // Use upsert to either create a new record or update an existing one
+      const updatedBalance = await tx.userBalance.upsert({
+        where: {
+          // Use the unique constraint we defined in the schema
+          userId_tokenAddress: {
+            userId: userId,
+            tokenAddress: buzz.customTokenAddress,
+          },
+        },
+        // If no record exists, create a new one
+        create: {
+          userId,
+          tokenAddress: buzz.customTokenAddress,
+          tokenName: buzz.paymentToken,
+          tokenAmountOnChain: userRewardAmountOnChain,
+          tokenDecimals: buzz.tokenDecimals,
+        },
+        // If a record exists, update the tokenAmount
+        update: {
+          tokenAmountOnChain: {
+            // Increment the existing amount
+            increment: userRewardAmountOnChain,
+          },
+        },
+      });
+
+      remainingTokenAmountOnChain = remainingTokenAmountOnChain.minus(
+        math.bignumber(userRewardAmountOnChain)
+      );
+    });
+
+    if (remainingTokenAmountOnChain.gt(0)) {
+      const updatedCreatorBalance = await tx.userBalance.upsert({
+        where: {
+          // Use the unique constraint we defined in the schema
+          userId_tokenAddress: {
+            userId: buzz.createdBy,
+            tokenAddress: buzz.customTokenAddress,
+          },
+        },
+        // If no record exists, create a new one
+        create: {
+          userId: buzz.createdBy,
+          tokenAddress: buzz.customTokenAddress,
+          tokenName: buzz.paymentToken,
+          tokenAmountOnChain: remainingTokenAmountOnChain.toString(),
+          tokenDecimals: buzz.tokenDecimals,
+        },
+        // If a record exists, update the tokenAmount
+        update: {
+          tokenAmountOnChain: {
+            // Increment the existing amount
+            increment: remainingTokenAmountOnChain.toString(),
+          },
+        },
+      });
+    }
+
+    // Mark the buzz as settled
+    await tx.buzz.update({
+      where: { id: buzz.id },
+      data: { isSettled: true },
+    });
+  });
+};
 
 const getUserWeight = async (buzz: any, dbUser: any) => {
   const publicClient = getPublicClient(

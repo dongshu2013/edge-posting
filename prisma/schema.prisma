@@ -51,7 +51,9 @@ model Buzz {
   replies      Reply[]
   transactions Transaction[]
   user         User          @relation(fields: [createdBy], references: [uid])
-  tweetText String?
+  tweetText    String?
+  rewardSettleType String?
+  maxParticipants Int?
 
   tokenAmount String
   paymentToken String // BNB CUSTOM
@@ -154,6 +156,13 @@ model UserWithdrawRequest {
   user      User             @relation(fields: [userId], references: [uid])
 
   @@unique([userId, nonceOnChain]) // Each user can have only one balance per token
+}
+
+model UserApiKey {
+  id String @id @default(cuid())
+
+  userId String @unique
+  apiKey String @unique
 }
 
 enum ReplyStatus {

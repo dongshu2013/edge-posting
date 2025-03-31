@@ -6,12 +6,29 @@ import { prisma } from "@/lib/prisma";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 export async function POST(request: Request) {
+  let userId = null;
+
   const userData = await getAuthUser();
-  if (!userData) {
+  if (userData) {
+    userId = userData.uid;
+  } else {
+    const apiKey = request.headers.get("x-api-key");
+    const userApiKey = await prisma.userApiKey.findUnique({
+      where: {
+        apiKey: apiKey || "",
+      },
+    });
+
+    if (userApiKey) {
+      userId = userApiKey.userId;
+    }
+  }
+
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const identifier = `generate-reply-${userData.uid}`;
+  const identifier = `generate-reply-${userId}`;
 
   const rateLimiter = getRateLimiter(identifier, {
     tokensPerInterval: 30,
@@ -25,7 +42,7 @@ export async function POST(request: Request) {
 
   const user = await prisma.user.findUnique({
     where: {
-      uid: userData.uid,
+      uid: userId,
     },
   });
   const userBio = user?.bio;

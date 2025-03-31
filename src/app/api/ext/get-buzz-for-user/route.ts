@@ -1,47 +1,58 @@
-import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import { getAuthUser } from "@/lib/auth-helpers";
+import { NextRequest, NextResponse } from "next/server";
 import { zeroAddress } from "viem";
 
 export async function GET(request: NextRequest) {
   try {
-    const authUser = await getAuthUser();
+    const apiKey = request.headers.get("x-api-key");
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Api key is required" },
+        { status: 401 }
+      );
+    }
+
+    const userApiKey = await prisma.userApiKey.findUnique({
+      where: {
+        apiKey,
+      },
+    });
+    if (!userApiKey) {
+      return NextResponse.json({ error: "Invalid api key" }, { status: 401 });
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: {
+        uid: userApiKey.userId,
+      },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 });
+    }
 
     const searchParams = request.nextUrl.searchParams;
-    const createdBy = searchParams.get("createdBy");
-    const cursor = searchParams.get("cursor");
     const limit = 10; // Number of items per page
     const sortBy =
       (searchParams.get("sortBy") as "newest" | "price" | "engagement") ||
       "newest";
-    const onlyActive = searchParams.get("onlyActive") === "true";
     const filterToken = searchParams.get("filterToken") === "true";
-    const excludeReplied = searchParams.get("excludeReplied") === "true";
 
-    let excludedBuzzIds: string[] = [];
-    if (excludeReplied) {
-      // Get user replied buzz ids
-      if (authUser) {
-        const repliedBuzzes = await prisma.reply.findMany({
-          where: {
-            createdBy: authUser?.uid,
-          },
-          select: {
-            buzzId: true,
-          },
-        });
-        excludedBuzzIds = repliedBuzzes.map((reply) => reply.buzzId);
-      }
-    }
-    console.log(excludedBuzzIds);
+    const repliedBuzzes = await prisma.reply.findMany({
+      where: {
+        createdBy: dbUser?.uid,
+      },
+      select: {
+        buzzId: true,
+      },
+    });
+    const excludedBuzzIds = repliedBuzzes.map((reply) => reply.buzzId);
 
-    const filterWithTokenAddress = !!authUser && filterToken;
     let filterTokenAddresses: string[] = [];
-    if (filterToken && authUser) {
+    if (filterToken) {
       const userBalances = await prisma.userBalance.findMany({
         where: {
-          userId: authUser?.uid,
+          userId: dbUser?.uid,
         },
         select: {
           tokenAddress: true,
@@ -56,15 +67,13 @@ export async function GET(request: NextRequest) {
     // Build the query
     const query: Prisma.BuzzFindManyArgs = {
       where: {
-        ...(createdBy && { createdBy }),
-        ...(onlyActive && { deadline: { gt: new Date() } }),
-        ...(excludeReplied &&
-          excludedBuzzIds.length > 0 && { id: { notIn: excludedBuzzIds } }),
-        ...(filterWithTokenAddress && {
+        ...{ deadline: { gt: new Date() } },
+        ...(excludedBuzzIds.length > 0 && { id: { notIn: excludedBuzzIds } }),
+        ...(filterToken && {
           customTokenAddress: { in: filterTokenAddresses },
         }),
       },
-      take: limit + 1, // Take one extra to know if there are more items
+      take: limit,
       orderBy: {
         ...(sortBy === "newest" && { createdAt: "desc" }),
         ...(sortBy === "price" && { price: "desc" }),
@@ -82,8 +91,6 @@ export async function GET(request: NextRequest) {
         tokenAmount: true,
         paymentToken: true,
         customTokenAddress: true,
-        rewardSettleType: true,
-        maxParticipants: true,
         user: {
           select: {
             username: true,
@@ -95,25 +102,14 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      ...(cursor && {
-        cursor: {
-          id: cursor,
-        },
-        skip: 1, // Skip the cursor
-      }),
     };
 
     const buzzes = await prisma.buzz.findMany(query);
 
     // Check if there are more items
-    const hasMore = buzzes.length > limit;
-    const items = hasMore ? buzzes.slice(0, -1) : buzzes;
-    const nextCursor = hasMore ? items[items.length - 1].id : undefined;
 
     return NextResponse.json({
-      items,
-      nextCursor,
-      hasMore,
+      buzzList: buzzes,
     });
   } catch (error) {
     console.error("Failed to fetch buzzes:", error);

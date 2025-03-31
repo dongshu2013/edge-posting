@@ -28,6 +28,8 @@ interface Buzz {
   tokenAmount: string;
   paymentToken: string;
   customTokenAddress: string;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   replyCount: number;
   totalReplies: number;
   createdBy: string;
@@ -186,6 +188,8 @@ export default function BuzzDetailPage() {
             showViewReplies={false}
             hasReplied={hasReplied}
             username={buzz?.user?.username}
+            rewardSettleType={buzz.rewardSettleType}
+            maxParticipants={buzz.maxParticipants}
           />
         </div>
 

@@ -9,6 +9,8 @@
     "lint": "next lint",
     "check-data": "ts-node scripts/check-data.ts",
     "seed": "ts-node --project prisma/tsconfig.json prisma/seed.ts",
+    "init-prod-db": "ts-node --project scripts/tsconfig.json scripts/init-production-db.ts",
+    "init-prod-db:sh": "bash scripts/init-prod-db.sh",
     "postinstall": "prisma generate"
   },
   "prisma": {

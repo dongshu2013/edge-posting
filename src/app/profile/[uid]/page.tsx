@@ -16,6 +16,7 @@ import toast from "react-hot-toast";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import { WalletCard } from "@/components/profile/WalletCard";
 import { UserBalanceCard } from "@/components/profile/UserBalanceCard";
+import { ApiKeyPanel } from "@/components/profile/ApiKeyPanel";
 
 interface UserProfile {
   email: string | null;
@@ -302,20 +303,22 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-semibold text-gray-900">
             Profile Details
           </h1>
-          <button
-            onClick={() => setShowUsernameModal(true)}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <PencilIcon className="h-4 w-4 mr-1.5" />
-            Edit Username
-          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <p className="text-sm text-gray-500">Username</p>
-            <p className="text-lg font-medium text-gray-900">
-              {profile.username || "Not set"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-medium text-gray-900">
+                {profile.username || "Not set"}
+              </p>
+
+              <button
+                onClick={() => setShowUsernameModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <div>
             <p className="text-sm text-gray-500">Twitter Username</p>
@@ -333,19 +336,22 @@ export default function ProfilePage() {
             <div className="flex justify-between items-center">
               <div className="space-y-1">
                 <p className="text-sm text-gray-500">Bio</p>
-                <p className="text-lg font-medium text-gray-900">
-                  {profile.bio || "No bio"}
-                </p>
+
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-medium text-gray-900">
+                    {profile.bio || "No bio"}
+                  </p>
+                  <button
+                    onClick={() => setShowProfileEditModal(true)}
+                    className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 h-fit"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setShowProfileEditModal(true)}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 h-fit"
-              >
-                <PencilIcon className="h-4 w-4 mr-1.5" />
-                Edit Profile
-              </button>
             </div>
           </div>
+
           <div>
             <p className="text-sm text-gray-500">My Referral Code</p>
             <div className="flex items-center gap-2">
@@ -361,6 +367,8 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+
+          <ApiKeyPanel />
         </div>
       </div>
 

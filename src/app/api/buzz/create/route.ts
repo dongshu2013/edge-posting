@@ -16,6 +16,8 @@ export interface CreateBuzzRequest {
   paymentToken: string;
   customTokenAddress?: string;
   transactionHash: string;
+  rewardSettleType: string;
+  maxParticipants?: number;
 }
 
 export async function POST(request: Request) {
@@ -34,6 +36,8 @@ export async function POST(request: Request) {
       paymentToken,
       customTokenAddress,
       transactionHash,
+      rewardSettleType,
+      maxParticipants,
     }: CreateBuzzRequest = body;
 
     // 验证必填字段
@@ -54,6 +58,13 @@ export async function POST(request: Request) {
     if (paymentToken !== "BNB" && !customTokenAddress) {
       return NextResponse.json(
         { error: "Custom token address is required" },
+        { status: 400 }
+      );
+    }
+
+    if (rewardSettleType === "fixed" && !Number(maxParticipants)) {
+      return NextResponse.json(
+        { error: "Max participants is required" },
         { status: 400 }
       );
     }
@@ -258,6 +269,8 @@ export async function POST(request: Request) {
           paymentToken: tokenMetadata.symbol || paymentToken,
           customTokenAddress: customTokenAddress || zeroAddress,
           transactionHash,
+          rewardSettleType,
+          maxParticipants: maxParticipants ? Number(maxParticipants) : null,
         },
       });
 

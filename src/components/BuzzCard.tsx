@@ -26,6 +26,8 @@ export interface BuzzCardProps {
   showViewReplies?: boolean;
   isActive?: boolean;
   hasReplied?: boolean;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   username: string;
 }
 
@@ -65,6 +67,8 @@ export default function BuzzCard({
   tokenAmount,
   paymentToken,
   customTokenAddress,
+  rewardSettleType,
+  maxParticipants,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -221,7 +225,7 @@ export default function BuzzCard({
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="p-4">
         {/* Header with creator info and price */}
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center">
           <div className="flex items-center">
             <span className="text-sm font-medium text-gray-900">
               @{username || createdBy.substring(0, 6)}
@@ -233,15 +237,69 @@ export default function BuzzCard({
               </span>
             )}
           </div>
-          <div className="text-sm font-medium">
-            <span className="text-amber-500 font-semibold">
+        </div>
+
+        <div className="mt-1">
+          <div className="text-sm">
+            Total Reward:
+            <span className="ml-1 text-amber-500 font-semibold">
               {tokenAmount} BNB
             </span>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm flex items-center">
+              <span>Settle Type:</span>
+              <div className="relative inline-block ml-1 group">
+                <span className="cursor-help">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4 text-gray-500"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+                    />
+                  </svg>
+                </span>
+                <div className="absolute top-full left-0 mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 z-50">
+                  <div className="relative">
+                    <p>
+                      <strong>Default:</strong> The total reward amount will be
+                      split among all participants who complete the task, and
+                      the amount will be determined by their token holdings.
+                    </p>
+                    <p className="mt-1">
+                      <strong>Fixed:</strong> Each participant will receive a
+                      fixed amount, remaining reward will be returned to the
+                      creator.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <span className="ml-1 text-amber-500 font-semibold capitalize">
+                {rewardSettleType || "Default"}
+              </span>
+            </div>
+
+            {maxParticipants && (
+              <div className="text-sm">
+                Max Participants:
+                <span className="ml-1 text-amber-500 font-semibold">
+                  {maxParticipants}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Twitter Embed */}
-        <div className="border rounded-lg overflow-hidden mb-3">
+        <div className="mt-3 border rounded-lg overflow-hidden mb-3">
           <div className="h-72">
             <iframe
               src={getEmbedUrl(tweetLink)}

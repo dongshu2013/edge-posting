@@ -18,6 +18,8 @@ interface Buzz {
   tokenAmount: string;
   paymentToken: string;
   customTokenAddress: string;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   replyCount: number;
   createdBy: string;
   deadline: string;
@@ -341,6 +343,8 @@ function BuzzesPageContent() {
                     tokenAmount={buzz.tokenAmount}
                     paymentToken={buzz.paymentToken}
                     customTokenAddress={buzz.customTokenAddress}
+                    rewardSettleType={buzz.rewardSettleType}
+                    maxParticipants={buzz.maxParticipants}
                   />
                 </div>
               ))}

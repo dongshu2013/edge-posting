@@ -5,14 +5,31 @@ import { authTwitter } from "@/utils/xUtils";
 
 export async function POST(request: Request) {
   try {
-    const user = await getAuthUser();
-    if (!user) {
+    let userId = null;
+
+    const userData = await getAuthUser();
+    if (userData) {
+      userId = userData.uid;
+    } else {
+      const apiKey = request.headers.get("x-api-key");
+      const userApiKey = await prisma.userApiKey.findUnique({
+        where: {
+          apiKey: apiKey || "",
+        },
+      });
+
+      if (userApiKey) {
+        userId = userApiKey.userId;
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const dbUser = await prisma.user.findUnique({
       where: {
-        uid: user.uid,
+        uid: userId,
       },
     });
 
@@ -68,7 +85,7 @@ export async function POST(request: Request) {
     const existingReply = await prisma.reply.findFirst({
       where: {
         buzzId,
-        createdBy: user.uid,
+        createdBy: userId,
       },
     });
 
@@ -124,7 +141,7 @@ export async function POST(request: Request) {
         buzzId,
         replyLink,
         text,
-        createdBy: user.uid,
+        createdBy: userId,
         status: "PENDING",
       },
     });

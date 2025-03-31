@@ -16,6 +16,8 @@ interface Buzz {
   tokenAmount: string;
   paymentToken: string;
   customTokenAddress: string;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   replyCount: number;
   totalReplies: number;
   createdBy: string;
@@ -235,6 +237,8 @@ function MyBuzzesPageContent() {
                     showViewReplies={true}
                     isActive={buzz.isActive}
                     username={buzz.user.username}
+                    rewardSettleType={buzz.rewardSettleType}
+                    maxParticipants={buzz.maxParticipants}
                   />
                 </div>
               ))}

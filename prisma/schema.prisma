@@ -32,6 +32,7 @@ model User {
   userBalances UserBalance[]
   withdrawRequests UserWithdrawRequest[]
   bindedWallet String?    @unique
+  kolStatus String? // null pending confimed
 
   @@index([uid])
   @@index([email])
@@ -54,6 +55,7 @@ model Buzz {
   tweetText    String?
   rewardSettleType String?
   maxParticipants Int?
+  participantMinimumTokenAmount String?
 
   tokenAmount String
   paymentToken String // BNB CUSTOM
@@ -164,6 +166,7 @@ model UserApiKey {
   userId String @unique
   apiKey String @unique
 }
+
 
 enum ReplyStatus {
   PENDING

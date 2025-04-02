@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Buzz } from "@prisma/client";
 import { getPublicClient } from "@/lib/ethereum";
-import { formatEther, parseEther } from "viem";
+import { erc20Abi, formatEther, parseEther } from "viem";
 import * as math from "mathjs";
 
 export const dynamic = "force-dynamic";
@@ -79,7 +79,7 @@ const settleDefaultTypeRewards = async (buzz: any) => {
   const userWeights = await Promise.all(
     replyUserIds.map(async (uid: string) => {
       const user = dbUserMap.get(uid);
-      return await getUserWeight(buzz, user);
+      return await getUserFormatBalance(buzz, user);
     })
   );
 
@@ -104,7 +104,7 @@ const settleDefaultTypeRewards = async (buzz: any) => {
 
   const refinedUserWeights = userWeights.map((weight: number) => {
     if (weight === 0) {
-      return minWeight / 10;
+      return minWeight / 4;
     }
     return weight;
   });
@@ -121,41 +121,81 @@ const settleDefaultTypeRewards = async (buzz: any) => {
     .bignumber(buzz.tokenAmount)
     .times(math.bignumber(10).pow(buzz.tokenDecimals));
 
+  const kolUserIds = await prisma.user.findMany({
+    where: {
+      kolStatus: "confirmed",
+    },
+    select: {
+      uid: true,
+    },
+  });
+
+  const kolRewardTokenAmount =
+    kolUserIds.length > 0
+      ? totalTokenAmountOnChain.div(math.bignumber(2))
+      : math.bignumber(0);
+
+  const userRewardTokenAmount =
+    totalTokenAmountOnChain.minus(kolRewardTokenAmount);
+
+  console.log("kolRewardTokenAmount", kolRewardTokenAmount);
+  console.log("userRewardTokenAmount", userRewardTokenAmount);
+  console.log("kolNumber", kolUserIds.length);
+
+  const addUserBalance = async (
+    tx: any,
+    userId: string,
+    amountOnChain: string
+  ) => {
+    const updatedBalance = await tx.userBalance.upsert({
+      where: {
+        // Use the unique constraint we defined in the schema
+        userId_tokenAddress: {
+          userId: userId,
+          tokenAddress: buzz.customTokenAddress,
+        },
+      },
+      // If no record exists, create a new one
+      create: {
+        userId,
+        tokenAddress: buzz.customTokenAddress,
+        tokenName: buzz.paymentToken,
+        tokenAmountOnChain: amountOnChain,
+        tokenDecimals: buzz.tokenDecimals,
+      },
+      // If a record exists, update the tokenAmount
+      update: {
+        tokenAmountOnChain: {
+          // Increment the existing amount
+          increment: amountOnChain,
+        },
+      },
+    });
+
+    return updatedBalance;
+  };
+
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
+    kolUserIds.forEach(async (kol: any, index: number) => {
+      const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
+        .div(math.bignumber(kolUserIds.length))
+        .floor()
+        .toString();
+
+      await addUserBalance(tx, kol.uid, kolAverageRewardTokenAmountOnChain);
+    });
+
     replyUserIds.forEach(async (userId: string, index: number) => {
       // const amountOnChain =
       //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
 
-      const amountOnChain = totalTokenAmountOnChain
+      const amountOnChain = userRewardTokenAmount
         .mul(math.bignumber(userWeights[index]))
         .div(math.bignumber(totalWeight))
         .floor()
         .toString();
       // Use upsert to either create a new record or update an existing one
-      const updatedBalance = await tx.userBalance.upsert({
-        where: {
-          // Use the unique constraint we defined in the schema
-          userId_tokenAddress: {
-            userId: userId,
-            tokenAddress: buzz.customTokenAddress,
-          },
-        },
-        // If no record exists, create a new one
-        create: {
-          userId,
-          tokenAddress: buzz.customTokenAddress,
-          tokenName: buzz.paymentToken,
-          tokenAmountOnChain: amountOnChain,
-          tokenDecimals: buzz.tokenDecimals,
-        },
-        // If a record exists, update the tokenAmount
-        update: {
-          tokenAmountOnChain: {
-            // Increment the existing amount
-            increment: amountOnChain,
-          },
-        },
-      });
+      await addUserBalance(tx, userId, amountOnChain);
     });
 
     // Mark the buzz as settled
@@ -182,6 +222,17 @@ const settleFixedTypeRewards = async (buzz: any) => {
 
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
     replyUserIds.forEach(async (userId: string, index: number) => {
+      // Check if buzz has participantMinimumTokenAmount limit
+      if (
+        buzz.participantMinimumTokenAmount &&
+        Number(buzz.participantMinimumTokenAmount) > 0
+      ) {
+        const userBalance = await getUserFormatBalance(buzz, userId);
+        if (userBalance < Number(buzz.participantMinimumTokenAmount)) {
+          return;
+        }
+      }
+
       // Use upsert to either create a new record or update an existing one
       const updatedBalance = await tx.userBalance.upsert({
         where: {
@@ -248,7 +299,7 @@ const settleFixedTypeRewards = async (buzz: any) => {
   });
 };
 
-const getUserWeight = async (buzz: any, dbUser: any) => {
+const getUserFormatBalance = async (buzz: any, dbUser: any) => {
   const publicClient = getPublicClient(
     Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
   );
@@ -262,6 +313,12 @@ const getUserWeight = async (buzz: any, dbUser: any) => {
     });
     return Number(formatEther(userBalance));
   } else {
-    return 1;
+    const userBalance = await publicClient.readContract({
+      address: buzz.customTokenAddress,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [dbUser.bindedWallet],
+    });
+    return Number(formatEther(userBalance));
   }
 };

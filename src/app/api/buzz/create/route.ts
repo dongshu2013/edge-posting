@@ -18,6 +18,7 @@ export interface CreateBuzzRequest {
   transactionHash: string;
   rewardSettleType: string;
   maxParticipants?: number;
+  participantMinimumTokenAmount?: number;
 }
 
 export async function POST(request: Request) {
@@ -38,6 +39,7 @@ export async function POST(request: Request) {
       transactionHash,
       rewardSettleType,
       maxParticipants,
+      participantMinimumTokenAmount,
     }: CreateBuzzRequest = body;
 
     // 验证必填字段
@@ -271,6 +273,11 @@ export async function POST(request: Request) {
           transactionHash,
           rewardSettleType,
           maxParticipants: maxParticipants ? Number(maxParticipants) : null,
+          participantMinimumTokenAmount:
+            participantMinimumTokenAmount &&
+            Number(participantMinimumTokenAmount) > 0
+              ? participantMinimumTokenAmount.toString()
+              : null,
         },
       });
 

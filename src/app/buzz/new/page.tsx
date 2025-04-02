@@ -41,6 +41,7 @@ export default function NewBuzzPage() {
     transactionHash: "",
     rewardSettleType: "default",
     maxParticipants: 10,
+    minimumTokenAmount: 0,
   });
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
@@ -230,8 +231,8 @@ export default function NewBuzzPage() {
     }
 
     const deadline = new Date();
-    deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    // deadline.setMinutes(deadline.getMinutes() + 5);
+    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       setIsCreatingBuzz(true);
@@ -245,6 +246,7 @@ export default function NewBuzzPage() {
         transactionHash: txHash,
         rewardSettleType: formData.rewardSettleType,
         maxParticipants: formData.maxParticipants,
+        participantMinimumTokenAmount: formData.minimumTokenAmount,
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -469,40 +471,79 @@ export default function NewBuzzPage() {
                   </div>
 
                   {formData.rewardSettleType === "fixed" && (
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="maxParticipants"
-                        className="block text-sm font-medium text-gray-700"
-                      >
-                        Maximum Number of Participants
-                      </label>
-                      <div className="relative rounded-xl shadow-sm">
-                        <input
-                          type="number"
-                          name="maxParticipants"
-                          id="maxParticipants"
-                          className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                          placeholder="Expected Participants"
-                          min="1"
-                          value={formData.maxParticipants}
-                          onChange={handleInputChange}
-                          required={formData.rewardSettleType === "fixed"}
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-r-xl">
-                          <span className="text-sm font-medium">users</span>
+                    <div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="maxParticipants"
+                          className="block text-sm font-medium text-gray-700"
+                        >
+                          Maximum Number of Participants
+                        </label>
+                        <div className="relative rounded-xl shadow-sm">
+                          <input
+                            type="number"
+                            name="maxParticipants"
+                            id="maxParticipants"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            placeholder="Expected Participants"
+                            min="1"
+                            value={formData.maxParticipants}
+                            onChange={handleInputChange}
+                            required={formData.rewardSettleType === "fixed"}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-r-xl">
+                            <span className="text-sm font-medium">users</span>
+                          </div>
                         </div>
+                        <p className="text-xs text-gray-500 italic">
+                          Each participant will receive{" "}
+                          {formData.maxParticipants > 0
+                            ? (
+                                formData.totalAmount / formData.maxParticipants
+                              ).toFixed(6)
+                            : 0}{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 italic">
-                        Each participant will receive {formData.maxParticipants > 0 ? 
-                          (formData.totalAmount / formData.maxParticipants).toFixed(6) : 0} {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
-                      </p>
+
+                      {/* Minimum Token Amount Field */}
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="minimumTokenAmount"
+                          className="block text-sm font-medium text-gray-700"
+                        >
+                          Minimum Token Requirement (Optional) 🔒
+                        </label>
+                        <div className="relative rounded-xl shadow-sm">
+                          <input
+                            type="number"
+                            name="minimumTokenAmount"
+                            id="minimumTokenAmount"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            placeholder="0"
+                            min="0"
+                            step="any"
+                            value={formData.minimumTokenAmount}
+                            onChange={handleInputChange}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-r-xl">
+                            <span className="text-sm font-medium">
+                              {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 italic">
+                          Users must have at least this amount of {formData.paymentToken === "BNB" ? "BNB" : "tokens"} to receive reward
+                        </p>
+                      </div>
+
                     </div>
                   )}
 
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-start">
                       <span className="text-sm text-gray-700">
-                        {formData.rewardSettleType === "default" 
+                        {formData.rewardSettleType === "default"
                           ? "The total reward amount will be split among all participants who complete the task, and the amount will be determined by their token holdings."
                           : "Each participant will receive a fixed amount, remaining reward will be returned to the creator."}
                       </span>

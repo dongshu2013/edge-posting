@@ -10,6 +10,7 @@ import { fetchApi } from "@/lib/api";
 import { AuthButton } from "@/components/AuthButton";
 import ReplyLinkModal from "./ReplyLinkModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
+import Image from "next/image";
 
 export interface BuzzCardProps {
   id: string;
@@ -29,6 +30,8 @@ export interface BuzzCardProps {
   rewardSettleType?: string;
   maxParticipants?: number;
   username: string;
+  avatar: string;
+  twitterUsername: string;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -64,6 +67,8 @@ export default function BuzzCard({
   isActive = true,
   hasReplied = false,
   username,
+  twitterUsername,
+  avatar,
   tokenAmount,
   paymentToken,
   customTokenAddress,
@@ -227,8 +232,16 @@ export default function BuzzCard({
         {/* Header with creator info and price */}
         <div className="flex justify-between items-center">
           <div className="flex items-center">
+            <Image
+              src={avatar}
+              alt={username}
+              className="w-4 h-4 rounded-full mr-2"
+              width={16}
+              height={16}
+            />
+            
             <span className="text-sm font-medium text-gray-900">
-              @{username || createdBy.substring(0, 6)}
+              @{twitterUsername || createdBy.substring(0, 6)}
             </span>
             <span className="mx-1 text-gray-500">·</span>
             {createdAt && (

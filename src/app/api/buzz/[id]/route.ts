@@ -30,6 +30,8 @@ export async function GET(
             user: {
               select: {
                 username: true,
+                avatar: true,
+                twitterUsername: true,
               },
             },
           },
@@ -40,6 +42,8 @@ export async function GET(
         user: {
           select: {
             username: true,
+            avatar: true,
+            twitterUsername: true,
           },
         },
       },

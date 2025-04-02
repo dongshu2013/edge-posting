@@ -26,6 +26,8 @@ interface Buzz {
   isActive: boolean;
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
   };
   _count: {
     replies: number;
@@ -237,6 +239,8 @@ function MyBuzzesPageContent() {
                     showViewReplies={true}
                     isActive={buzz.isActive}
                     username={buzz.user.username}
+                    avatar={buzz.user.avatar}
+                    twitterUsername={buzz.user.twitterUsername}
                     rewardSettleType={buzz.rewardSettleType}
                     maxParticipants={buzz.maxParticipants}
                   />

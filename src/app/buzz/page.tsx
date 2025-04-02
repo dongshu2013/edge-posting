@@ -27,6 +27,8 @@ interface Buzz {
   isActive: boolean;
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
   };
   _count: {
     replies: number;
@@ -340,6 +342,8 @@ function BuzzesPageContent() {
                     createdAt={buzz.createdAt}
                     isActive={buzz.isActive}
                     username={buzz?.user?.username}
+                    avatar={buzz?.user?.avatar}
+                    twitterUsername={buzz?.user?.twitterUsername}
                     tokenAmount={buzz.tokenAmount}
                     paymentToken={buzz.paymentToken}
                     customTokenAddress={buzz.customTokenAddress}

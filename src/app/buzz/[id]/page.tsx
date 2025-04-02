@@ -40,6 +40,8 @@ interface Buzz {
   hasReplied?: boolean;
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
   };
 }
 
@@ -188,6 +190,8 @@ export default function BuzzDetailPage() {
             showViewReplies={false}
             hasReplied={hasReplied}
             username={buzz?.user?.username}
+            avatar={buzz?.user?.avatar}
+            twitterUsername={buzz?.user?.twitterUsername}
             rewardSettleType={buzz.rewardSettleType}
             maxParticipants={buzz.maxParticipants}
           />

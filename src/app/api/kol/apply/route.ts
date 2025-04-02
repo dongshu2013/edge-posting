@@ -9,38 +9,71 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    console.log("authUser", authUser);
-
     const currentUser = await prisma.user.findUnique({
       where: {
         uid: authUser.uid,
       },
     });
 
-    console.log("currentUser", currentUser);
-
-    if (
-      currentUser?.kolStatus === "confirmed" ||
-      currentUser?.kolStatus === "pending"
-    ) {
+    if (!currentUser?.twitterUsername) {
       return NextResponse.json(
-        { error: "User already applied" },
+        { error: "User not linked to Twitter" },
         { status: 400 }
       );
     }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        uid: authUser.uid,
-      },
-      data: {
-        kolStatus: "pending",
-      },
-    });
+    const { area } = await request.json();
+    if (!area) {
+      return NextResponse.json({ error: "Area is required" }, { status: 400 });
+    }
 
-    return NextResponse.json({
-      success: !!updatedUser,
-    });
+    try {
+      const infoResponse = await fetch(
+        `https://api.tweetscout.io/v2/info/${currentUser.twitterUsername}`,
+        {
+          headers: {
+            Accept: "application/json",
+            ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+          },
+        }
+      );
+      const tweetscoutInfo = await infoResponse.json();
+
+      const scoreResponse = await fetch(
+        `https://api.tweetscout.io/v2/score/${currentUser.twitterUsername}`,
+        {
+          headers: {
+            Accept: "application/json",
+            ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+          },
+        }
+      );
+      const scoreData = await scoreResponse.json();
+
+      await prisma.kol.create({
+        data: {
+          twitterUsername: currentUser.twitterUsername,
+          area: area,
+          avatar: tweetscoutInfo.avatar,
+          nickname: tweetscoutInfo.name || tweetscoutInfo.screen_name,
+          followers: tweetscoutInfo.followers_count,
+          description: tweetscoutInfo.description || "",
+          score: scoreData?.score || 1,
+          status: "pending",
+          userId: currentUser.uid,
+        },
+      });
+
+      return NextResponse.json({
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(`Error applying to become a KOL`, err);
+      return NextResponse.json(
+        { error: err.message || "Failed to apply to become a KOL" },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error("Error applying to become a KOL:", error);
     return NextResponse.json(

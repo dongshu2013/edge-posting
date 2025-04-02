@@ -1,9 +1,9 @@
-import { NextResponse } from "next/server";
+import { getPublicClient } from "@/lib/ethereum";
 import { prisma } from "@/lib/prisma";
 import { Buzz } from "@prisma/client";
-import { getPublicClient } from "@/lib/ethereum";
-import { erc20Abi, formatEther, parseEther } from "viem";
 import * as math from "mathjs";
+import { NextResponse } from "next/server";
+import { erc20Abi, formatEther } from "viem";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300; // 5 minutes
@@ -85,118 +85,106 @@ const settleDefaultTypeRewards = async (buzz: any) => {
 
   console.log("userWeights", userWeights);
 
-  let minWeight = 0;
-  userWeights.forEach((weight: number) => {
-    if (weight > 0) {
-      if (minWeight === 0) {
-        minWeight = weight;
-      } else {
-        minWeight = Math.min(minWeight, weight);
-      }
-    }
-  });
-  // All users have 0 balance
-  if (minWeight === 0) {
-    minWeight = 1;
-  }
-
-  console.log("minWeight", minWeight);
-
-  const refinedUserWeights = userWeights.map((weight: number) => {
-    if (weight === 0) {
-      return minWeight / 4;
-    }
-    return weight;
-  });
-
-  console.log("refinedUserWeights", refinedUserWeights);
-
-  const totalWeight = refinedUserWeights.reduce(
+  const totalWeight = userWeights.reduce(
     (acc: number, weight: number) => acc + weight,
     0
   );
 
-  console.log("totalWeight", totalWeight);
   const totalTokenAmountOnChain = math
     .bignumber(buzz.tokenAmount)
     .times(math.bignumber(10).pow(buzz.tokenDecimals));
 
-  const kolUserIds = await prisma.user.findMany({
-    where: {
-      kolStatus: "confirmed",
-    },
-    select: {
-      uid: true,
-    },
-  });
-
-  const kolRewardTokenAmount =
-    kolUserIds.length > 0
-      ? totalTokenAmountOnChain.div(math.bignumber(2))
+  const hasBalanceWeights = userWeights.filter((weight: number) => weight > 0);
+  const emptyBalanceWeights = userWeights.filter(
+    (weight: number) => weight === 0
+  );
+  // 40%
+  const hasBalanceRewardTokenAmount =
+    hasBalanceWeights.length > 0
+      ? totalTokenAmountOnChain.mul(math.bignumber(4)).div(math.bignumber(10))
+      : math.bignumber(0);
+  // 10%
+  const emptyBalanceRewardTokenAmount =
+    emptyBalanceWeights.length > 0
+      ? totalTokenAmountOnChain.mul(math.bignumber(1)).div(math.bignumber(10))
       : math.bignumber(0);
 
-  const userRewardTokenAmount =
-    totalTokenAmountOnChain.minus(kolRewardTokenAmount);
+  const kols = await prisma.kol.findMany({
+    where: {
+      status: "confirmed",
+    },
+  });
+  // 50%
+  const kolRewardTokenAmount =
+    kols.length > 0
+      ? totalTokenAmountOnChain.mul(math.bignumber(5)).div(math.bignumber(10))
+      : math.bignumber(0);
 
+  const remainingRewardTokenAmount = totalTokenAmountOnChain
+    .minus(kolRewardTokenAmount)
+    .minus(emptyBalanceRewardTokenAmount)
+    .minus(hasBalanceRewardTokenAmount);
+
+  console.log("totalTokenAmountOnChain", totalTokenAmountOnChain);
   console.log("kolRewardTokenAmount", kolRewardTokenAmount);
-  console.log("userRewardTokenAmount", userRewardTokenAmount);
-  console.log("kolNumber", kolUserIds.length);
-
-  const addUserBalance = async (
-    tx: any,
-    userId: string,
-    amountOnChain: string
-  ) => {
-    const updatedBalance = await tx.userBalance.upsert({
-      where: {
-        // Use the unique constraint we defined in the schema
-        userId_tokenAddress: {
-          userId: userId,
-          tokenAddress: buzz.customTokenAddress,
-        },
-      },
-      // If no record exists, create a new one
-      create: {
-        userId,
-        tokenAddress: buzz.customTokenAddress,
-        tokenName: buzz.paymentToken,
-        tokenAmountOnChain: amountOnChain,
-        tokenDecimals: buzz.tokenDecimals,
-      },
-      // If a record exists, update the tokenAmount
-      update: {
-        tokenAmountOnChain: {
-          // Increment the existing amount
-          increment: amountOnChain,
-        },
-      },
-    });
-
-    return updatedBalance;
-  };
+  console.log("hasBalanceRewardTokenAmount", hasBalanceRewardTokenAmount);
+  console.log("emptyBalanceRewardTokenAmount", emptyBalanceRewardTokenAmount);
+  console.log("remainingRewardTokenAmount", remainingRewardTokenAmount);
 
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
-    kolUserIds.forEach(async (kol: any, index: number) => {
+    kols.forEach(async (kol: any, index: number) => {
       const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
-        .div(math.bignumber(kolUserIds.length))
+        .div(math.bignumber(kols.length))
         .floor()
         .toString();
 
-      await addUserBalance(tx, kol.uid, kolAverageRewardTokenAmountOnChain);
+      if (kol.userId) {
+        await addUserBalance(
+          buzz,
+          tx,
+          kol.userId,
+          kolAverageRewardTokenAmountOnChain
+        );
+      } else {
+        // Kol not registered yet, add balance to kol balance first
+        await addKolBalance(
+          buzz,
+          tx,
+          kol.id,
+          kolAverageRewardTokenAmountOnChain
+        );
+      }
     });
 
     replyUserIds.forEach(async (userId: string, index: number) => {
       // const amountOnChain =
       //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
 
-      const amountOnChain = userRewardTokenAmount
-        .mul(math.bignumber(userWeights[index]))
-        .div(math.bignumber(totalWeight))
-        .floor()
-        .toString();
-      // Use upsert to either create a new record or update an existing one
-      await addUserBalance(tx, userId, amountOnChain);
+      let amountOnChain = "0";
+      if (userWeights[index] > 0) {
+        amountOnChain = hasBalanceRewardTokenAmount
+          .mul(math.bignumber(userWeights[index]))
+          .div(math.bignumber(totalWeight))
+          .floor()
+          .toString();
+      } else {
+        amountOnChain = emptyBalanceRewardTokenAmount
+          .div(math.bignumber(emptyBalanceWeights.length))
+          .floor()
+          .toString();
+      }
+      await addUserBalance(buzz, tx, userId, amountOnChain);
     });
+
+    // Return fund to creator
+    if (remainingRewardTokenAmount.gt(0)) {
+      await addUserBalance(
+        buzz,
+        tx,
+        buzz.createdBy,
+        remainingRewardTokenAmount.toString()
+      );
+    }
 
     // Mark the buzz as settled
     await tx.buzz.update({
@@ -321,4 +309,74 @@ const getUserFormatBalance = async (buzz: any, dbUser: any) => {
     });
     return Number(formatEther(userBalance));
   }
+};
+
+const addUserBalance = async (
+  buzz: any,
+  tx: any,
+  userId: string,
+  amountOnChain: string
+) => {
+  const updatedBalance = await tx.userBalance.upsert({
+    where: {
+      // Use the unique constraint we defined in the schema
+      userId_tokenAddress: {
+        userId: userId,
+        tokenAddress: buzz.customTokenAddress,
+      },
+    },
+    // If no record exists, create a new one
+    create: {
+      userId,
+      tokenAddress: buzz.customTokenAddress,
+      tokenName: buzz.paymentToken,
+      tokenAmountOnChain: amountOnChain,
+      tokenDecimals: buzz.tokenDecimals,
+    },
+    // If a record exists, update the tokenAmount
+    update: {
+      tokenAmountOnChain: {
+        // Increment the existing amount
+        increment: amountOnChain,
+      },
+    },
+  }).catch((err: any) => {
+    console.error("Error adding user balance:", err);
+  });
+
+  return updatedBalance;
+};
+
+const addKolBalance = async (
+  buzz: any,
+  tx: any,
+  kolId: string,
+  amountOnChain: string
+) => {
+  const updatedBalance = await tx.kolBalance.upsert({
+    where: {
+      // Use the unique constraint we defined in the schema
+      kolId_tokenAddress: {
+        kolId: kolId,
+        tokenAddress: buzz.customTokenAddress,
+      },
+    },
+    // If no record exists, create a new one
+    create: {
+      kolId,
+      tokenAddress: buzz.customTokenAddress,
+      tokenName: buzz.paymentToken,
+      tokenAmountOnChain: amountOnChain,
+      tokenDecimals: buzz.tokenDecimals,
+    },
+    // If a record exists, update the tokenAmount
+    update: {
+      tokenAmountOnChain: {
+        // Increment the existing amount
+        increment: amountOnChain,
+      },
+    },
+  });
+
+  return updatedBalance;
 };

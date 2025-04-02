@@ -33,10 +33,27 @@ model User {
   withdrawRequests UserWithdrawRequest[]
   bindedWallet String?    @unique
   kolStatus String? // null pending confimed
+  kolInfo     Kol?
 
   @@index([uid])
   @@index([email])
   @@index([username])
+}
+
+model Kol {
+  id           String        @id @default(cuid())
+  userId String? @unique
+  avatar String
+  twitterUsername String @unique
+  nickname String
+  status String // pending confirmed
+  score  Float   
+  followers Int
+  description String
+  area Int // 1-欧美 2-韩国 3-中国 4-日本 5-东南亚
+  kolBalances KolBalance[]
+
+  user         User?          @relation(fields: [userId], references: [uid])
 }
 
 model Buzz {
@@ -144,6 +161,20 @@ model UserBalance {
   user      User             @relation(fields: [userId], references: [uid])
 
   @@unique([userId, tokenAddress]) // Each user can have only one balance per token
+}
+
+model KolBalance {
+  id String @id @default(cuid())
+
+  kolId    String
+  tokenAmountOnChain BigInt
+  tokenName String
+  tokenAddress String
+  tokenDecimals Int
+
+  kol      Kol             @relation(fields: [kolId], references: [id])
+
+  @@unique([kolId, tokenAddress]) // Each kol can have only one balance per token
 }
 
 model UserWithdrawRequest {

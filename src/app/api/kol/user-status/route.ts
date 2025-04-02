@@ -10,14 +10,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbUser = await prisma.user.findUnique({
+    const dbUser = await prisma.kol.findUnique({
       where: {
-        uid: authUser.uid,
+        userId: authUser.uid,
       },
     });
 
     return NextResponse.json({
-      kolStatus: dbUser?.kolStatus || null,
+      kolStatus: dbUser?.status || null,
     });
   } catch (error) {
     return NextResponse.json(

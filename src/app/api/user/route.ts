@@ -43,6 +43,50 @@ export async function POST(request: Request) {
       },
     });
 
+    // Bind kol with new user
+    if (user?.twitterUsername) {
+      const updatedKol = await prisma.kol
+        .update({
+          where: {
+            userId: undefined,
+            twitterUsername: user.twitterUsername,
+          },
+          data: {
+            userId: user.uid,
+          },
+        })
+        .catch((err) => {
+          console.error("Error updating kol:", err);
+        });
+      console.log("bind kol with new user:", updatedKol);
+
+      if (updatedKol) {
+        // Transfer kol balance to user
+        const kolBalances = await prisma.kolBalance.findMany({
+          where: {
+            kolId: updatedKol.id,
+          },
+        });
+
+        await prisma.$transaction(async (tx: any) => {
+          kolBalances.forEach(async (kolBalance: any) => {
+            await addUserBalance(
+              kolBalance,
+              tx,
+              user.uid,
+              kolBalance.tokenAmountOnChain
+            );
+
+            await tx.kolBalance.delete({
+              where: {
+                id: kolBalance.id,
+              },
+            });
+          });
+        });
+      }
+    }
+
     return NextResponse.json(user);
   } catch (error) {
     console.error(error);
@@ -52,3 +96,37 @@ export async function POST(request: Request) {
     );
   }
 }
+
+const addUserBalance = async (
+  kolBalance: any,
+  tx: any,
+  userId: string,
+  amountOnChain: string
+) => {
+  const updatedBalance = await tx.userBalance.upsert({
+    where: {
+      // Use the unique constraint we defined in the schema
+      userId_tokenAddress: {
+        userId: userId,
+        tokenAddress: kolBalance.customTokenAddress,
+      },
+    },
+    // If no record exists, create a new one
+    create: {
+      userId,
+      tokenAddress: kolBalance.customTokenAddress,
+      tokenName: kolBalance.paymentToken,
+      tokenAmountOnChain: amountOnChain,
+      tokenDecimals: kolBalance.tokenDecimals,
+    },
+    // If a record exists, update the tokenAmount
+    update: {
+      tokenAmountOnChain: {
+        // Increment the existing amount
+        increment: amountOnChain,
+      },
+    },
+  });
+
+  return updatedBalance;
+};

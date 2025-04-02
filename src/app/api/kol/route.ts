@@ -7,17 +7,17 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
 
-    const kols = await prisma.user.findMany({
+    const kols = await prisma.kol.findMany({
       where: {
-        kolStatus: "confirmed",
+        status: "confirmed",
       },
       skip: (page - 1) * pageSize,
       take: pageSize,
     });
 
-    const totalCount = await prisma.user.count({
+    const totalCount = await prisma.kol.count({
       where: {
-        kolStatus: "confirmed",
+        status: "confirmed",
       },
     });
 

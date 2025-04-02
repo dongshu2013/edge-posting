@@ -231,8 +231,8 @@ export default function NewBuzzPage() {
     }
 
     const deadline = new Date();
-    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    deadline.setMinutes(deadline.getMinutes() + 5);
+    deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    // deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       setIsCreatingBuzz(true);

@@ -76,6 +76,14 @@ const settleDefaultTypeRewards = async (buzz: any) => {
   });
   const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
 
+  // Find reply user ids that are kols
+  const kols = await prisma.kol.findMany({
+    where: {
+      status: "confirmed",
+      userId: { in: replyUserIds },
+    },
+  });
+
   const userWeights = await Promise.all(
     replyUserIds.map(async (uid: string) => {
       const user = dbUserMap.get(uid);
@@ -94,10 +102,20 @@ const settleDefaultTypeRewards = async (buzz: any) => {
     .bignumber(buzz.tokenAmount)
     .times(math.bignumber(10).pow(buzz.tokenDecimals));
 
-  const hasBalanceWeights = userWeights.filter((weight: number) => weight > 0);
-  const emptyBalanceWeights = userWeights.filter(
-    (weight: number) => weight === 0
-  );
+  const hasBalanceWeights = userWeights
+    .filter((weight: number) => weight > 0)
+    // Filter out kols
+    .filter((weight: number) => {
+      const kol = kols.find((kol: any) => kol.userId === weight);
+      return !kol;
+    });
+  const emptyBalanceWeights = userWeights
+    .filter((weight: number) => weight === 0)
+    // Filter out kols
+    .filter((weight: number) => {
+      const kol = kols.find((kol: any) => kol.userId === weight);
+      return !kol;
+    });
   // 40%
   const hasBalanceRewardTokenAmount =
     hasBalanceWeights.length > 0
@@ -109,11 +127,6 @@ const settleDefaultTypeRewards = async (buzz: any) => {
       ? totalTokenAmountOnChain.mul(math.bignumber(1)).div(math.bignumber(10))
       : math.bignumber(0);
 
-  const kols = await prisma.kol.findMany({
-    where: {
-      status: "confirmed",
-    },
-  });
   // 50%
   const kolRewardTokenAmount =
     kols.length > 0

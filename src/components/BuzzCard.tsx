@@ -9,8 +9,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { AuthButton } from "@/components/AuthButton";
 import ReplyLinkModal from "./ReplyLinkModal";
+import FollowTwitterModal from "./FollowTwitterModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
 import Image from "next/image";
+import { twitterProjectHandle } from "@/config";
 
 export interface BuzzCardProps {
   id: string;
@@ -79,6 +81,7 @@ export default function BuzzCard({
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
@@ -132,6 +135,11 @@ export default function BuzzCard({
           text: replyText,
         }),
       });
+
+      if (response.code === 101) {
+        setIsFollowModalOpen(true);
+        return;
+      }
 
       if (response.error) {
         throw new Error(response.error || "Failed to submit reply");
@@ -369,6 +377,12 @@ export default function BuzzCard({
         onSubmit={handleReplySubmit}
         tokenAmount={tokenAmount}
         initialReplyText={generatedReplyText}
+      />
+
+      <FollowTwitterModal
+        isOpen={isFollowModalOpen}
+        onClose={() => setIsFollowModalOpen(false)}
+        twitterUsername={twitterProjectHandle}
       />
 
       {/* Instructions Modal */}

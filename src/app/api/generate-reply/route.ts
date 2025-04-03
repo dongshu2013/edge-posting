@@ -4,6 +4,7 @@ import { getAuthUser } from "@/lib/auth-helpers";
 import { getRateLimiter } from "@/lib/rateLimiter";
 import { prisma } from "@/lib/prisma";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
+import { checkIfUserFollowsTwitter } from "@/utils/xUtils";
 
 export async function POST(request: Request) {
   let userId = null;
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
   const identifier = `generate-reply-${userId}`;
 
   const rateLimiter = getRateLimiter(identifier, {
-    tokensPerInterval: 30,
+    tokensPerInterval: 100,
     interval: "day",
   });
 
@@ -47,6 +48,20 @@ export async function POST(request: Request) {
   });
   const userBio = user?.bio;
   const userMood = user?.mood;
+
+  // Check if user has followed our twitter
+  const userTwitterUsername = user?.twitterUsername;
+  if (!userTwitterUsername) {
+    return NextResponse.json(
+      { error: "User twitter username not found" },
+      { status: 400 }
+    );
+  }
+
+  const isFollowed = await checkIfUserFollowsTwitter(userTwitterUsername);
+  if (!isFollowed) {
+    return NextResponse.json({ error: "User not followed", code: 101 });
+  }
 
   try {
     const { instructions, tweetText } = await request.json();

@@ -2,8 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ChatBubbleLeftRightIcon } from "@heroicons/react/24/outline";
+import {
+  ChatBubbleLeftRightIcon,
+  SparklesIcon,
+} from "@heroicons/react/24/outline";
 import BuzzCard from "@/components/BuzzCard";
+import BuzzSettleHistory from "@/components/BuzzSettleHistory";
 import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
@@ -46,6 +50,22 @@ interface Buzz {
   };
 }
 
+interface SettleHistory {
+  id: string;
+  buzzId: string;
+  settleAmount: string;
+  kolId?: string;
+  userId?: string;
+  createdAt: Date;
+  type: string;
+  user?: {
+    username: string;
+  };
+  kol?: {
+    username: string;
+  };
+}
+
 export default function BuzzDetailPage() {
   const params = useParams();
   const userInfo = useUserStore((state) => state.userInfo);
@@ -56,6 +76,9 @@ export default function BuzzDetailPage() {
   const [selectedReply, setSelectedReply] = useState<Reply | null>(null);
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"replies" | "settle-history">(
+    "replies"
+  );
 
   const isOwner =
     userInfo &&
@@ -199,104 +222,132 @@ export default function BuzzDetailPage() {
           />
         </div>
 
-        {/* Right Side - Scrollable Replies */}
+        {/* Right Side - Scrollable Content */}
         <div className="flex-1">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
-            <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
-              <ChatBubbleLeftRightIcon className="h-6 w-6 sm:h-7 sm:w-7 text-blue-500" />
-              <span className="text-blue-500">Replies</span>
-              <span className="text-gray-900">({buzz.replies.length})</span>
-            </h2>
+          {/* Tab Switch */}
+          <div className="flex items-center gap-2 mb-6">
+            <button
+              onClick={() => setActiveTab("replies")}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                activeTab === "replies"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <ChatBubbleLeftRightIcon className="h-4 w-4 inline-block mr-1" />
+              Replies ({buzz.replies.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("settle-history")}
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                activeTab === "settle-history"
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                  : "bg-white text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              <SparklesIcon className="h-4 w-4 inline-block mr-1" />
+              Settle History
+            </button>
           </div>
 
-          {buzz.replies.length === 0 ? (
-            <div className="bg-gray-50 rounded-2xl p-8 text-center">
-              <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-lg font-medium text-gray-900">
-                No replies yet
-              </h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Be the first to reply and earn BUZZ! 🚀
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {buzz.replies.map((reply) => (
-                <div
-                  key={reply.id}
-                  className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 overflow-hidden"
-                >
-                  {/* Reply Header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-gray-900">
-                        @{reply?.user?.username}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {new Date(reply.createdAt).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                          }
-                        )}
-                      </span>
+          {/* Replies Tab */}
+          {activeTab === "replies" && (
+            <>
+              {buzz.replies.length === 0 ? (
+                <div className="bg-gray-50 rounded-2xl p-8 text-center">
+                  <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-lg font-medium text-gray-900">
+                    No replies yet
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Be the first to reply and earn BUZZ! 🚀
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {buzz.replies.map((reply) => (
+                    <div
+                      key={reply.id}
+                      className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 p-4 overflow-hidden"
+                    >
+                      {/* Reply Header */}
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-900">
+                            @{reply?.user?.username}
+                          </span>
+                          <span className="text-sm text-gray-500">
+                            {new Date(reply.createdAt).toLocaleDateString(
+                              undefined,
+                              {
+                                month: "short",
+                                day: "numeric",
+                              }
+                            )}
+                          </span>
 
-                      <div className="flex items-center gap-2">
-                        {isOwner && reply.status === "PENDING" && (
-                          <button
-                            onClick={() => handleReject(reply.id)}
-                            disabled={isRejecting}
-                            className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isRejecting ? "Rejecting..." : "Reject"}
-                          </button>
-                        )}
+                          <div className="flex items-center gap-2">
+                            {isOwner && reply.status === "PENDING" && (
+                              <button
+                                onClick={() => handleReject(reply.id)}
+                                disabled={isRejecting}
+                                className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {isRejecting ? "Rejecting..." : "Reject"}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          {reply.status === "APPROVED" && (
+                            <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Approved
+                            </span>
+                          )}
+                          {reply.status === "REJECTED" && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              Rejected
+                            </span>
+                          )}
+                          {reply.status === "PENDING" && (
+                            <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              Pending
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Tweet Embed */}
+                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+                        <div className="aspect-[16/9]">
+                          <iframe
+                            src={getEmbedUrl(reply.replyLink)}
+                            className="w-full h-full"
+                            frameBorder="0"
+                            title="Reply Preview"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Reply Text - Truncated */}
+                      <div
+                        className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] flex items-center"
+                        onClick={() => handleReplyClick(reply)}
+                      >
+                        <p className="text-gray-600 text-sm line-clamp-2 w-full">
+                          {reply.text}
+                        </p>
                       </div>
                     </div>
-                    <div>
-                      {reply.status === "APPROVED" && (
-                        <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Approved
-                        </span>
-                      )}
-                      {reply.status === "REJECTED" && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                          Rejected
-                        </span>
-                      )}
-                      {reply.status === "PENDING" && (
-                        <span className="hidden items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                          Pending
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Tweet Embed */}
-                  <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
-                    <div className="aspect-[16/9]">
-                      <iframe
-                        src={getEmbedUrl(reply.replyLink)}
-                        className="w-full h-full"
-                        frameBorder="0"
-                        title="Reply Preview"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Reply Text - Truncated */}
-                  <div
-                    className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] flex items-center"
-                    onClick={() => handleReplyClick(reply)}
-                  >
-                    <p className="text-gray-600 text-sm line-clamp-2 w-full">
-                      {reply.text}
-                    </p>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              )}
+            </>
+          )}
+
+          {/* Settle History Tab */}
+          {activeTab === "settle-history" && (
+            <BuzzSettleHistory buzzId={buzz.id} />
           )}
         </div>
       </div>

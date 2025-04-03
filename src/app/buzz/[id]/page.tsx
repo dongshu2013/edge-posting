@@ -42,6 +42,7 @@ interface Buzz {
     username: string;
     avatar: string;
     twitterUsername: string;
+    nickname: string;
   };
 }
 
@@ -194,6 +195,7 @@ export default function BuzzDetailPage() {
             twitterUsername={buzz?.user?.twitterUsername}
             rewardSettleType={buzz.rewardSettleType}
             maxParticipants={buzz.maxParticipants}
+            nickname={buzz?.user?.nickname}
           />
         </div>
 

@@ -131,31 +131,40 @@ const settleDefaultTypeRewards = async (buzz: any) => {
   console.log("emptyBalanceRewardTokenAmount", emptyBalanceRewardTokenAmount);
   console.log("remainingRewardTokenAmount", remainingRewardTokenAmount);
 
+  const settleHistories: any[] = [];
+
+  kols.forEach(async (kol: any, index: number) => {
+    const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
+      .div(math.bignumber(kols.length))
+      .floor()
+      .toString();
+
+    if (kol.userId) {
+      settleHistories.push({
+        userId: kol.userId,
+        buzzId: buzz.id,
+        settleAmount: kolAverageRewardTokenAmountOnChain,
+        type: "KOL",
+      });
+      await addUserBalance(
+        buzz,
+        prisma,
+        kol.userId,
+        kolAverageRewardTokenAmountOnChain
+      );
+    } else {
+      settleHistories.push({
+        kolId: kol.id,
+        buzzId: buzz.id,
+        settleAmount: kolAverageRewardTokenAmountOnChain,
+        type: "KOL",
+      });
+      // Kol not registered yet, add balance to kol balance first
+      await addKolBalance(buzz, prisma, kol.id, kolAverageRewardTokenAmountOnChain);
+    }
+  });
+
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
-    kols.forEach(async (kol: any, index: number) => {
-      const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
-        .div(math.bignumber(kols.length))
-        .floor()
-        .toString();
-
-      if (kol.userId) {
-        await addUserBalance(
-          buzz,
-          tx,
-          kol.userId,
-          kolAverageRewardTokenAmountOnChain
-        );
-      } else {
-        // Kol not registered yet, add balance to kol balance first
-        await addKolBalance(
-          buzz,
-          tx,
-          kol.id,
-          kolAverageRewardTokenAmountOnChain
-        );
-      }
-    });
-
     replyUserIds.forEach(async (userId: string, index: number) => {
       // const amountOnChain =
       //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
@@ -174,6 +183,12 @@ const settleDefaultTypeRewards = async (buzz: any) => {
           .toString();
       }
       await addUserBalance(buzz, tx, userId, amountOnChain);
+      settleHistories.push({
+        userId,
+        buzzId: buzz.id,
+        settleAmount: amountOnChain,
+        type: "Normal",
+      });
     });
 
     // Return fund to creator
@@ -184,7 +199,17 @@ const settleDefaultTypeRewards = async (buzz: any) => {
         buzz.createdBy,
         remainingRewardTokenAmount.toString()
       );
+      settleHistories.push({
+        userId: buzz.createdBy,
+        buzzId: buzz.id,
+        settleAmount: remainingRewardTokenAmount.toString(),
+        type: "Refund",
+      });
     }
+
+    await tx.settleHistory.createMany({
+      data: settleHistories,
+    });
 
     // Mark the buzz as settled
     await tx.buzz.update({
@@ -208,6 +233,7 @@ const settleFixedTypeRewards = async (buzz: any) => {
 
   const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
 
+  const settleHistories: any[] = [];
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
     replyUserIds.forEach(async (userId: string, index: number) => {
       // Check if buzz has participantMinimumTokenAmount limit
@@ -247,12 +273,25 @@ const settleFixedTypeRewards = async (buzz: any) => {
         },
       });
 
+      settleHistories.push({
+        userId,
+        buzzId: buzz.id,
+        settleAmount: userRewardAmountOnChain,
+        type: "Normal",
+      });
+
       remainingTokenAmountOnChain = remainingTokenAmountOnChain.minus(
         math.bignumber(userRewardAmountOnChain)
       );
     });
 
     if (remainingTokenAmountOnChain.gt(0)) {
+      settleHistories.push({
+        userId: buzz.createdBy,
+        buzzId: buzz.id,
+        settleAmount: remainingTokenAmountOnChain.toString(),
+        type: "Refund",
+      });
       const updatedCreatorBalance = await tx.userBalance.upsert({
         where: {
           // Use the unique constraint we defined in the schema
@@ -284,6 +323,10 @@ const settleFixedTypeRewards = async (buzz: any) => {
       where: { id: buzz.id },
       data: { isSettled: true },
     });
+  });
+
+  await prisma.settleHistory.createMany({
+    data: settleHistories,
   });
 };
 
@@ -317,32 +360,34 @@ const addUserBalance = async (
   userId: string,
   amountOnChain: string
 ) => {
-  const updatedBalance = await tx.userBalance.upsert({
-    where: {
-      // Use the unique constraint we defined in the schema
-      userId_tokenAddress: {
-        userId: userId,
+  const updatedBalance = await tx.userBalance
+    .upsert({
+      where: {
+        // Use the unique constraint we defined in the schema
+        userId_tokenAddress: {
+          userId: userId,
+          tokenAddress: buzz.customTokenAddress,
+        },
+      },
+      // If no record exists, create a new one
+      create: {
+        userId,
         tokenAddress: buzz.customTokenAddress,
+        tokenName: buzz.paymentToken,
+        tokenAmountOnChain: amountOnChain,
+        tokenDecimals: buzz.tokenDecimals,
       },
-    },
-    // If no record exists, create a new one
-    create: {
-      userId,
-      tokenAddress: buzz.customTokenAddress,
-      tokenName: buzz.paymentToken,
-      tokenAmountOnChain: amountOnChain,
-      tokenDecimals: buzz.tokenDecimals,
-    },
-    // If a record exists, update the tokenAmount
-    update: {
-      tokenAmountOnChain: {
-        // Increment the existing amount
-        increment: amountOnChain,
+      // If a record exists, update the tokenAmount
+      update: {
+        tokenAmountOnChain: {
+          // Increment the existing amount
+          increment: amountOnChain,
+        },
       },
-    },
-  }).catch((err: any) => {
-    console.error("Error adding user balance:", err);
-  });
+    })
+    .catch((err: any) => {
+      console.error("Error adding user balance:", err);
+    });
 
   return updatedBalance;
 };

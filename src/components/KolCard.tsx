@@ -1,3 +1,4 @@
+import { getDisplayArea } from "@/utils/commonUtils";
 import { formatFollowers } from "@/utils/numberUtils";
 import Image from "next/image";
 
@@ -12,7 +13,7 @@ export default function KolCard({ kol }: KolCardProps) {
         <div className="h-12 w-12 rounded-full overflow-hidden">
           <Image
             src={kol.avatar}
-            alt={kol.name}
+            alt={"kol"}
             width={48}
             height={48}
             className="object-cover"
@@ -20,9 +21,17 @@ export default function KolCard({ kol }: KolCardProps) {
         </div>
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900">{kol.nickname}</p>
+        <div className="flex items-center space-x-2 gap-2">
+          <p className="text-sm font-medium text-gray-900">{kol.nickname}</p>
+
+          <p className="text-sm font-medium text-gray-500">
+            {getDisplayArea(kol.area)}
+          </p>
+        </div>
         <p className="text-sm text-blue-600">@{kol.twitterUsername}</p>
-        <p className="mt-1 text-sm text-gray-500 line-clamp-2">{kol.description || "Empty"}</p>
+        <p className="mt-1 text-sm text-gray-500 line-clamp-2">
+          {kol.description || "Empty"}
+        </p>
       </div>
 
       <div className="flex-shrink-0 text-right">

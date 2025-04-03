@@ -32,6 +32,7 @@ export interface BuzzCardProps {
   username: string;
   avatar: string;
   twitterUsername: string;
+  nickname: string;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -67,6 +68,7 @@ export default function BuzzCard({
   isActive = true,
   hasReplied = false,
   username,
+  nickname,
   twitterUsername,
   avatar,
   tokenAmount,
@@ -235,14 +237,21 @@ export default function BuzzCard({
             <Image
               src={avatar}
               alt={username}
-              className="w-4 h-4 rounded-full mr-2"
-              width={16}
-              height={16}
+              className="w-10 h-10 rounded-full mr-2"
+              width={40}
+              height={40}
             />
-            
-            <span className="text-sm font-medium text-gray-900">
-              @{twitterUsername || createdBy.substring(0, 6)}
-            </span>
+
+            <div className="leading-tight">
+              <div className="text-[16px] font-medium text-gray-900">
+                {nickname || createdBy.substring(0, 6)}
+              </div>
+
+              <div className="text-[12px] text-gray-900">
+                @{twitterUsername || createdBy.substring(0, 6)}
+              </div>
+            </div>
+
             <span className="mx-1 text-gray-500">·</span>
             {createdAt && (
               <span className="text-sm text-gray-500">
@@ -260,7 +269,7 @@ export default function BuzzCard({
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="hidden items-center justify-between">
             <div className="text-sm flex items-center">
               <span>Settle Type:</span>
               <div className="relative inline-block ml-1 group">

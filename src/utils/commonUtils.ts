@@ -65,3 +65,22 @@ export async function getSha256Hash(value: string): Promise<string> {
 
   return hashHex;
 }
+
+export function getDisplayArea(area: number) {
+  if (area === 1) {
+    return "America/Europe";
+  }
+  if (area === 2) {
+    return "Korea";
+  }
+  if (area === 3) {
+    return "China";
+  }
+  if (area === 4) {
+    return "Japan";
+  }
+  if (area === 5) {
+    return "South Asia";
+  }
+  return "Unknown";
+}

@@ -8,19 +8,13 @@ import { useQuery } from "@tanstack/react-query";
 import { CustomPagination } from "@/components/CustomPagination";
 import { fetchApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { Pagination } from "@mui/material";
 
 export default function KolPage() {
   const { userInfo } = useAuth();
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [page, setPage] = useState(1);
-
-  const kolsQuery = useQuery({
-    queryKey: ["kols"],
-    queryFn: async () => {
-      const response = await fetch("/api/kol");
-      return response.json();
-    },
-  });
+  const [selectedArea, setSelectedArea] = useState("");
 
   const userStatusQuery = useQuery({
     queryKey: ["userStatus", userInfo?.uid],
@@ -34,8 +28,16 @@ export default function KolPage() {
   });
   const userKolStatus = userStatusQuery.data?.kolStatus;
 
-  console.log("userKolStatus", userKolStatus);
-
+  const kolsQuery = useQuery({
+    queryKey: ["kols", page, selectedArea],
+    queryFn: async () => {
+      const response = await fetchApi(
+        `/api/kol?page=${page}&area=${selectedArea}`,
+        {}
+      );
+      return response;
+    },
+  });
   const kols = kolsQuery.data?.items || [];
   const totalCount = kolsQuery.data?.totalCount || 0;
 
@@ -59,7 +61,7 @@ export default function KolPage() {
         </button>
       </div>
     ) : (
-      <div className="mt-6">
+      <div className="hidden mt-6">
         <button
           onClick={() => {
             if (!userInfo?.uid) {
@@ -83,7 +85,22 @@ export default function KolPage() {
           Key Opinion Leaders
         </h1>
 
-        {renderApplyButton()}
+        <div className="flex items-center gap-4">
+          <select
+            value={selectedArea}
+            onChange={(e) => setSelectedArea(e.target.value)}
+            className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+          >
+            <option value="">Select area</option>
+            <option value="1">America/Europe</option>
+            <option value="2">Korea</option>
+            <option value="3">China</option>
+            <option value="4">Japan</option>
+            <option value="5">South Asia</option>
+          </select>
+
+          {renderApplyButton()}
+        </div>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -127,10 +144,10 @@ export default function KolPage() {
       </div>
 
       {kols.length > 0 && (
-        <CustomPagination
+        <Pagination
           page={page}
-          setPage={setPage}
-          totalCount={totalCount}
+          onChange={(event, value) => setPage(value)}
+          count={Math.ceil(totalCount / 10)}
         />
       )}
 

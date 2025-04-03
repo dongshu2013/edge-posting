@@ -44,6 +44,7 @@ export async function GET(
             username: true,
             avatar: true,
             twitterUsername: true,
+            nickname: true,
           },
         },
       },

@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
             username: true,
             avatar: true,
             twitterUsername: true,
+            nickname: true,
           },
         },
         _count: {

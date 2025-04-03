@@ -21,6 +21,7 @@ import {
 import { contractAbi } from "@/config/contractAbi";
 import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 import toast from "react-hot-toast";
+import { TermsModal } from "@/components/TermsModal";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -231,8 +232,8 @@ export default function NewBuzzPage() {
     }
 
     const deadline = new Date();
-    deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    // deadline.setMinutes(deadline.getMinutes() + 5);
+    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       setIsCreatingBuzz(true);
@@ -444,11 +445,12 @@ export default function NewBuzzPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Reward Distribution 💎
                 </label>
+
                 <div className="flex flex-col space-y-4">
-                  <div className="flex rounded-xl overflow-hidden border border-gray-200">
+                  <div className="flex overflow-hidden">
                     <button
                       type="button"
-                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                      className={`rounded-xl flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.rewardSettleType === "default"
                           ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
                           : "bg-gray-50 text-gray-700 hover:bg-gray-100"
@@ -457,9 +459,10 @@ export default function NewBuzzPage() {
                     >
                       Split Among All
                     </button>
+
                     <button
                       type="button"
-                      className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
+                      className={`invisible flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.rewardSettleType === "fixed"
                           ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
                           : "bg-gray-50 text-gray-700 hover:bg-gray-100"
@@ -528,25 +531,47 @@ export default function NewBuzzPage() {
                           />
                           <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-r-xl">
                             <span className="text-sm font-medium">
-                              {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                              {formData.paymentToken === "BNB"
+                                ? "BNB"
+                                : "Tokens"}
                             </span>
                           </div>
                         </div>
                         <p className="text-xs text-gray-500 italic">
-                          Users must have at least this amount of {formData.paymentToken === "BNB" ? "BNB" : "tokens"} to receive reward
+                          Users must have at least this amount of{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "tokens"}{" "}
+                          to receive reward
                         </p>
                       </div>
-
                     </div>
                   )}
 
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-start">
-                      <span className="text-sm text-gray-700">
-                        {formData.rewardSettleType === "default"
-                          ? "The total reward amount will be split among all participants who complete the task, and the amount will be determined by their token holdings."
-                          : "Each participant will receive a fixed amount, remaining reward will be returned to the creator."}
-                      </span>
+                      {formData.rewardSettleType === "default" && (
+                        <span className="text-sm text-gray-700">
+                          Reward will be split into 3 parts: <br />
+                          1. 10% for user not holding tokens, reward will be
+                          distributed evenly among them;
+                          <br />
+                          2. 40% for the holders, reward will be distributed
+                          according to their token holdings;
+                          <br />
+                          3. 50% for the the KOLs, reward will be distributed
+                          according to their KOL influence score.
+                          <br />
+                          <br />
+                          If there is no participant in the above parts, the
+                          reward will be returned to the creator.
+                        </span>
+                      )}
+
+                      {formData.rewardSettleType === "fixed" && (
+                        <span className="text-sm text-gray-700">
+                          Each participant will receive a fixed amount,
+                          remaining reward will be returned to the creator.
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -645,6 +670,16 @@ export default function NewBuzzPage() {
                     ? "Pay & Create Buzz Campaign 🚀"
                     : "Create Buzz Campaign 🚀"}
                 </button>
+              </div>
+
+              <div className="flex justify-center">
+                <TermsModal
+                  trigger={
+                    <div className="text-sm text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                      User Terms
+                    </div>
+                  }
+                />
               </div>
             </form>
           </div>

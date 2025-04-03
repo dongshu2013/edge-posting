@@ -34,6 +34,7 @@ model User {
   bindedWallet String?    @unique
   kolStatus String? // null pending confimed
   kolInfo     Kol?
+  settleHistories SettleHistory[]
 
   @@index([uid])
   @@index([email])
@@ -52,6 +53,7 @@ model Kol {
   description String
   area Int // 1-欧美 2-韩国 3-中国 4-日本 5-东南亚
   kolBalances KolBalance[]
+  settleHistories SettleHistory[]
 
   user         User?          @relation(fields: [userId], references: [uid])
 }
@@ -73,6 +75,7 @@ model Buzz {
   rewardSettleType String?
   maxParticipants Int?
   participantMinimumTokenAmount String?
+  settleHistories SettleHistory[]
 
   tokenAmount String
   paymentToken String // BNB CUSTOM
@@ -101,6 +104,20 @@ model Reply {
   @@index([buzzId])
   @@index([createdBy])
   @@index([status])
+}
+
+model SettleHistory {
+  id           String            @id @default(cuid())
+  buzzId       String
+  settleAmount String
+  kolId        String?
+  userId       String?
+  createdAt    DateTime          @default(now())
+  type String  // Refund KOL Normal
+
+  buzz        Buzz              @relation(fields: [buzzId], references: [id])
+  kol         Kol?      @relation(fields: [kolId], references: [id])
+  user         User?      @relation(fields: [userId], references: [uid])
 }
 
 model Transaction {

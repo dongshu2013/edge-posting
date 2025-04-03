@@ -28,6 +28,7 @@ interface Buzz {
     username: string;
     avatar: string;
     twitterUsername: string;
+    nickname: string;
   };
   _count: {
     replies: number;
@@ -243,6 +244,7 @@ function MyBuzzesPageContent() {
                     twitterUsername={buzz.user.twitterUsername}
                     rewardSettleType={buzz.rewardSettleType}
                     maxParticipants={buzz.maxParticipants}
+                    nickname={buzz.user.nickname}
                   />
                 </div>
               ))}

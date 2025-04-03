@@ -133,35 +133,42 @@ const settleDefaultTypeRewards = async (buzz: any) => {
 
   const settleHistories: any[] = [];
 
-  kols.forEach(async (kol: any, index: number) => {
-    const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
-      .div(math.bignumber(kols.length))
-      .floor()
-      .toString();
+  await prisma.$transaction(async (tx: any) => {
+    kols.forEach(async (kol: any, index: number) => {
+      const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
+        .div(math.bignumber(kols.length))
+        .floor()
+        .toString();
 
-    if (kol.userId) {
-      settleHistories.push({
-        userId: kol.userId,
-        buzzId: buzz.id,
-        settleAmount: kolAverageRewardTokenAmountOnChain,
-        type: "KOL",
-      });
-      await addUserBalance(
-        buzz,
-        prisma,
-        kol.userId,
-        kolAverageRewardTokenAmountOnChain
-      );
-    } else {
-      settleHistories.push({
-        kolId: kol.id,
-        buzzId: buzz.id,
-        settleAmount: kolAverageRewardTokenAmountOnChain,
-        type: "KOL",
-      });
-      // Kol not registered yet, add balance to kol balance first
-      await addKolBalance(buzz, prisma, kol.id, kolAverageRewardTokenAmountOnChain);
-    }
+      if (kol.userId) {
+        settleHistories.push({
+          userId: kol.userId,
+          buzzId: buzz.id,
+          settleAmount: kolAverageRewardTokenAmountOnChain,
+          type: "KOL",
+        });
+        await addUserBalance(
+          buzz,
+          tx,
+          kol.userId,
+          kolAverageRewardTokenAmountOnChain
+        );
+      } else {
+        settleHistories.push({
+          kolId: kol.id,
+          buzzId: buzz.id,
+          settleAmount: kolAverageRewardTokenAmountOnChain,
+          type: "KOL",
+        });
+        // Kol not registered yet, add balance to kol balance first
+        await addKolBalance(
+          buzz,
+          tx,
+          kol.id,
+          kolAverageRewardTokenAmountOnChain
+        );
+      }
+    });
   });
 
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {

@@ -447,7 +447,7 @@ export default function NewBuzzPage() {
                 </label>
 
                 <div className="flex flex-col space-y-4">
-                  <div className="flex overflow-hidden">
+                  <div className="hidden overflow-hidden">
                     <button
                       type="button"
                       className={`rounded-xl flex-1 py-3 px-4 text-center text-sm font-medium ${

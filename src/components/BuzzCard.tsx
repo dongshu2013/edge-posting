@@ -153,9 +153,10 @@ export default function BuzzCard({
   };
 
   const getRandomReplyText = () => {
-    const template =
-      replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
-    return template;
+    return "";
+    // const template =
+    //   replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+    // return template;
   };
 
   const handleDirectReply = async () => {
@@ -177,7 +178,6 @@ export default function BuzzCard({
       setReplyLoading(false);
       return;
     }
-
 
     const aiReplyText = generateReplyResponse?.text;
 

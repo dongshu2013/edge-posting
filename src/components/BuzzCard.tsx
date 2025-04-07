@@ -171,6 +171,14 @@ export default function BuzzCard({
     }).catch((err) => {
       console.error("Error generating reply:", err);
     });
+    console.log("generateReplyResponse", generateReplyResponse);
+    if (generateReplyResponse.code === 101) {
+      setIsFollowModalOpen(true);
+      setReplyLoading(false);
+      return;
+    }
+
+
     const aiReplyText = generateReplyResponse?.text;
 
     console.log("aiReplyText", aiReplyText);

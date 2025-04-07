@@ -51,6 +51,7 @@ export async function checkIfUserFollowsTwitter(twitterUsername: string) {
       {
         headers: {
           Accept: "application/json",
+          "Content-Type": "application/json",
           ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
         },
         method: "POST",

@@ -29,6 +29,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const { instructions, tweetText, buzzId } = await request.json();
+
+  const existingReply = await prisma.reply.findFirst({
+    where: {
+      createdBy: userId,
+      buzzId: buzzId,
+    },
+  });
+  if (existingReply) {
+    return NextResponse.json({ error: "Reply already exists", code: 102 });
+  }
+
   const identifier = `generate-reply-${userId}`;
 
   const rateLimiter = getRateLimiter(identifier, {
@@ -64,7 +76,6 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { instructions, tweetText } = await request.json();
 
     const messages: ChatCompletionMessageParam[] = [
       {

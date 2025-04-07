@@ -13,6 +13,7 @@ import FollowTwitterModal from "./FollowTwitterModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
 import Image from "next/image";
 import { twitterProjectHandle } from "@/config";
+import { toast } from "react-hot-toast";
 
 export interface BuzzCardProps {
   id: string;
@@ -168,6 +169,7 @@ export default function BuzzCard({
       body: JSON.stringify({
         instructions: instructions,
         tweetText: tweetText,
+        buzzId: id,
       }),
     }).catch((err) => {
       console.error("Error generating reply:", err);
@@ -175,6 +177,11 @@ export default function BuzzCard({
     console.log("generateReplyResponse", generateReplyResponse);
     if (generateReplyResponse.code === 101) {
       setIsFollowModalOpen(true);
+      setReplyLoading(false);
+      return;
+    }
+    if (generateReplyResponse.code === 102) {
+      toast.error("You have already replied to this buzz");
       setReplyLoading(false);
       return;
     }

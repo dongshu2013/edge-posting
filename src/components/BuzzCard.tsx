@@ -14,6 +14,7 @@ import { getReplyIntentUrl } from "@/lib/twitter";
 import Image from "next/image";
 import { twitterProjectHandle } from "@/config";
 import { toast } from "react-hot-toast";
+import kolBadge from "../../public/images/badge/badge_kol.jpg";
 
 export interface BuzzCardProps {
   id: string;
@@ -36,6 +37,7 @@ export interface BuzzCardProps {
   avatar: string;
   twitterUsername: string;
   nickname: string;
+  kolStatus?: string;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -79,6 +81,7 @@ export default function BuzzCard({
   customTokenAddress,
   rewardSettleType,
   maxParticipants,
+  kolStatus,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
@@ -275,6 +278,18 @@ export default function BuzzCard({
               </div>
             </div>
 
+            {kolStatus === "confirmed" && (
+              <Image
+                src={kolBadge}
+                alt="Kol Badge"
+                width={40}
+                height={40}
+                className="ml-2"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center">
             <span className="mx-1 text-gray-500">·</span>
             {createdAt && (
               <span className="text-sm text-gray-500">

@@ -90,6 +90,11 @@ export async function GET(request: NextRequest) {
             avatar: true,
             twitterUsername: true,
             nickname: true,
+            kolInfo: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
         _count: {

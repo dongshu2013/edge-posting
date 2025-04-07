@@ -30,6 +30,9 @@ interface Buzz {
     avatar: string;
     twitterUsername: string;
     nickname: string;
+    kolInfo?: {
+      status: string;
+    };
   };
   _count: {
     replies: number;
@@ -344,6 +347,7 @@ function BuzzesPageContent() {
                     isActive={buzz.isActive}
                     username={buzz?.user?.username}
                     nickname={buzz?.user?.nickname || ""}
+                    kolStatus={buzz?.user?.kolInfo?.status}
                     avatar={buzz?.user?.avatar}
                     twitterUsername={buzz?.user?.twitterUsername}
                     tokenAmount={buzz.tokenAmount}

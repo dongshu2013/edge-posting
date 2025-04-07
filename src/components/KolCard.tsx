@@ -28,7 +28,21 @@ export default function KolCard({ kol }: KolCardProps) {
             {getDisplayArea(kol.area)}
           </p>
         </div>
-        <p className="text-sm text-blue-600">@{kol.twitterUsername}</p>
+
+        <div className="mt-1 flex items-center space-x-2 gap-2">
+          <p className="text-sm text-blue-600">@{kol.twitterUsername}</p>
+
+          {kol.score && (
+            <div className="flex items-center space-x-1">
+              <p className="text-xs text-gray-500">Influence Score:</p>
+
+              <div className="text-sm font-medium bg-gradient-to-r from-indigo-500 to-purple-600 text-transparent bg-clip-text rounded">
+                {Number(Number(kol.score).toFixed(1))}
+              </div>
+            </div>
+          )}
+        </div>
+
         <p className="mt-1 text-sm text-gray-500 line-clamp-2">
           {kol.description || "Empty"}
         </p>

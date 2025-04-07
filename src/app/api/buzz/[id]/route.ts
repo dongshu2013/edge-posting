@@ -45,6 +45,11 @@ export async function GET(
             avatar: true,
             twitterUsername: true,
             nickname: true,
+            kolInfo: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
       },

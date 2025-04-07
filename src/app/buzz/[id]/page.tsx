@@ -40,6 +40,7 @@ interface Buzz {
   deadline: string;
   createdAt: Date;
   isActive: boolean;
+  isSettled: boolean;
   replies: Reply[];
   hasReplied?: boolean;
   user: {
@@ -47,6 +48,9 @@ interface Buzz {
     avatar: string;
     twitterUsername: string;
     nickname: string;
+    kolInfo?: {
+      status: string;
+    };
   };
 }
 
@@ -215,6 +219,7 @@ export default function BuzzDetailPage() {
             hasReplied={hasReplied}
             username={buzz?.user?.username}
             avatar={buzz?.user?.avatar}
+            kolStatus={buzz?.user?.kolInfo?.status}
             twitterUsername={buzz?.user?.twitterUsername}
             rewardSettleType={buzz.rewardSettleType}
             maxParticipants={buzz.maxParticipants}
@@ -237,17 +242,20 @@ export default function BuzzDetailPage() {
               <ChatBubbleLeftRightIcon className="h-4 w-4 inline-block mr-1" />
               Replies ({buzz.replies.length})
             </button>
-            <button
-              onClick={() => setActiveTab("settle-history")}
-              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                activeTab === "settle-history"
-                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
-                  : "bg-white text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              <SparklesIcon className="h-4 w-4 inline-block mr-1" />
-              Settle History
-            </button>
+
+            {buzz.isSettled && (
+              <button
+                onClick={() => setActiveTab("settle-history")}
+                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  activeTab === "settle-history"
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <SparklesIcon className="h-4 w-4 inline-block mr-1" />
+                Settle History
+              </button>
+            )}
           </div>
 
           {/* Replies Tab */}

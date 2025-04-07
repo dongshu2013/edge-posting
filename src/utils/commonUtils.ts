@@ -1,3 +1,5 @@
+import { IBadge } from "@/types/common";
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -83,4 +85,17 @@ export function getDisplayArea(area: number) {
     return "South Asia";
   }
   return "Unknown";
+}
+
+export function getBadgeIcon(badge: IBadge) {
+  if (badge.type === "kol") {
+    return "/images/badge/badge_kol.jpg";
+  }
+  if (badge.type === "task_published") {
+    return "/images/badge/badge_task_published.jpg";
+  }
+  if (badge.type === "task_done") {
+    return "/images/badge/badge_task_done.jpg";
+  }
+  return "/images/badge/badge_default.jpg";
 }

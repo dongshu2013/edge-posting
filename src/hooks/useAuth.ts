@@ -48,10 +48,11 @@ export function useAuth() {
   const saveUserToDatabase = useCallback(
     async (user: User) => {
       if (isSyncing || !user) return;
+      console.log("Saving user to database", user);
 
       try {
         setIsSyncing(true);
-        console.log("Fetching user info from database...");
+        // console.log("Fetching user info from database...");
 
         const response = await fetchApi(`/api/user/${user.uid}`, {
           method: "GET",
@@ -89,6 +90,8 @@ export function useAuth() {
           console.log("User created", response);
           setUserInfo(response);
         }
+
+
       } catch (error) {
         console.error("Failed to save user to database:", error);
       } finally {

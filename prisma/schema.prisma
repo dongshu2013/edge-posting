@@ -32,10 +32,30 @@ model User {
   userBalances UserBalance[]
   withdrawRequests UserWithdrawRequest[]
   bindedWallet String?    @unique
+  kolStatus String? // null pending confimed
+  kolInfo     Kol?
+  settleHistories SettleHistory[]
 
   @@index([uid])
   @@index([email])
   @@index([username])
+}
+
+model Kol {
+  id           String        @id @default(cuid())
+  userId String? @unique
+  avatar String
+  twitterUsername String @unique
+  nickname String
+  status String // pending confirmed
+  score  Float   
+  followers Int
+  description String
+  area Int // 1-欧美 2-韩国 3-中国 4-日本 5-东南亚
+  kolBalances KolBalance[]
+  settleHistories SettleHistory[]
+
+  user         User?          @relation(fields: [userId], references: [uid])
 }
 
 model Buzz {
@@ -51,7 +71,11 @@ model Buzz {
   replies      Reply[]
   transactions Transaction[]
   user         User          @relation(fields: [createdBy], references: [uid])
-  tweetText String?
+  tweetText    String?
+  rewardSettleType String?
+  maxParticipants Int?
+  participantMinimumTokenAmount String?
+  settleHistories SettleHistory[]
 
   tokenAmount String
   paymentToken String // BNB CUSTOM
@@ -80,6 +104,20 @@ model Reply {
   @@index([buzzId])
   @@index([createdBy])
   @@index([status])
+}
+
+model SettleHistory {
+  id           String            @id @default(cuid())
+  buzzId       String
+  settleAmount String
+  kolId        String?
+  userId       String?
+  createdAt    DateTime          @default(now())
+  type String  // Refund KOL Normal
+
+  buzz        Buzz              @relation(fields: [buzzId], references: [id])
+  kol         Kol?      @relation(fields: [kolId], references: [id])
+  user         User?      @relation(fields: [userId], references: [uid])
 }
 
 model Transaction {
@@ -142,6 +180,20 @@ model UserBalance {
   @@unique([userId, tokenAddress]) // Each user can have only one balance per token
 }
 
+model KolBalance {
+  id String @id @default(cuid())
+
+  kolId    String
+  tokenAmountOnChain BigInt
+  tokenName String
+  tokenAddress String
+  tokenDecimals Int
+
+  kol      Kol             @relation(fields: [kolId], references: [id])
+
+  @@unique([kolId, tokenAddress]) // Each kol can have only one balance per token
+}
+
 model UserWithdrawRequest {
   id String @id @default(cuid())
 
@@ -155,6 +207,14 @@ model UserWithdrawRequest {
 
   @@unique([userId, nonceOnChain]) // Each user can have only one balance per token
 }
+
+model UserApiKey {
+  id String @id @default(cuid())
+
+  userId String @unique
+  apiKey String @unique
+}
+
 
 enum ReplyStatus {
   PENDING

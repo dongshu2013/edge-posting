@@ -18,6 +18,8 @@ interface Buzz {
   tokenAmount: string;
   paymentToken: string;
   customTokenAddress: string;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   replyCount: number;
   createdBy: string;
   deadline: string;
@@ -25,6 +27,12 @@ interface Buzz {
   isActive: boolean;
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
+    nickname: string;
+    kolInfo?: {
+      status: string;
+    };
   };
   _count: {
     replies: number;
@@ -338,9 +346,15 @@ function BuzzesPageContent() {
                     createdAt={buzz.createdAt}
                     isActive={buzz.isActive}
                     username={buzz?.user?.username}
+                    nickname={buzz?.user?.nickname || ""}
+                    kolStatus={buzz?.user?.kolInfo?.status}
+                    avatar={buzz?.user?.avatar}
+                    twitterUsername={buzz?.user?.twitterUsername}
                     tokenAmount={buzz.tokenAmount}
                     paymentToken={buzz.paymentToken}
                     customTokenAddress={buzz.customTokenAddress}
+                    rewardSettleType={buzz.rewardSettleType}
+                    maxParticipants={buzz.maxParticipants}
                   />
                 </div>
               ))}

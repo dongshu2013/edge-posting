@@ -35,13 +35,13 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: "Missing authorization header" },
-        { status: 401 }
-      );
-    }
+    // const authHeader = request.headers.get("authorization");
+    // if (!authHeader) {
+    //   return NextResponse.json(
+    //     { error: "Missing authorization header" },
+    //     { status: 401 }
+    //   );
+    // }
 
     // const userData = await verifyAuthToken(authHeader, request.nextUrl);
     // if (!userData) {

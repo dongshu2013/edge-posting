@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import { Toaster } from "react-hot-toast";
 import { AuthModal } from "@/components/AuthModal";
 import { UserInit } from "@/components/UserInit";
+import { Footer } from "@/components/Footer";
 
 const geist = Geist({
   subsets: ["latin"],
@@ -13,7 +14,7 @@ const geist = Geist({
 });
 
 export const metadata: Metadata = {
-  title: "Edge Posting",
+  title: "Buzzline",
   description: "Engage with tweets and earn BUZZ tokens using AI",
   icons: {
     icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
@@ -40,6 +41,7 @@ export default function RootLayout({
                 {children}
               </div>
             </main>
+            <Footer />
             <AuthModal />
           </div>
         </WalletProvider>

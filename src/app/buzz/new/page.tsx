@@ -20,6 +20,8 @@ import {
 } from "wagmi";
 import { contractAbi } from "@/config/contractAbi";
 import TransactionLoadingModal from "@/components/TransactionLoadingModal";
+import toast from "react-hot-toast";
+import { TermsModal } from "@/components/TermsModal";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -38,6 +40,9 @@ export default function NewBuzzPage() {
     customTokenAddress: "",
     paymentMethod: "in-app",
     transactionHash: "",
+    rewardSettleType: "default",
+    maxParticipants: 10,
+    minimumTokenAmount: 0,
   });
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
@@ -46,6 +51,7 @@ export default function NewBuzzPage() {
   const [transactionTitle, setTransactionTitle] = useState("");
   const [transactionDescription, setTransactionDescription] = useState("");
   const [transactionHash, setTransactionHash] = useState("");
+  const [isCreatingBuzz, setIsCreatingBuzz] = useState(false);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -67,7 +73,19 @@ export default function NewBuzzPage() {
     });
   };
 
+  const handleRewardSettleTypeChange = (type: string) => {
+    setFormData({
+      ...formData,
+      rewardSettleType: type,
+    });
+  };
+
   const handleInAppPayment = async () => {
+    if (Number(formData.totalAmount) <= 0) {
+      toast.error("Total amount must be greater than 0");
+      return;
+    }
+
     if (!isConnected || !address) {
       openConnectModal?.();
       return;
@@ -184,7 +202,9 @@ export default function NewBuzzPage() {
         setTransactionHash(txHash);
         setTransactionStatus("success");
         setTransactionTitle("Transaction Successful");
-        setTransactionDescription("Your transaction has been processed successfully.");
+        setTransactionDescription(
+          "Your transaction has been processed successfully."
+        );
         await createBuzzCampaign(txHash);
       }
     } catch (error) {
@@ -205,11 +225,18 @@ export default function NewBuzzPage() {
     if (!userInfo?.uid) {
       return;
     }
+    console.log("formData.totalAmount", formData.totalAmount);
+    if (Number(formData.totalAmount) <= 0) {
+      toast.error("Total amount must be greater than 0");
+      return;
+    }
+
     const deadline = new Date();
     deadline.setHours(deadline.getHours() + Number(formData.deadline));
     // deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
+      setIsCreatingBuzz(true);
       const payload: CreateBuzzRequest = {
         tweetLink: formData.tweetLink,
         instructions: formData.instructions,
@@ -218,6 +245,9 @@ export default function NewBuzzPage() {
         paymentToken: formData.paymentToken,
         customTokenAddress: formData.customTokenAddress,
         transactionHash: txHash,
+        rewardSettleType: formData.rewardSettleType,
+        maxParticipants: formData.maxParticipants,
+        participantMinimumTokenAmount: formData.minimumTokenAmount,
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -234,6 +264,8 @@ export default function NewBuzzPage() {
     } catch (error) {
       console.error("Error creating buzz:", error);
       alert(error instanceof Error ? error.message : "Failed to create buzz");
+    } finally {
+      setIsCreatingBuzz(false);
     }
   };
 
@@ -408,6 +440,143 @@ export default function NewBuzzPage() {
                 </div>
               </div>
 
+              {/* Reward Settle Type Switch */}
+              <div className="mt-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reward Distribution 💎
+                </label>
+
+                <div className="flex flex-col space-y-4">
+                  <div className="hidden overflow-hidden">
+                    <button
+                      type="button"
+                      className={`rounded-xl flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.rewardSettleType === "default"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handleRewardSettleTypeChange("default")}
+                    >
+                      Split Among All
+                    </button>
+
+                    <button
+                      type="button"
+                      className={`invisible flex-1 py-3 px-4 text-center text-sm font-medium ${
+                        formData.rewardSettleType === "fixed"
+                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
+                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                      }`}
+                      onClick={() => handleRewardSettleTypeChange("fixed")}
+                    >
+                      Fixed Per Participant
+                    </button>
+                  </div>
+
+                  {formData.rewardSettleType === "fixed" && (
+                    <div>
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="maxParticipants"
+                          className="block text-sm font-medium text-gray-700"
+                        >
+                          Maximum Number of Participants
+                        </label>
+                        <div className="relative rounded-xl shadow-sm">
+                          <input
+                            type="number"
+                            name="maxParticipants"
+                            id="maxParticipants"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            placeholder="Expected Participants"
+                            min="1"
+                            value={formData.maxParticipants}
+                            onChange={handleInputChange}
+                            required={formData.rewardSettleType === "fixed"}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-purple-500 to-purple-600 text-white rounded-r-xl">
+                            <span className="text-sm font-medium">users</span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 italic">
+                          Each participant will receive{" "}
+                          {formData.maxParticipants > 0
+                            ? (
+                                formData.totalAmount / formData.maxParticipants
+                              ).toFixed(6)
+                            : 0}{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "Tokens"}
+                        </p>
+                      </div>
+
+                      {/* Minimum Token Amount Field */}
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="minimumTokenAmount"
+                          className="block text-sm font-medium text-gray-700"
+                        >
+                          Minimum Token Requirement (Optional) 🔒
+                        </label>
+                        <div className="relative rounded-xl shadow-sm">
+                          <input
+                            type="number"
+                            name="minimumTokenAmount"
+                            id="minimumTokenAmount"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            placeholder="0"
+                            min="0"
+                            step="any"
+                            value={formData.minimumTokenAmount}
+                            onChange={handleInputChange}
+                          />
+                          <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-r-xl">
+                            <span className="text-sm font-medium">
+                              {formData.paymentToken === "BNB"
+                                ? "BNB"
+                                : "Tokens"}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 italic">
+                          Users must have at least this amount of{" "}
+                          {formData.paymentToken === "BNB" ? "BNB" : "tokens"}{" "}
+                          to receive reward
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="bg-gray-50 rounded-xl p-4">
+                    <div className="flex items-start">
+                      {formData.rewardSettleType === "default" && (
+                        <span className="text-sm text-gray-700">
+                          Reward will be split into 3 parts: <br />
+                          1. 10% for user not holding tokens, reward will be
+                          distributed evenly among them;
+                          <br />
+                          2. 40% for the holders, reward will be distributed
+                          according to their token holdings;
+                          <br />
+                          3. 50% for the the KOLs, reward will be distributed
+                          according to their KOL influence score.
+                          <br />
+                          <br />
+                          If there is no participant in the above parts, the
+                          reward will be returned to the creator.
+                        </span>
+                      )}
+
+                      {formData.rewardSettleType === "fixed" && (
+                        <span className="text-sm text-gray-700">
+                          Each participant will receive a fixed amount,
+                          remaining reward will be returned to the creator.
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <div className="mt-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Payment Method 💳
@@ -491,13 +660,26 @@ export default function NewBuzzPage() {
               {/* Submit Button */}
               <div className="mt-6">
                 <button
+                  disabled={isCreatingBuzz || isTransactionLoading}
                   type="submit"
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
-                  {formData.paymentMethod === "in-app"
+                  {isCreatingBuzz
+                    ? "Creating Buzz... 🚀"
+                    : formData.paymentMethod === "in-app"
                     ? "Pay & Create Buzz Campaign 🚀"
                     : "Create Buzz Campaign 🚀"}
                 </button>
+              </div>
+
+              <div className="flex justify-center">
+                <TermsModal
+                  trigger={
+                    <div className="text-sm text-gray-500 hover:text-gray-700 underline cursor-pointer">
+                      User Terms
+                    </div>
+                  }
+                />
               </div>
             </form>
           </div>

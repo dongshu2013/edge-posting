@@ -8,7 +8,14 @@ import { Copy, PencilIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
 import { useAccount, useSignMessage } from "wagmi";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/Dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/Dialog";
+import { ConfirmDialog } from "../dialog/ConfirmDialog";
 
 export const WalletCard = () => {
   const { userInfo, updateUserInfo } = useUserStore();
@@ -39,7 +46,7 @@ export const WalletCard = () => {
       openConnectModal?.();
       return;
     }
-    
+
     try {
       setIsBindingWallet(true);
       const siweMessage = getSiweMessage(
@@ -117,35 +124,13 @@ export const WalletCard = () => {
         </div>
       </div>
 
-      {/* Confirmation Modal */}
-      <Dialog open={showConfirmModal} onOpenChange={setShowConfirmModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Replace Wallet Confirmation</DialogTitle>
-            <DialogDescription>
-              You already have a wallet bound to your account. Binding a new wallet will replace the existing one.
-              Do you want to continue?
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4 flex justify-end space-x-2">
-            <button
-              type="button"
-              className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              onClick={() => setShowConfirmModal(false)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={isBindingWallet}
-              className="inline-flex justify-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-              onClick={handleBindWallet}
-            >
-              {isBindingWallet ? "Binding..." : "Confirm Replace"}
-            </button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <ConfirmDialog
+        visible={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        title="Replace Wallet Confirmation"
+        description="You already have a wallet bound to your account. Binding a new wallet will replace the existing one. Do you want to continue?"
+        onConfirm={handleBindWallet}
+      />
     </>
   );
 };

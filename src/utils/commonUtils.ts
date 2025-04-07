@@ -1,3 +1,5 @@
+import { IBadge } from "@/types/common";
+
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -64,4 +66,36 @@ export async function getSha256Hash(value: string): Promise<string> {
     .join("");
 
   return hashHex;
+}
+
+export function getDisplayArea(area: number) {
+  if (area === 1) {
+    return "America/Europe";
+  }
+  if (area === 2) {
+    return "Korea";
+  }
+  if (area === 3) {
+    return "China";
+  }
+  if (area === 4) {
+    return "Japan";
+  }
+  if (area === 5) {
+    return "South Asia";
+  }
+  return "Unknown";
+}
+
+export function getBadgeIcon(badge: IBadge) {
+  if (badge.type === "kol") {
+    return "/images/badge/badge_kol.jpg";
+  }
+  if (badge.type === "task_published") {
+    return "/images/badge/badge_task_published.jpg";
+  }
+  if (badge.type === "task_done") {
+    return "/images/badge/badge_task_done.jpg";
+  }
+  return "/images/badge/badge_default.jpg";
 }

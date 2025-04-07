@@ -82,9 +82,19 @@ export async function GET(request: NextRequest) {
         tokenAmount: true,
         paymentToken: true,
         customTokenAddress: true,
+        rewardSettleType: true,
+        maxParticipants: true,
         user: {
           select: {
             username: true,
+            avatar: true,
+            twitterUsername: true,
+            nickname: true,
+            kolInfo: {
+              select: {
+                status: true,
+              },
+            },
           },
         },
         _count: {

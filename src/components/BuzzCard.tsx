@@ -9,7 +9,12 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { AuthButton } from "@/components/AuthButton";
 import ReplyLinkModal from "./ReplyLinkModal";
+import FollowTwitterModal from "./FollowTwitterModal";
 import { getReplyIntentUrl } from "@/lib/twitter";
+import Image from "next/image";
+import { twitterProjectHandle } from "@/config";
+import { toast } from "react-hot-toast";
+import kolBadge from "../../public/images/badge/badge_kol.jpg";
 
 export interface BuzzCardProps {
   id: string;
@@ -26,7 +31,13 @@ export interface BuzzCardProps {
   showViewReplies?: boolean;
   isActive?: boolean;
   hasReplied?: boolean;
+  rewardSettleType?: string;
+  maxParticipants?: number;
   username: string;
+  avatar: string;
+  twitterUsername: string;
+  nickname: string;
+  kolStatus?: string;
 }
 
 // Utility function to convert tweet URL to embed URL
@@ -62,12 +73,19 @@ export default function BuzzCard({
   isActive = true,
   hasReplied = false,
   username,
+  nickname,
+  twitterUsername,
+  avatar,
   tokenAmount,
   paymentToken,
   customTokenAddress,
+  rewardSettleType,
+  maxParticipants,
+  kolStatus,
 }: BuzzCardProps) {
   const { user } = useAuth();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
   const [generatedReplyText, setGeneratedReplyText] = useState("");
   const [showInstructionsModal, setShowInstructionsModal] = useState(false);
   const [replyLoading, setReplyLoading] = useState(false);
@@ -122,6 +140,11 @@ export default function BuzzCard({
         }),
       });
 
+      if (response.code === 101) {
+        setIsFollowModalOpen(true);
+        return;
+      }
+
       if (response.error) {
         throw new Error(response.error || "Failed to submit reply");
       }
@@ -134,9 +157,10 @@ export default function BuzzCard({
   };
 
   const getRandomReplyText = () => {
-    const template =
-      replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
-    return template;
+    return "";
+    // const template =
+    //   replyTemplates[Math.floor(Math.random() * replyTemplates.length)];
+    // return template;
   };
 
   const handleDirectReply = async () => {
@@ -148,10 +172,23 @@ export default function BuzzCard({
       body: JSON.stringify({
         instructions: instructions,
         tweetText: tweetText,
+        buzzId: id,
       }),
     }).catch((err) => {
       console.error("Error generating reply:", err);
     });
+    console.log("generateReplyResponse", generateReplyResponse);
+    if (generateReplyResponse.code === 101) {
+      setIsFollowModalOpen(true);
+      setReplyLoading(false);
+      return;
+    }
+    if (generateReplyResponse.code === 102) {
+      toast.error("You have already replied to this buzz");
+      setReplyLoading(false);
+      return;
+    }
+
     const aiReplyText = generateReplyResponse?.text;
 
     console.log("aiReplyText", aiReplyText);
@@ -221,11 +258,38 @@ export default function BuzzCard({
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
       <div className="p-4">
         {/* Header with creator info and price */}
-        <div className="flex justify-between items-center mb-3">
+        <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <span className="text-sm font-medium text-gray-900">
-              @{username || createdBy.substring(0, 6)}
-            </span>
+            <Image
+              src={avatar}
+              alt={username}
+              className="w-10 h-10 rounded-full mr-2"
+              width={40}
+              height={40}
+            />
+
+            <div className="leading-tight">
+              <div className="text-[16px] font-medium text-gray-900">
+                {nickname || createdBy.substring(0, 6)}
+              </div>
+
+              <div className="text-[12px] text-gray-900">
+                @{twitterUsername || createdBy.substring(0, 6)}
+              </div>
+            </div>
+
+            {kolStatus === "confirmed" && (
+              <Image
+                src={kolBadge}
+                alt="Kol Badge"
+                width={40}
+                height={40}
+                className="ml-2"
+              />
+            )}
+          </div>
+
+          <div className="flex items-center">
             <span className="mx-1 text-gray-500">·</span>
             {createdAt && (
               <span className="text-sm text-gray-500">
@@ -233,15 +297,69 @@ export default function BuzzCard({
               </span>
             )}
           </div>
-          <div className="text-sm font-medium">
-            <span className="text-amber-500 font-semibold">
+        </div>
+
+        <div className="mt-1">
+          <div className="text-sm">
+            Total Reward:
+            <span className="ml-1 text-amber-500 font-semibold">
               {tokenAmount} BNB
             </span>
+          </div>
+
+          <div className="hidden items-center justify-between">
+            <div className="text-sm flex items-center">
+              <span>Settle Type:</span>
+              <div className="relative inline-block ml-1 group">
+                <span className="cursor-help">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    strokeWidth={1.5}
+                    stroke="currentColor"
+                    className="w-4 h-4 text-gray-500"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z"
+                    />
+                  </svg>
+                </span>
+                <div className="absolute top-full left-0 mt-1 w-64 p-2 bg-gray-800 text-white text-xs rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 z-50">
+                  <div className="relative">
+                    <p>
+                      <strong>Default:</strong> The total reward amount will be
+                      split among all participants who complete the task, and
+                      the amount will be determined by their token holdings.
+                    </p>
+                    <p className="mt-1">
+                      <strong>Fixed:</strong> Each participant will receive a
+                      fixed amount, remaining reward will be returned to the
+                      creator.
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <span className="ml-1 text-amber-500 font-semibold capitalize">
+                {rewardSettleType || "Default"}
+              </span>
+            </div>
+
+            {maxParticipants && (
+              <div className="text-sm">
+                Max Participants:
+                <span className="ml-1 text-amber-500 font-semibold">
+                  {maxParticipants}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Twitter Embed */}
-        <div className="border rounded-lg overflow-hidden mb-3">
+        <div className="mt-3 border rounded-lg overflow-hidden mb-3">
           <div className="h-72">
             <iframe
               src={getEmbedUrl(tweetLink)}
@@ -289,6 +407,12 @@ export default function BuzzCard({
         onSubmit={handleReplySubmit}
         tokenAmount={tokenAmount}
         initialReplyText={generatedReplyText}
+      />
+
+      <FollowTwitterModal
+        isOpen={isFollowModalOpen}
+        onClose={() => setIsFollowModalOpen(false)}
+        twitterUsername={twitterProjectHandle}
       />
 
       {/* Instructions Modal */}

@@ -16,6 +16,10 @@ import toast from "react-hot-toast";
 import ProfileEditModal from "@/components/ProfileEditModal";
 import { WalletCard } from "@/components/profile/WalletCard";
 import { UserBalanceCard } from "@/components/profile/UserBalanceCard";
+import { ApiKeyPanel } from "@/components/profile/ApiKeyPanel";
+import { IBadge } from "@/types/common";
+import Image from "next/image";
+import { getBadgeIcon } from "@/utils/commonUtils";
 
 interface UserProfile {
   email: string | null;
@@ -74,6 +78,18 @@ export default function ProfilePage() {
       ).then((res) => res.json());
 
       return resJson?.data?.orders || [];
+    },
+  });
+
+  const badgesQuery = useQuery<IBadge[]>({
+    queryKey: ["badges", userInfo?.uid],
+    enabled: !!userInfo?.uid,
+    queryFn: async () => {
+      const resJson = await fetchApi(`/api/user/${userInfo?.uid}/badges`, {
+        auth: true,
+      });
+
+      return resJson?.badges || [];
     },
   });
 
@@ -302,50 +318,78 @@ export default function ProfilePage() {
           <h1 className="text-2xl font-semibold text-gray-900">
             Profile Details
           </h1>
-          <button
-            onClick={() => setShowUsernameModal(true)}
-            className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
-          >
-            <PencilIcon className="h-4 w-4 mr-1.5" />
-            Edit Username
-          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <p className="text-sm text-gray-500">Username</p>
-            <p className="text-lg font-medium text-gray-900">
-              {profile.username || "Not set"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-medium text-gray-900">
+                {profile.username || "Not set"}
+              </p>
+
+              <button
+                onClick={() => setShowUsernameModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Twitter Username</p>
-            <p className="text-lg font-medium text-gray-900">
-              {profile.twitterUsername || "Not found"}
-            </p>
+
+          <div className="space-y-1">
+            <p className="text-sm text-gray-500">Bio</p>
+
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-medium text-gray-900">
+                {profile.bio || "No bio"}
+              </p>
+              <button
+                onClick={() => setShowProfileEditModal(true)}
+                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 h-fit"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
+
           <div>
             <p className="text-sm text-gray-500">Nickname</p>
             <p className="text-lg font-medium text-gray-900">
               {profile.nickname}
             </p>
           </div>
-          <div className="col-span-2">
+
+          <div className="">
             <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-sm text-gray-500">Bio</p>
+              <div>
+                <p className="text-sm text-gray-500">Twitter Username</p>
                 <p className="text-lg font-medium text-gray-900">
-                  {profile.bio || "No bio"}
+                  {profile.twitterUsername || "Not found"}
                 </p>
               </div>
-              <button
-                onClick={() => setShowProfileEditModal(true)}
-                className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 h-fit"
-              >
-                <PencilIcon className="h-4 w-4 mr-1.5" />
-                Edit Profile
-              </button>
             </div>
           </div>
+
+          <div className="col-span-2">
+            <div>
+              <p className="text-sm text-gray-500">My Badges</p>
+              <div className="flex items-center gap-2">
+                {badgesQuery.data?.length ? (
+                  badgesQuery.data?.map((badge) => (
+                    <Image
+                      src={getBadgeIcon(badge)}
+                      alt={badge.type}
+                      width={56}
+                      height={56}
+                    />
+                  ))
+                ) : (
+                  <p className="text-gray-500">No badges yet</p>
+                )}
+              </div>
+            </div>
+          </div>
+
           <div>
             <p className="text-sm text-gray-500">My Referral Code</p>
             <div className="flex items-center gap-2">
@@ -361,6 +405,8 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+
+          <ApiKeyPanel />
         </div>
       </div>
 

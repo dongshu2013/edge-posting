@@ -18,7 +18,7 @@ export async function fetchApi(endpoint: string, options: FetchOptions = {}) {
     headers.set("authorization", `Bearer ${token}`);
   }
 
-  console.log(`Fetching ${endpoint} with auth: ${requiresAuth}`);
+  // console.log(`Fetching ${endpoint} with auth: ${requiresAuth}`);
 
   const response = await fetch(endpoint, {
     ...fetchOptions,

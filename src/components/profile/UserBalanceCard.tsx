@@ -12,8 +12,9 @@ import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import { formatEther } from "viem";
-import { useWriteContract } from "wagmi";
+import { useAccount, useWriteContract } from "wagmi";
 import TransactionLoadingModal from "../TransactionLoadingModal";
+import { useConnectModal } from "@rainbow-me/rainbowkit";
 
 interface UserBalanceWithSelected extends UserBalance {
   selected: boolean;
@@ -21,6 +22,8 @@ interface UserBalanceWithSelected extends UserBalance {
 
 export const UserBalanceCard = () => {
   const { userInfo } = useAuth();
+  const { address } = useAccount();
+  const { openConnectModal } = useConnectModal();
   const [selectedTokenIds, setSelectedTokenIds] = useState<string[]>([]);
   const [isWithdrawing, setIsWithdrawing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
@@ -126,6 +129,7 @@ export const UserBalanceCard = () => {
       toast.error("Please bind your wallet first");
       return;
     }
+
     const selectedTokens = userBalancesQuery.data?.filter((token) =>
       selectedTokenIds.includes(token.id)
     );
@@ -165,6 +169,11 @@ export const UserBalanceCard = () => {
   const sendWithdrawTx = async (request: WithdrawSignatureResult) => {
     if (!userInfo?.uid) {
       toast.error("Please login first");
+      return;
+    }
+    if (!address) {
+      openConnectModal?.();
+      toast.error("Please connect your wallet first");
       return;
     }
     try {

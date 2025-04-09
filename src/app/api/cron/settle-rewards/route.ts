@@ -116,18 +116,18 @@ const settleDefaultTypeRewards = async (buzz: any) => {
   // 40%
   const hasBalanceRewardTokenAmount =
     hasBalanceWeights.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(4)).div(math.bignumber(10))
+      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfHolders)).div(math.bignumber(100))
       : math.bignumber(0);
   // 10%
   const emptyBalanceRewardTokenAmount =
     emptyBalanceWeights.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(1)).div(math.bignumber(10))
+      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfOthers)).div(math.bignumber(100))
       : math.bignumber(0);
 
   // 50%
   const kolRewardTokenAmount =
     kols.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(5)).div(math.bignumber(10))
+      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfKols)).div(math.bignumber(100))
       : math.bignumber(0);
 
   const remainingRewardTokenAmount = totalTokenAmountOnChain
@@ -415,6 +415,10 @@ const addKolBalance = async (
   kolId: string,
   amountOnChain: string
 ) => {
+  if (math.bignumber(amountOnChain).lte(0)) {
+    return;
+  }
+
   const updatedBalance = await tx.kolBalance.upsert({
     where: {
       // Use the unique constraint we defined in the schema

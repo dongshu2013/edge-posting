@@ -19,6 +19,9 @@ export interface CreateBuzzRequest {
   rewardSettleType: string;
   maxParticipants?: number;
   participantMinimumTokenAmount?: number;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
 }
 
 export async function POST(request: Request) {
@@ -40,6 +43,9 @@ export async function POST(request: Request) {
       rewardSettleType,
       maxParticipants,
       participantMinimumTokenAmount,
+      shareOfKols,
+      shareOfHolders,
+      shareOfOthers,
     }: CreateBuzzRequest = body;
 
     // 验证必填字段
@@ -67,6 +73,17 @@ export async function POST(request: Request) {
     if (rewardSettleType === "fixed" && !Number(maxParticipants)) {
       return NextResponse.json(
         { error: "Max participants is required" },
+        { status: 400 }
+      );
+    }
+
+    const shareOfKolsNumber = shareOfKols ? Number(shareOfKols) : 0;
+    const shareOfHoldersNumber = shareOfHolders ? Number(shareOfHolders) : 0;
+    const shareOfOthersNumber = shareOfOthers ? Number(shareOfOthers) : 0;
+    const totalShare = shareOfKolsNumber + shareOfHoldersNumber + shareOfOthersNumber;
+    if (totalShare !== 100) {
+      return NextResponse.json(
+        { error: "Total share must be 100" },
         { status: 400 }
       );
     }
@@ -278,6 +295,9 @@ export async function POST(request: Request) {
             Number(participantMinimumTokenAmount) > 0
               ? participantMinimumTokenAmount.toString()
               : null,
+          shareOfKols: shareOfKolsNumber,
+          shareOfHolders: shareOfHoldersNumber,
+          shareOfOthers: shareOfOthersNumber,
         },
       });
 

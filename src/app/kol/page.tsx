@@ -8,13 +8,22 @@ import { useQuery } from "@tanstack/react-query";
 import { CustomPagination } from "@/components/CustomPagination";
 import { fetchApi } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { Pagination } from "@mui/material";
+import {
+  Pagination,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+} from "@mui/material";
+import { getShortAddress } from "@/utils/commonUtils";
 
 export default function KolPage() {
   const { userInfo } = useAuth();
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [page, setPage] = useState(1);
-  const [selectedArea, setSelectedArea] = useState("");
+  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [minScore, setMinScore] = useState<string>("");
+  const [maxScore, setMaxScore] = useState<string>("");
 
   const userStatusQuery = useQuery({
     queryKey: ["userStatus", userInfo?.uid],
@@ -29,10 +38,16 @@ export default function KolPage() {
   const userKolStatus = userStatusQuery.data?.kolStatus;
 
   const kolsQuery = useQuery({
-    queryKey: ["kols", page, selectedArea],
+    queryKey: ["kols", page, selectedAreas, minScore, maxScore],
     queryFn: async () => {
+      const areasParam =
+        selectedAreas.length > 0 ? selectedAreas.join(",") : "";
+      const scoreParams =
+        minScore || maxScore
+          ? `&minScore=${minScore || ""}&maxScore=${maxScore || ""}`
+          : "";
       const response = await fetchApi(
-        `/api/kol?page=${page}&area=${selectedArea}`,
+        `/api/kol?page=${page}&areas=${areasParam}${scoreParams}`,
         {}
       );
       return response;
@@ -40,6 +55,7 @@ export default function KolPage() {
   });
   const kols = kolsQuery.data?.items || [];
   const totalCount = kolsQuery.data?.totalCount || 0;
+  const isLoading = kolsQuery.isLoading;
 
   const renderApplyButton = () => {
     return userKolStatus === "confirmed" ? (
@@ -80,31 +96,94 @@ export default function KolPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
         <h1 className="text-2xl font-bold text-gray-900">
           Key Opinion Leaders
         </h1>
 
         <div className="flex items-center gap-4">
-          <select
-            value={selectedArea}
-            onChange={(e) => setSelectedArea(e.target.value)}
-            className="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          >
-            <option value="">Select area</option>
-            <option value="1">America/Europe</option>
-            <option value="2">Korea</option>
-            <option value="3">China</option>
-            <option value="4">Japan</option>
-            <option value="5">South Asia</option>
-          </select>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              placeholder="Min Score"
+              value={minScore}
+              onChange={(e) => setMinScore(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              min="0"
+            />
+            <span className="text-gray-500">to</span>
+            <input
+              type="number"
+              placeholder="Max Score"
+              value={maxScore}
+              onChange={(e) => setMaxScore(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              min="0"
+            />
+          </div>
+
+          <FormControl sx={{ minWidth: 200 }}>
+            <InputLabel id="area-select-label" sx={{}}>
+              Areas
+            </InputLabel>
+
+            <Select
+              labelId="area-select-label"
+              id="area-select"
+              multiple
+              value={selectedAreas}
+              sx={{
+                height: 40,
+              }}
+              onChange={(e) =>
+                setSelectedAreas(
+                  typeof e.target.value === "string"
+                    ? e.target.value.split(",")
+                    : e.target.value
+                )
+              }
+              label="Areas"
+              renderValue={(selected) => {
+                const selectedLabels = selected.map((value) => {
+                  switch (value) {
+                    case "1":
+                      return "America/Europe";
+                    case "2":
+                      return "Korea";
+                    case "3":
+                      return "China";
+                    case "4":
+                      return "Japan";
+                    case "5":
+                      return "South Asia";
+                    default:
+                      return value;
+                  }
+                });
+                return getShortAddress(selectedLabels.join(", "), 10);
+              }}
+            >
+              <MenuItem value="1">America/Europe</MenuItem>
+              <MenuItem value="2">Korea</MenuItem>
+              <MenuItem value="3">China</MenuItem>
+              <MenuItem value="4">Japan</MenuItem>
+              <MenuItem value="5">South Asia</MenuItem>
+            </Select>
+          </FormControl>
 
           {renderApplyButton()}
         </div>
       </div>
 
       <div className="bg-white shadow rounded-lg overflow-hidden">
-        {kols.length === 0 ? (
+        {isLoading ? (
+          <div className="py-12 px-4 text-center">
+            <div className="flex justify-center items-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <span className="ml-2 text-gray-600">Loading KOLs...</span>
+            </div>
+          </div>
+        ) : kols.length === 0 ? (
           <div className="py-12 px-4 text-center">
             <svg
               className="mx-auto h-12 w-12 text-gray-400"

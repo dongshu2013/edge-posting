@@ -9,7 +9,7 @@ import { getTokenMetadata } from "@/utils/evmUtils";
 import { BoltIcon } from "@heroicons/react/24/outline";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { erc20Abi, parseEther } from "viem";
 import * as math from "mathjs";
 import {
@@ -22,6 +22,7 @@ import { contractAbi } from "@/config/contractAbi";
 import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 import toast from "react-hot-toast";
 import { TermsModal } from "@/components/TermsModal";
+import { Slider } from "@mui/material";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -44,6 +45,7 @@ export default function NewBuzzPage() {
     maxParticipants: 10,
     minimumTokenAmount: 0,
   });
+  const [sharesValue, setSharesValue] = useState<number[]>([50, 90]);
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
     "pending" | "success" | "error"
@@ -52,6 +54,22 @@ export default function NewBuzzPage() {
   const [transactionDescription, setTransactionDescription] = useState("");
   const [transactionHash, setTransactionHash] = useState("");
   const [isCreatingBuzz, setIsCreatingBuzz] = useState(false);
+
+  const shareOfKols = useMemo(() => {
+    return sharesValue[0];
+  }, [sharesValue]);
+
+  const shareOfHolders = useMemo(() => {
+    return Math.max(sharesValue[1] - sharesValue[0], 0);
+  }, [sharesValue]);
+
+  const shareOfOthers = useMemo(() => {
+    return 100 - shareOfKols - shareOfHolders;
+  }, [shareOfKols, shareOfHolders]);
+
+  const handleChange = (event: Event, newValue: number[]) => {
+    setSharesValue(newValue);
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -232,8 +250,8 @@ export default function NewBuzzPage() {
     }
 
     const deadline = new Date();
-    deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    // deadline.setMinutes(deadline.getMinutes() + 5);
+    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       setIsCreatingBuzz(true);
@@ -248,6 +266,9 @@ export default function NewBuzzPage() {
         rewardSettleType: formData.rewardSettleType,
         maxParticipants: formData.maxParticipants,
         participantMinimumTokenAmount: formData.minimumTokenAmount,
+        shareOfKols: shareOfKols,
+        shareOfHolders: shareOfHolders,
+        shareOfOthers: shareOfOthers,
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -546,19 +567,46 @@ export default function NewBuzzPage() {
                     </div>
                   )}
 
+                  <Slider
+                    getAriaLabel={() => "Temperature range"}
+                    value={sharesValue}
+                    onChange={handleChange}
+                    valueLabelDisplay="auto"
+                    sx={{
+                      color: "transparent",
+                      "& .MuiSlider-track": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        border: "none",
+                      },
+                      "& .MuiSlider-thumb": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        "&:hover, &.Mui-focusVisible": {
+                          boxShadow: "0 0 0 8px rgba(99, 102, 241, 0.16)",
+                        },
+                      },
+                      "& .MuiSlider-rail": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        opacity: 1,
+                      },
+                    }}
+                  />
+
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-start">
                       {formData.rewardSettleType === "default" && (
                         <span className="text-sm text-gray-700">
                           Reward will be split into 3 parts: <br />
-                          1. 10% for user not holding tokens, reward will be
-                          distributed evenly among them;
+                          1. {shareOfKols}% for the the KOLs, reward will be
+                          distributed according to their KOL influence score.
                           <br />
-                          2. 40% for the holders, reward will be distributed
-                          according to their token holdings;
+                          2. {shareOfHolders}% for the holders, reward will be
+                          distributed according to their token holdings;
                           <br />
-                          3. 50% for the the KOLs, reward will be distributed
-                          according to their KOL influence score.
+                          3. {shareOfOthers}% for user not holding tokens, reward
+                          will be distributed evenly among them;
                           <br />
                           <br />
                           If there is no participant in the above parts, the

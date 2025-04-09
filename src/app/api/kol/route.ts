@@ -6,14 +6,30 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const page = parseInt(searchParams.get("page") || "1");
     const pageSize = parseInt(searchParams.get("pageSize") || "10");
-    const area = searchParams.get("area");
+    const areas = searchParams.get("areas");
+    const minScore = searchParams.get("minScore");
+    const maxScore = searchParams.get("maxScore");
+    console.log("areas", areas);
 
     const where: any = {
       status: "confirmed",
     };
-    if (area) {
-      where.area = parseInt(area);
+    if (areas) {
+      where.area = {
+        in: areas.split(",").map((area) => parseInt(area)),
+      };
     }
+    if (minScore) {
+      where.score = {
+        gte: parseInt(minScore),
+      };
+    }
+    if (maxScore) {
+      where.score = {
+        lte: parseInt(maxScore),
+      };
+    }
+
     const kols = await prisma.kol.findMany({
       where,
       skip: (page - 1) * pageSize,

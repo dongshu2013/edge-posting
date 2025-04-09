@@ -83,6 +83,10 @@ model Buzz {
   tokenDecimals Int
   transactionHash String @unique
 
+  shareOfKols Int @default(50)
+  shareOfHolders Int @default(40)
+  shareOfOthers Int @default(10)
+
 
   @@index([createdBy])
   @@index([createdAt])

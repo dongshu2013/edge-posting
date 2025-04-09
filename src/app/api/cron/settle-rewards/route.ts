@@ -116,18 +116,24 @@ const settleDefaultTypeRewards = async (buzz: any) => {
   // 40%
   const hasBalanceRewardTokenAmount =
     hasBalanceWeights.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfHolders)).div(math.bignumber(100))
+      ? totalTokenAmountOnChain
+          .mul(math.bignumber(buzz.shareOfHolders))
+          .div(math.bignumber(100))
       : math.bignumber(0);
   // 10%
   const emptyBalanceRewardTokenAmount =
     emptyBalanceWeights.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfOthers)).div(math.bignumber(100))
+      ? totalTokenAmountOnChain
+          .mul(math.bignumber(buzz.shareOfOthers))
+          .div(math.bignumber(100))
       : math.bignumber(0);
 
   // 50%
   const kolRewardTokenAmount =
     kols.length > 0
-      ? totalTokenAmountOnChain.mul(math.bignumber(buzz.shareOfKols)).div(math.bignumber(100))
+      ? totalTokenAmountOnChain
+          .mul(math.bignumber(buzz.shareOfKols))
+          .div(math.bignumber(100))
       : math.bignumber(0);
 
   const remainingRewardTokenAmount = totalTokenAmountOnChain
@@ -151,12 +157,15 @@ const settleDefaultTypeRewards = async (buzz: any) => {
         .toString();
 
       if (kol.userId) {
-        settleHistories.push({
-          userId: kol.userId,
-          buzzId: buzz.id,
-          settleAmount: kolAverageRewardTokenAmountOnChain,
-          type: "KOL",
-        });
+        if (math.bignumber(kolAverageRewardTokenAmountOnChain).gt(0)) {
+          settleHistories.push({
+            userId: kol.userId,
+            buzzId: buzz.id,
+            settleAmount: kolAverageRewardTokenAmountOnChain,
+            type: "KOL",
+          });
+        }
+
         await addUserBalance(
           buzz,
           tx,
@@ -164,12 +173,14 @@ const settleDefaultTypeRewards = async (buzz: any) => {
           kolAverageRewardTokenAmountOnChain
         );
       } else {
-        settleHistories.push({
-          kolId: kol.id,
-          buzzId: buzz.id,
-          settleAmount: kolAverageRewardTokenAmountOnChain,
-          type: "KOL",
-        });
+        if (math.bignumber(kolAverageRewardTokenAmountOnChain).gt(0)) {
+          settleHistories.push({
+            kolId: kol.id,
+            buzzId: buzz.id,
+            settleAmount: kolAverageRewardTokenAmountOnChain,
+            type: "KOL",
+          });
+        }
         // Kol not registered yet, add balance to kol balance first
         await addKolBalance(
           buzz,
@@ -200,12 +211,14 @@ const settleDefaultTypeRewards = async (buzz: any) => {
           .toString();
       }
       await addUserBalance(buzz, tx, userId, amountOnChain);
-      settleHistories.push({
-        userId,
-        buzzId: buzz.id,
-        settleAmount: amountOnChain,
-        type: "Normal",
-      });
+      if (math.bignumber(amountOnChain).gt(0)) {
+        settleHistories.push({
+          userId,
+          buzzId: buzz.id,
+          settleAmount: amountOnChain,
+          type: "Normal",
+        });
+      }
     });
 
     // Return fund to creator
@@ -290,12 +303,14 @@ const settleFixedTypeRewards = async (buzz: any) => {
         },
       });
 
-      settleHistories.push({
-        userId,
-        buzzId: buzz.id,
-        settleAmount: userRewardAmountOnChain,
-        type: "Normal",
-      });
+      if (math.bignumber(userRewardAmountOnChain).gt(0)) {
+        settleHistories.push({
+          userId,
+          buzzId: buzz.id,
+          settleAmount: userRewardAmountOnChain,
+          type: "Normal",
+        });
+      }
 
       remainingTokenAmountOnChain = remainingTokenAmountOnChain.minus(
         math.bignumber(userRewardAmountOnChain)
@@ -377,6 +392,10 @@ const addUserBalance = async (
   userId: string,
   amountOnChain: string
 ) => {
+  if (math.bignumber(amountOnChain).lte(0)) {
+    return;
+  }
+
   const updatedBalance = await tx.userBalance
     .upsert({
       where: {

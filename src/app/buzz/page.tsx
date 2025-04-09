@@ -8,8 +8,9 @@ import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import FilterTokenBuzzesToggle from "@/components/FilterTokenBuzzesToggle";
-import { useAuth } from "@/hooks/useAuth";
 import { useUserStore } from "@/store/userStore";
+import CreatorFilterToggle from "@/components/CreatorFilterToggle";
+import TokenAddressFilterToggle from "@/components/TokenAddressFilterToggle";
 
 interface Buzz {
   id: string;
@@ -64,24 +65,31 @@ function BuzzesPageContent() {
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const observer = useRef<IntersectionObserver | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   console.log("🍷", userInfo);
 
   const showAll = searchParams.get("showAll") === "true";
   const filterToken = searchParams.get("filterToken") === "true";
+  const creatorTwitterUsernames =
+    searchParams.get("creatorTwitterUsernames")?.split(",") || [];
+  const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
   const sortBy = useMemo(() => {
     const sortByParam = searchParams.get("sortBy");
     switch (sortByParam) {
       case "newest":
         return "newest";
-      case "price":
-        return "price";
+      case "deadline":
+        return "deadline";
       case "engagement":
         return "engagement";
       default:
         return "newest";
     }
   }, [searchParams]);
+
+  const creatorTwitterUsernamesParam = creatorTwitterUsernames.join(",");
+  const tokenAddressesParam = tokenAddresses.join(",");
 
   const fetchBuzzes = useCallback(
     async (cursor?: string): Promise<BuzzResponse> => {
@@ -99,6 +107,15 @@ function BuzzesPageContent() {
         if (filterToken) {
           url.searchParams.append("filterToken", "true");
         }
+        if (creatorTwitterUsernames.length > 0) {
+          url.searchParams.append(
+            "creatorTwitterUsernames",
+            creatorTwitterUsernames.join(",")
+          );
+        }
+        if (tokenAddresses.length > 0) {
+          url.searchParams.append("tokenAddresses", tokenAddressesParam);
+        }
         // Only show buzzes that the user hasn't replied to
         url.searchParams.append("excludeReplied", "true");
 
@@ -107,7 +124,13 @@ function BuzzesPageContent() {
         throw err;
       }
     },
-    [showAll, sortBy, filterToken]
+    [
+      showAll,
+      sortBy,
+      filterToken,
+      creatorTwitterUsernamesParam,
+      tokenAddressesParam,
+    ]
   );
 
   const loadMore = useCallback(async () => {
@@ -178,26 +201,7 @@ function BuzzesPageContent() {
     };
   }, []);
 
-  const sortedBuzzes = [...buzzes]
-    // .filter((buzz) => {
-    //   if (showAll) return true;
-    //   const deadlineTime = new Date(buzz.deadline).getTime();
-    //   const currentTime = Date.now();
-    //   return buzz.isActive && currentTime < deadlineTime;
-    // })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price":
-          return Number(b.tokenAmount) - Number(a.tokenAmount);
-        case "engagement":
-          return b.replyCount - a.replyCount;
-        case "newest":
-        default:
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-      }
-    });
+  const sortedBuzzes = [...buzzes];
 
   if (isLoading) {
     return (
@@ -221,67 +225,10 @@ function BuzzesPageContent() {
     );
   }
 
-  if (buzzes.length === 0) {
-    return (
-      <div className="py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("sortBy", e.target.value);
-              router.push(url.toString());
-            }}
-            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
-          >
-            <option value="newest">✨ Newest First</option>
-            <option value="price">💰 Highest Price</option>
-            <option value="engagement">🔥 Most Engagement</option>
-          </select>
-
-          <div className="flex gap-4 items-center">
-            {!!userInfo?.uid && (
-              <FilterTokenBuzzesToggle
-                isActive={filterToken}
-                onToggle={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set(
-                    "filterToken",
-                    (!filterToken).toString()
-                  );
-                  router.push(url.toString());
-                }}
-              />
-            )}
-
-            <ActiveBuzzesToggle
-              isActive={!showAll}
-              onToggle={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("showAll", (!showAll).toString());
-                router.push(url.toString());
-              }}
-            />
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-          <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900">
-            No buzzes yet
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Connect your wallet and create your first buzz!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="py-8">
+    <div className="">
       <div className="flex-1">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
           <select
             id="sortBy"
             value={sortBy}
@@ -293,33 +240,84 @@ function BuzzesPageContent() {
             className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
           >
             <option value="newest">✨ Newest First</option>
-            <option value="price">💰 Highest Price</option>
+            <option value="deadline">🕒 Deadline</option>
             <option value="engagement">🔥 Most Engagement</option>
           </select>
+        </div>
 
-          <div className="flex gap-4 items-center">
-            {!!userInfo?.uid && (
-              <FilterTokenBuzzesToggle
-                isActive={filterToken}
-                onToggle={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set(
-                    "filterToken",
-                    (!filterToken).toString()
-                  );
-                  router.push(url.toString());
-                }}
-              />
-            )}
+        <div className="flex gap-4 items-center mb-3">
+          <div className="w-full">
+            <div
+              className="flex items-center justify-between cursor-pointer mb-2"
+              onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+              <h3 className="text-lg font-medium text-gray-900">Filters</h3>
+              <svg
+                className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
+                  isCollapsed ? "rotate-180" : ""
+                }`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
+              </svg>
+            </div>
 
-            <ActiveBuzzesToggle
-              isActive={!showAll}
-              onToggle={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("showAll", (!showAll).toString());
-                router.push(url.toString());
-              }}
-            />
+            <div
+              className={`overflow-hidden transition-all duration-200 ${
+                isCollapsed ? "max-h-0" : "max-h-96"
+              }`}
+            >
+              <div className="mb-3">
+                <ActiveBuzzesToggle
+                  isActive={!showAll}
+                  onToggle={() => {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set("showAll", (!showAll).toString());
+                    router.push(url.toString());
+                  }}
+                />
+              </div>
+
+              <div className="mb-3">
+                <CreatorFilterToggle
+                  onFilter={(username) => {
+                    const url = new URL(window.location.href);
+                    if (username) {
+                      url.searchParams.set("creatorTwitterUsernames", username);
+                    } else {
+                      url.searchParams.delete("creatorTwitterUsernames");
+                    }
+                    router.push(url.toString());
+                  }}
+                />
+              </div>
+
+              <div className="mb-6">
+                <TokenAddressFilterToggle
+                  onFilter={(addresses) => {
+                    const url = new URL(window.location.href);
+                    if (addresses.length > 0) {
+                      url.searchParams.set(
+                        "tokenAddresses",
+                        addresses.join(",")
+                      );
+                    } else {
+                      url.searchParams.delete("tokenAddresses");
+                    }
+                    if (url.toString() !== window.location.href) {
+                      router.push(url.toString());
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

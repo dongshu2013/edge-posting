@@ -45,7 +45,6 @@ export default function NewBuzzPage() {
     maxParticipants: 10,
     minimumTokenAmount: 0,
   });
-  const [sharesValue, setSharesValue] = useState<number[]>([50, 90]);
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
     "pending" | "success" | "error"
@@ -55,21 +54,9 @@ export default function NewBuzzPage() {
   const [transactionHash, setTransactionHash] = useState("");
   const [isCreatingBuzz, setIsCreatingBuzz] = useState(false);
 
-  const shareOfKols = useMemo(() => {
-    return sharesValue[0];
-  }, [sharesValue]);
-
-  const shareOfHolders = useMemo(() => {
-    return Math.max(sharesValue[1] - sharesValue[0], 0);
-  }, [sharesValue]);
-
-  const shareOfOthers = useMemo(() => {
-    return 100 - shareOfKols - shareOfHolders;
-  }, [shareOfKols, shareOfHolders]);
-
-  const handleChange = (event: Event, newValue: number[]) => {
-    setSharesValue(newValue);
-  };
+  const [shareOfKols, setShareOfKols] = useState("50");
+  const [shareOfHolders, setShareOfHolders] = useState("40");
+  const [shareOfOthers, setShareOfOthers] = useState("10");
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -266,9 +253,9 @@ export default function NewBuzzPage() {
         rewardSettleType: formData.rewardSettleType,
         maxParticipants: formData.maxParticipants,
         participantMinimumTokenAmount: formData.minimumTokenAmount,
-        shareOfKols: shareOfKols,
-        shareOfHolders: shareOfHolders,
-        shareOfOthers: shareOfOthers,
+        shareOfKols: Number(shareOfKols),
+        shareOfHolders: Number(shareOfHolders),
+        shareOfOthers: Number(shareOfOthers),
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -567,7 +554,7 @@ export default function NewBuzzPage() {
                     </div>
                   )}
 
-                  <Slider
+                  {/* <Slider
                     getAriaLabel={() => "Temperature range"}
                     value={sharesValue}
                     onChange={handleChange}
@@ -592,26 +579,118 @@ export default function NewBuzzPage() {
                         opacity: 1,
                       },
                     }}
-                  />
+                  /> */}
 
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-start">
                       {formData.rewardSettleType === "default" && (
-                        <span className="text-sm text-gray-700">
-                          Reward will be split into 3 parts: <br />
-                          1. {shareOfKols}% for the the KOLs, reward will be
-                          distributed according to their KOL influence score.
-                          <br />
-                          2. {shareOfHolders}% for the holders, reward will be
-                          distributed according to their token holdings;
-                          <br />
-                          3. {shareOfOthers}% for user not holding tokens, reward
-                          will be distributed evenly among them;
-                          <br />
-                          <br />
-                          If there is no participant in the above parts, the
-                          reward will be returned to the creator.
-                        </span>
+                        <div className="space-y-4 w-full">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                KOLs Share (%)
+                              </label>
+                              <input
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                value={shareOfKols}
+                                onChange={(e) => {
+                                  if (e.target.value === "") {
+                                    setShareOfKols("");
+                                    return;
+                                  }
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setShareOfKols(value.toString());
+                                }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Holders Share (%)
+                              </label>
+                              <input
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                value={shareOfHolders}
+                                onChange={(e) => {
+                                  if (e.target.value === "") {
+                                    setShareOfHolders("");
+                                    return;
+                                  }
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setShareOfHolders(value.toString());
+                                }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Others Share (%)
+                              </label>
+                              <input
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                value={shareOfOthers}
+                                onChange={(e) => {
+                                  if (e.target.value === "") {
+                                    setShareOfOthers("");
+                                    return;
+                                  }
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setShareOfOthers(value.toString());
+                                }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-700">
+                              Total:{" "}
+                              {Number(shareOfKols) +
+                                Number(shareOfHolders) +
+                                Number(shareOfOthers)}
+                              %
+                            </div>
+                            {Number(shareOfKols) +
+                              Number(shareOfHolders) +
+                              Number(shareOfOthers) !==
+                              100 && (
+                              <div className="text-sm text-red-500">
+                                Total must equal 100%
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-700">
+                            Reward will be split into 3 parts: <br />
+                            1. {Number(shareOfKols)}% for the KOLs, reward will
+                            be distributed according to their KOL influence
+                            score.
+                            <br />
+                            2. {Number(shareOfHolders)}% for the holders, reward
+                            will be distributed according to their token
+                            holdings;
+                            <br />
+                            3. {Number(shareOfOthers)}% for users not holding
+                            tokens, reward will be distributed evenly among them;
+                            <br />
+                            <br />
+                            If there is no participant in the above parts, the
+                            reward will be returned to the creator.
+                          </div>
+                        </div>
                       )}
 
                       {formData.rewardSettleType === "fixed" && (

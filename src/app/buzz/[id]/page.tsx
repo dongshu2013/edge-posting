@@ -11,6 +11,7 @@ import BuzzSettleHistory from "@/components/BuzzSettleHistory";
 import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
+import Image from "next/image";
 
 interface Reply {
   id: string;
@@ -21,6 +22,9 @@ interface Reply {
   status: "PENDING" | "APPROVED" | "REJECTED";
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
+    nickname: string;
   };
 }
 
@@ -281,9 +285,27 @@ export default function BuzzDetailPage() {
                       {/* Reply Header */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            @{reply?.user?.username}
-                          </span>
+                          <div className="flex items-center">
+                            <Image
+                              src={reply.user.avatar}
+                              alt={reply.user.username}
+                              className="w-10 h-10 rounded-full mr-2"
+                              width={40}
+                              height={40}
+                            />
+
+                            <div className="leading-tight">
+                              <div className="text-[16px] font-medium text-gray-900">
+                                {reply.user.nickname ||
+                                  reply.user.username.substring(0, 6)}
+                              </div>
+
+                              <div className="text-[12px] text-gray-900">
+                                @{reply.user.twitterUsername ||
+                                  reply.user.username.substring(0, 6)}
+                              </div>
+                            </div>
+                          </div>
                           <span className="text-sm text-gray-500">
                             {new Date(reply.createdAt).toLocaleDateString(
                               undefined,

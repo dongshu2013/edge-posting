@@ -14,7 +14,7 @@ export default function ActiveBuzzesToggle({
   className = ""
 }: ActiveBuzzesToggleProps) {
   return (
-    <div className={`inline-flex items-center justify-between gap-3 bg-white rounded-2xl px-6 py-3 shadow-sm border border-gray-200 w-auto sm:w-auto ${className}`}>
+    <div className={`inline-flex items-center justify-between gap-3 bg-white rounded-2xl px-3 py-2 md:py-[10px] shadow-sm border border-gray-200 w-auto sm:w-auto ${className}`}>
       <span className="text-base sm:text-lg text-gray-700 font-medium">
         {label}
       </span>

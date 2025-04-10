@@ -135,8 +135,6 @@ export default function BuzzCard({
         method: "POST",
         body: JSON.stringify({
           buzzId: id,
-          replyLink,
-          text: replyText,
         }),
       });
 

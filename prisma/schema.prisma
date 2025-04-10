@@ -95,7 +95,7 @@ model Buzz {
 
 model Reply {
   id          String       @id @default(cuid())
-  replyLink   String
+  replyLink   String       @unique
   text        String       @db.Text
   createdAt   DateTime     @default(now())
   createdBy   String // Firebase UID

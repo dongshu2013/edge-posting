@@ -39,35 +39,46 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (!dbUser?.twitterUsername) {
+      return NextResponse.json(
+        { error: "Please bind your twitter account first" },
+        { status: 400 }
+      );
+    }
 
     const body = await request.json();
+    const { buzzId } = body;
 
-    const { buzzId, replyLink, text } = body;
-
-    if (!buzzId || !replyLink || !text) {
+    if (!buzzId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Validate the reply link format (basic check)
-    if (
-      !replyLink.match(/^https?:\/\/(twitter\.com|x\.com)\/.+\/status\/.+$/)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid reply link format" },
-        { status: 400 }
-      );
-    }
-
-    // Get the buzz to check if it exists and is active
     const buzz = await prisma.buzz.findUnique({
       where: { id: buzzId },
     });
-
     if (!buzz) {
       return NextResponse.json({ error: "Buzz not found" }, { status: 404 });
+    }
+
+    // Validate the reply link is reply to the buzz
+    const checkCommentResponse = await fetch(
+      `https://api.tweetscout.io/v2/check-comment?tweet_link=${buzz.tweetLink}&user_handle=${dbUser.twitterUsername}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+        },
+        method: "GET",
+      }
+    );
+    const checkComment = await checkCommentResponse.json();
+    console.log(checkComment);
+    if (!checkComment.commented || !checkComment.tweet) {
+      return NextResponse.json({ error: "No reply found" }, { status: 400 });
     }
 
     // Check if the buzz is still active
@@ -96,51 +107,12 @@ export async function POST(request: Request) {
       );
     }
 
-    try {
-      const beaerToken = await authTwitter();
-      const replyTwitterId = replyLink.split("/").pop();
-      const twitterResponse = await fetch(
-        `https://api.twitter.com/2/tweets/${replyTwitterId}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: beaerToken,
-          },
-        }
-      );
-
-      if (!twitterResponse.ok) {
-        return NextResponse.json(
-          { error: "Failed to get reply tweet" },
-          { status: 400 }
-        );
-      }
-
-      const replyTweetData = await twitterResponse.json();
-      console.log(replyTweetData);
-      const replyText = replyTweetData.data.text as string;
-      if (!replyText.trim().includes(text.trim())) {
-        return NextResponse.json(
-          { error: "Reply text does not match" },
-          { status: 400 }
-        );
-      }
-    } catch (err) {
-      console.error("Error in reply API:", err);
-      return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 }
-      );
-    }
-
     // Create the reply with PENDING status
     const reply = await prisma.reply.create({
       data: {
         buzzId,
-        replyLink,
-        text,
+        replyLink: `https://x.com/games_zawa/status/${checkComment.tweet.id_str}`,
+        text: checkComment.tweet.full_text,
         createdBy: userId,
         status: "PENDING",
       },

@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
     const creatorTwitterUsernames =
       searchParams.get("creatorTwitterUsernames")?.split(",") || [];
     const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
+    const tokenNames = searchParams.get("tokenNames")?.split(",") || [];
     const cursor = searchParams.get("cursor");
     const limit = 10; // Number of items per page
     const sortBy =
@@ -71,6 +72,12 @@ export async function GET(request: NextRequest) {
         ...(tokenAddresses.length > 0 && {
           customTokenAddress: {
             in: tokenAddresses,
+          },
+        }),
+        ...(tokenNames.length > 0 && {
+          paymentToken: {
+            in: tokenNames,
+            mode: "insensitive",
           },
         }),
         ...(onlyActive && { deadline: { gt: new Date() } }),

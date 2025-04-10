@@ -2,6 +2,8 @@
 
 import KolApplyModal from "@/components/KolApplyModal";
 import KolCard from "@/components/KolCard";
+import KolTableHeader from "@/components/KolTableHeader";
+import KolTableItem from "@/components/KolTableItem";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { getShortAddress } from "@/utils/commonUtils";
@@ -104,6 +106,15 @@ export default function KolPage() {
     );
   };
 
+  const handleSort = (field: string) => {
+    if (field === sortField) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortDirection("desc");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="md:mt-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
@@ -196,7 +207,7 @@ export default function KolPage() {
           </FormControl>
         </div>
 
-        <div className="mt-3 md:mt-0 flex items-center gap-2">
+        <div className="flex md:hidden mt-3 md:mt-0 items-center gap-2">
           <FormControl sx={{ minWidth: 150 }}>
             <InputLabel id="sort-field-label">Sort By</InputLabel>
             <Select
@@ -226,6 +237,12 @@ export default function KolPage() {
           </FormControl>
         </div>
       </div>
+
+      <KolTableHeader
+        sortField={sortField}
+        sortDirection={sortDirection}
+        onSort={handleSort}
+      />
 
       <div className="overflow-hidden">
         {isLoading ? (
@@ -261,10 +278,20 @@ export default function KolPage() {
             {renderApplyButton()}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {kols.map((kol: any) => (
-              <KolCard kol={kol} key={kol.id} />
-            ))}
+          <div>
+            <div className="hidden md:block">
+              {kols.map((kol: any) => (
+                <KolTableItem kol={kol} key={kol.id} />
+              ))}
+            </div>
+
+            <div className="md:hidden">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {kols.map((kol: any) => (
+                  <KolCard kol={kol} key={kol.id} />
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </div>

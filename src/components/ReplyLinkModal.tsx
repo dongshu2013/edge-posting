@@ -26,15 +26,6 @@ export default function ReplyLinkModal({
   initialReplyText = "", // 设置默认值
 }: ReplyLinkModalProps) {
   const { userInfo } = useAuth();
-  const replyLinkRef = useRef<HTMLInputElement>(null);
-  const replyTextRef = useRef<HTMLInputElement>(null);
-
-  // 当 initialReplyText 改变时更新 replyText input 的值
-  useEffect(() => {
-    if (replyTextRef.current) {
-      replyTextRef.current.value = initialReplyText;
-    }
-  }, [initialReplyText]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,22 +37,12 @@ export default function ReplyLinkModal({
       setIsWalletModalOpen(true);
       return;
     }
-    const replyLink = replyLinkRef.current?.value || "";
-    const replyText = replyTextRef.current?.value || "";
-
-    if (!replyLink.trim()) {
-      setError("Please enter a reply link");
-      return;
-    }
 
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await onSubmit({ replyLink, replyText });
-      if (replyLinkRef.current) {
-        replyLinkRef.current.value = "";
-      }
+      await onSubmit({ replyLink: "", replyText: "" });
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit reply");
@@ -123,48 +104,12 @@ export default function ReplyLinkModal({
 
                     <div className="mt-4">
                       <p className="text-sm text-gray-500 mb-4">
-                        After posting your reply on Twitter, copy the link to
-                        your reply and paste it here
+                        After posting your reply on Twitter, click the button
+                        below
                         {tokenAmount ? ` to earn max ${tokenAmount} BNB` : ""}.
                       </p>
 
-                      <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                          <label
-                            htmlFor="replyLink"
-                            className="block text-sm font-medium text-gray-700"
-                          >
-                            Reply Link
-                          </label>
-                          <input
-                            id="replyLink"
-                            type="url"
-                            name="replyLink"
-                            ref={replyLinkRef}
-                            className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            placeholder="https://twitter.com/..."
-                            required
-                          />
-                        </div>
-                        <div>
-                          <label
-                            htmlFor="replyLink"
-                            className="block text-sm font-medium text-gray-700"
-                          >
-                            Reply Text
-                          </label>
-                          <input
-                            type="text"
-                            name="replyText"
-                            id="replyText"
-                            ref={replyTextRef}
-                            className="mt-1 block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                            placeholder="Hey, check out this reply!"
-                            defaultValue={initialReplyText}
-                            required
-                          />
-                        </div>
-
+                      <form onSubmit={handleSubmit} className="space-y-4 ">
                         {error && (
                           <div className="rounded-md bg-red-50 p-4">
                             <p className="text-sm text-red-700">{error}</p>
@@ -178,8 +123,9 @@ export default function ReplyLinkModal({
                             disabled={isSubmitting}
                             className="inline-flex w-full justify-center rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:from-indigo-500 hover:to-purple-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {isSubmitting ? "Submitting..." : "Submit Reply"}
+                            {isSubmitting ? "Submitting..." : "Confirm Reply"}
                           </button>
+
                           <button
                             type="button"
                             className="mt-3 inline-flex w-full justify-center rounded-xl bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"

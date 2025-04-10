@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import BuzzCard from "@/components/BuzzCard";
-import { SparklesIcon } from "@heroicons/react/24/outline";
+import {
+  SparklesIcon,
+  XMarkIcon,
+  CurrencyDollarIcon,
+  UserIcon,
+  HashtagIcon,
+} from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -11,6 +17,7 @@ import FilterTokenBuzzesToggle from "@/components/FilterTokenBuzzesToggle";
 import { useUserStore } from "@/store/userStore";
 import CreatorFilterToggle from "@/components/CreatorFilterToggle";
 import TokenAddressFilterToggle from "@/components/TokenAddressFilterToggle";
+import classNames from "classnames";
 
 interface Buzz {
   id: string;
@@ -46,6 +53,52 @@ interface BuzzResponse {
   hasMore: boolean;
 }
 
+interface SearchItem {
+  type: "tokenAddress" | "tokenName" | "creatorTwitterUsername";
+  value: string;
+}
+
+function SearchTag({
+  item,
+  onDelete,
+  searchType,
+}: {
+  item: SearchItem;
+  onDelete: () => void;
+  searchType: "tokenAddress" | "tokenName" | "creatorTwitterUsername";
+}) {
+  const getIcon = () => {
+    switch (searchType) {
+      case "tokenAddress":
+        return <CurrencyDollarIcon className="w-4 h-4" />;
+      case "tokenName":
+        return <HashtagIcon className="w-4 h-4" />;
+      case "creatorTwitterUsername":
+        return <UserIcon className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div
+      className={classNames(
+        "inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm",
+        searchType === "tokenAddress" && "bg-green-100 text-green-700",
+        searchType === "tokenName" && "bg-purple-100 text-purple-700",
+        searchType === "creatorTwitterUsername" && "bg-blue-100 text-blue-700"
+      )}
+    >
+      {getIcon()}
+      <span>{item.value}</span>
+      <button
+        onClick={onDelete}
+        className="text-indigo-500 hover:text-indigo-700"
+      >
+        <XMarkIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function BuzzesPage() {
   return (
     <Suspense fallback={<div className="py-8">Loading buzzes...</div>}>
@@ -64,16 +117,23 @@ function BuzzesPageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState<
+    "tokenAddress" | "tokenName" | "creatorTwitterUsername"
+  >("tokenAddress");
   const observer = useRef<IntersectionObserver | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
-  console.log("🍷", userInfo);
+  // console.log("🍷", userInfo);
 
   const showAll = searchParams.get("showAll") === "true";
   const filterToken = searchParams.get("filterToken") === "true";
+
   const creatorTwitterUsernames =
     searchParams.get("creatorTwitterUsernames")?.split(",") || [];
   const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
+  const tokenNames = searchParams.get("tokenNames")?.split(",") || [];
+
   const sortBy = useMemo(() => {
     const sortByParam = searchParams.get("sortBy");
     switch (sortByParam) {
@@ -90,6 +150,24 @@ function BuzzesPageContent() {
 
   const creatorTwitterUsernamesParam = creatorTwitterUsernames.join(",");
   const tokenAddressesParam = tokenAddresses.join(",");
+  const tokenNamesParam = tokenNames.join(",");
+
+  const searchItems: SearchItem[] = useMemo(() => {
+    return [
+      ...tokenAddressesParam.split(",").map((address) => ({
+        type: "tokenAddress",
+        value: address,
+      })),
+      ...tokenNamesParam.split(",").map((name) => ({
+        type: "tokenName",
+        value: name,
+      })),
+      ...creatorTwitterUsernamesParam.split(",").map((username) => ({
+        type: "creatorTwitterUsername",
+        value: username,
+      })),
+    ].filter((item) => !!item.value) as SearchItem[];
+  }, [tokenNamesParam, creatorTwitterUsernamesParam, tokenAddressesParam]);
 
   const fetchBuzzes = useCallback(
     async (cursor?: string): Promise<BuzzResponse> => {
@@ -116,6 +194,9 @@ function BuzzesPageContent() {
         if (tokenAddresses.length > 0) {
           url.searchParams.append("tokenAddresses", tokenAddressesParam);
         }
+        if (tokenNames.length > 0) {
+          url.searchParams.append("tokenNames", tokenNamesParam);
+        }
         // Only show buzzes that the user hasn't replied to
         url.searchParams.append("excludeReplied", "true");
 
@@ -130,6 +211,7 @@ function BuzzesPageContent() {
       filterToken,
       creatorTwitterUsernamesParam,
       tokenAddressesParam,
+      tokenNamesParam,
     ]
   );
 
@@ -203,6 +285,84 @@ function BuzzesPageContent() {
 
   const sortedBuzzes = [...buzzes];
 
+  const handleConfirmSearch = () => {
+    const searchText = searchQuery.trim();
+    setSearchQuery("");
+    if (searchType === "tokenAddress") {
+      const currentTokenAddresses = searchParams.get("tokenAddresses");
+      const newTokenAddresses = currentTokenAddresses?.split(",") || [];
+      if (newTokenAddresses.includes(searchText)) {
+        return;
+      }
+      newTokenAddresses.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tokenAddresses", newTokenAddresses.join(","));
+      router.push(url.toString());
+    } else if (searchType === "tokenName") {
+      const currentTokenNames = searchParams.get("tokenNames");
+      const newTokenNames = currentTokenNames?.split(",") || [];
+      if (newTokenNames.includes(searchText)) {
+        return;
+      }
+      newTokenNames.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tokenNames", newTokenNames.join(","));
+      router.push(url.toString());
+    } else if (searchType === "creatorTwitterUsername") {
+      const currentCreatorTwitterUsernames = searchParams.get(
+        "creatorTwitterUsernames"
+      );
+      const newCreatorTwitterUsernames =
+        currentCreatorTwitterUsernames?.split(",") || [];
+      if (newCreatorTwitterUsernames.includes(searchText)) {
+        return;
+      }
+      newCreatorTwitterUsernames.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set(
+        "creatorTwitterUsernames",
+        newCreatorTwitterUsernames.join(",")
+      );
+      router.push(url.toString());
+    }
+  };
+
+  const handleDeleteSearchItem = (item: SearchItem) => {
+    const url = new URL(window.location.href);
+    if (item.type === "tokenAddress") {
+      const currentAddresses =
+        searchParams.get("tokenAddresses")?.split(",") || [];
+      const newAddresses = currentAddresses.filter(
+        (addr) => addr !== item.value
+      );
+      if (newAddresses.length > 0) {
+        url.searchParams.set("tokenAddresses", newAddresses.join(","));
+      } else {
+        url.searchParams.delete("tokenAddresses");
+      }
+    } else if (item.type === "tokenName") {
+      const currentNames = searchParams.get("tokenNames")?.split(",") || [];
+      const newNames = currentNames.filter((name) => name !== item.value);
+      if (newNames.length > 0) {
+        url.searchParams.set("tokenNames", newNames.join(","));
+      } else {
+        url.searchParams.delete("tokenNames");
+      }
+    } else if (item.type === "creatorTwitterUsername") {
+      const currentUsernames =
+        searchParams.get("creatorTwitterUsernames")?.split(",") || [];
+      const newUsernames = currentUsernames.filter(
+        (username) => username !== item.value
+      );
+      if (newUsernames.length > 0) {
+        url.searchParams.set("creatorTwitterUsernames", newUsernames.join(","));
+      } else {
+        url.searchParams.delete("creatorTwitterUsernames");
+      }
+    }
+    router.push(url.toString());
+  };
+
   if (isLoading) {
     return (
       <div className="py-8">
@@ -228,6 +388,96 @@ function BuzzesPageContent() {
   return (
     <div className="">
       <div className="flex-1">
+        <div className="flex flex-col items-start sm:flex-row mb-3 gap-3">
+          <div className="flex-1 self-stretch">
+            <div className="">
+              <div className="relative">
+                <div className="flex">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder={`Search by ${
+                        searchType === "tokenAddress"
+                          ? "token address"
+                          : searchType === "tokenName"
+                          ? "token name"
+                          : "creator Twitter username"
+                      }...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-4 pr-10 py-3 text-base border-gray-300 rounded-l-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleConfirmSearch();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        handleConfirmSearch();
+                      }}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <select
+                    value={searchType}
+                    onChange={(e) => {
+                      const newSearchType = e.target.value as
+                        | "tokenAddress"
+                        | "tokenName"
+                        | "creatorTwitterUsername";
+                      setSearchType(newSearchType);
+                    }}
+                    className="w-[150px] md:w-[180px] px-2 sm:px-4 py-3 text-sm sm:text-base border-l-0 border-gray-300 rounded-r-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+                  >
+                    <option value="tokenAddress">Token Address</option>
+                    <option value="tokenName">Token Name</option>
+                    <option value="creatorTwitterUsername">
+                      Creator Twitter
+                    </option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 flex flex-wrap gap-2">
+              {searchItems.map((item) => (
+                <SearchTag
+                  key={`${item.type}-${item.value}`}
+                  searchType={item.type}
+                  item={item}
+                  onDelete={() => handleDeleteSearchItem(item)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <ActiveBuzzesToggle
+            className="w-auto sm:w-auto"
+            isActive={!showAll}
+            onToggle={() => {
+              const url = new URL(window.location.href);
+              url.searchParams.set("showAll", (!showAll).toString());
+              router.push(url.toString());
+            }}
+          />
+        </div>
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
           <select
             id="sortBy"
@@ -243,82 +493,6 @@ function BuzzesPageContent() {
             <option value="deadline">🕒 Deadline</option>
             <option value="engagement">🔥 Most Engagement</option>
           </select>
-        </div>
-
-        <div className="flex gap-4 items-center mb-3">
-          <div className="w-full">
-            <div
-              className="flex items-center justify-between cursor-pointer mb-2"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-            >
-              <h3 className="text-lg font-medium text-gray-900">Filters</h3>
-              <svg
-                className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${
-                  isCollapsed ? "rotate-180" : ""
-                }`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
-            </div>
-
-            <div
-              className={`overflow-hidden transition-all duration-200 ${
-                isCollapsed ? "max-h-0" : "max-h-96"
-              }`}
-            >
-              <div className="mb-3">
-                <ActiveBuzzesToggle
-                  isActive={!showAll}
-                  onToggle={() => {
-                    const url = new URL(window.location.href);
-                    url.searchParams.set("showAll", (!showAll).toString());
-                    router.push(url.toString());
-                  }}
-                />
-              </div>
-
-              <div className="mb-3">
-                <CreatorFilterToggle
-                  onFilter={(username) => {
-                    const url = new URL(window.location.href);
-                    if (username) {
-                      url.searchParams.set("creatorTwitterUsernames", username);
-                    } else {
-                      url.searchParams.delete("creatorTwitterUsernames");
-                    }
-                    router.push(url.toString());
-                  }}
-                />
-              </div>
-
-              <div className="mb-6">
-                <TokenAddressFilterToggle
-                  onFilter={(addresses) => {
-                    const url = new URL(window.location.href);
-                    if (addresses.length > 0) {
-                      url.searchParams.set(
-                        "tokenAddresses",
-                        addresses.join(",")
-                      );
-                    } else {
-                      url.searchParams.delete("tokenAddresses");
-                    }
-                    if (url.toString() !== window.location.href) {
-                      router.push(url.toString());
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Grid layout for BuzzCards */}

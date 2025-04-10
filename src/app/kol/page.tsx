@@ -1,29 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import KolCard from "@/components/KolCard";
 import KolApplyModal from "@/components/KolApplyModal";
-import { toast } from "react-hot-toast";
-import { useQuery } from "@tanstack/react-query";
-import { CustomPagination } from "@/components/CustomPagination";
-import { fetchApi } from "@/lib/api";
+import KolCard from "@/components/KolCard";
 import { useAuth } from "@/hooks/useAuth";
+import { fetchApi } from "@/lib/api";
+import { getShortAddress } from "@/utils/commonUtils";
 import {
-  Pagination,
-  Select,
-  MenuItem,
   FormControl,
   InputLabel,
+  MenuItem,
+  Pagination,
+  Select,
 } from "@mui/material";
-import { getShortAddress } from "@/utils/commonUtils";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "react-hot-toast";
 
 export default function KolPage() {
   const { userInfo } = useAuth();
   const [showApplyModal, setShowApplyModal] = useState(false);
   const [page, setPage] = useState(1);
-  const [selectedAreas, setSelectedAreas] = useState<string[]>([]);
+  const [selectedAreas, setSelectedAreas] = useState<string[]>(["0"]);
   const [minScore, setMinScore] = useState<string>("");
   const [maxScore, setMaxScore] = useState<string>("");
+  const [sortField, setSortField] = useState<string>("score");
+  const [sortDirection, setSortDirection] = useState<string>("desc");
 
   const userStatusQuery = useQuery({
     queryKey: ["userStatus", userInfo?.uid],
@@ -38,7 +39,15 @@ export default function KolPage() {
   const userKolStatus = userStatusQuery.data?.kolStatus;
 
   const kolsQuery = useQuery({
-    queryKey: ["kols", page, selectedAreas, minScore, maxScore],
+    queryKey: [
+      "kols",
+      page,
+      selectedAreas,
+      minScore,
+      maxScore,
+      sortField,
+      sortDirection,
+    ],
     queryFn: async () => {
       const areasParam =
         selectedAreas.length > 0 ? selectedAreas.join(",") : "";
@@ -46,8 +55,9 @@ export default function KolPage() {
         minScore || maxScore
           ? `&minScore=${minScore || ""}&maxScore=${maxScore || ""}`
           : "";
+      const sortParams = `&sortField=${sortField}&sortDirection=${sortDirection}`;
       const response = await fetchApi(
-        `/api/kol?page=${page}&areas=${areasParam}${scoreParams}`,
+        `/api/kol?page=${page}&areas=${areasParam}${scoreParams}${sortParams}`,
         {}
       );
       return response;
@@ -96,28 +106,26 @@ export default function KolPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-        <h1 className="text-2xl font-bold text-gray-900">
-          Key Opinion Leaders
-        </h1>
-
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
+      <div className="md:mt-5 flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-5">
+          <div className="flex flex-row items-center gap-1 md:gap-2">
             <input
               type="number"
               placeholder="Min Score"
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-[150px] md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               min="0"
             />
+
             <span className="text-gray-500">to</span>
+
             <input
               type="number"
               placeholder="Max Score"
               value={maxScore}
               onChange={(e) => setMaxScore(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              className="w-[150px] md:w-auto px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
               min="0"
             />
           </div>
@@ -135,17 +143,32 @@ export default function KolPage() {
               sx={{
                 height: 40,
               }}
-              onChange={(e) =>
-                setSelectedAreas(
-                  typeof e.target.value === "string"
-                    ? e.target.value.split(",")
-                    : e.target.value
-                )
-              }
+              onChange={(e) => {
+                const values: string[] = e.target.value as string[];
+                if (values.length === 0) {
+                  setSelectedAreas(["0"]);
+                  return;
+                }
+                if (values.includes("0")) {
+                  if (values.length === 1) {
+                    setSelectedAreas(["0"]);
+                  } else {
+                    if (selectedAreas.includes("0")) {
+                      setSelectedAreas(values.filter((value) => value !== "0"));
+                    } else {
+                      setSelectedAreas(["0"]);
+                    }
+                  }
+                } else {
+                  setSelectedAreas(values);
+                }
+              }}
               label="Areas"
               renderValue={(selected) => {
                 const selectedLabels = selected.map((value) => {
                   switch (value) {
+                    case "0":
+                      return "All";
                     case "1":
                       return "America/Europe";
                     case "2":
@@ -163,6 +186,7 @@ export default function KolPage() {
                 return getShortAddress(selectedLabels.join(", "), 10);
               }}
             >
+              <MenuItem value="0">All</MenuItem>
               <MenuItem value="1">America/Europe</MenuItem>
               <MenuItem value="2">Korea</MenuItem>
               <MenuItem value="3">China</MenuItem>
@@ -170,12 +194,40 @@ export default function KolPage() {
               <MenuItem value="5">South Asia</MenuItem>
             </Select>
           </FormControl>
+        </div>
 
-          {renderApplyButton()}
+        <div className="mt-3 md:mt-0 flex items-center gap-2">
+          <FormControl sx={{ minWidth: 150 }}>
+            <InputLabel id="sort-field-label">Sort By</InputLabel>
+            <Select
+              labelId="sort-field-label"
+              value={sortField}
+              onChange={(e) => setSortField(e.target.value)}
+              label="Sort By"
+              sx={{ height: 40 }}
+            >
+              <MenuItem value="score">Score</MenuItem>
+              <MenuItem value="followers">Followers</MenuItem>
+            </Select>
+          </FormControl>
+
+          <FormControl sx={{ minWidth: 120 }}>
+            <InputLabel id="sort-direction-label">Order</InputLabel>
+            <Select
+              labelId="sort-direction-label"
+              value={sortDirection}
+              onChange={(e) => setSortDirection(e.target.value)}
+              label="Order"
+              sx={{ height: 40 }}
+            >
+              <MenuItem value="desc">Descending</MenuItem>
+              <MenuItem value="asc">Ascending</MenuItem>
+            </Select>
+          </FormControl>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="overflow-hidden">
         {isLoading ? (
           <div className="py-12 px-4 text-center">
             <div className="flex justify-center items-center">
@@ -209,25 +261,22 @@ export default function KolPage() {
             {renderApplyButton()}
           </div>
         ) : (
-          <ul className="divide-y divide-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {kols.map((kol: any) => (
-              <li
-                key={kol.id}
-                className="p-4 hover:bg-gray-50 transition-colors"
-              >
-                <KolCard kol={kol} />
-              </li>
+              <KolCard kol={kol} key={kol.id} />
             ))}
-          </ul>
+          </div>
         )}
       </div>
 
       {kols.length > 0 && (
-        <Pagination
-          page={page}
-          onChange={(event, value) => setPage(value)}
-          count={Math.ceil(totalCount / 10)}
-        />
+        <div className="flex justify-center">
+          <Pagination
+            page={page}
+            onChange={(event, value) => setPage(value)}
+            count={Math.ceil(totalCount / 10)}
+          />
+        </div>
       )}
 
       <KolApplyModal

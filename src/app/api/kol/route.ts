@@ -9,15 +9,19 @@ export async function GET(request: NextRequest) {
     const areas = searchParams.get("areas");
     const minScore = searchParams.get("minScore");
     const maxScore = searchParams.get("maxScore");
+    const sortField = searchParams.get("sortField");
+    const sortDirection = searchParams.get("sortDirection");
     console.log("areas", areas);
 
     const where: any = {
       status: "confirmed",
     };
     if (areas) {
-      where.area = {
-        in: areas.split(",").map((area) => parseInt(area)),
-      };
+      if (!areas.includes("0")) {
+        where.area = {
+          in: areas.split(",").map((area) => parseInt(area)),
+        };
+      }
     }
     if (minScore) {
       where.score = {
@@ -30,10 +34,16 @@ export async function GET(request: NextRequest) {
       };
     }
 
+    const orderBy: any = {};
+    if (sortField) {
+      orderBy[sortField] = sortDirection || "desc";
+    }
+
     const kols = await prisma.kol.findMany({
       where,
       skip: (page - 1) * pageSize,
       take: pageSize,
+      orderBy,
     });
 
     const totalCount = await prisma.kol.count({

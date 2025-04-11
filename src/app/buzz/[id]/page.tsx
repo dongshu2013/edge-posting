@@ -361,7 +361,7 @@ export default function BuzzDetailPage() {
 
                       {/* Reply Text - Truncated */}
                       <div
-                        className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] flex items-center"
+                        className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] hidden items-center"
                         onClick={() => handleReplyClick(reply)}
                       >
                         <p className="text-gray-600 text-sm line-clamp-2 w-full">

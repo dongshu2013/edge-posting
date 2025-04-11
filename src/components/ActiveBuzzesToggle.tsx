@@ -10,7 +10,7 @@ interface ActiveBuzzesToggleProps {
 export default function ActiveBuzzesToggle({
   isActive,
   onToggle,
-  label = "Show Active Only",
+  label = "Claimable",
   className = ""
 }: ActiveBuzzesToggleProps) {
   return (

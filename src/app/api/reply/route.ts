@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { authTwitter } from "@/utils/xUtils";
+import { prisma } from "@/lib/prisma";
+import { replyHandler } from "@/lib/replyHandler";
+import dayjs from "dayjs";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
@@ -63,6 +64,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Buzz not found" }, { status: 404 });
     }
 
+    // Check if the buzz is still active
+    const isExpired = !buzz.isActive || new Date() >= buzz.deadline;
+    // Check if the buzz is already settled
+    if (buzz.isSettled || isExpired) {
+      return NextResponse.json(
+        { error: "This buzz has already been settled" },
+        { status: 400 }
+      );
+    }
+
+    // Check if the user has already replied to this buzz
+    const existingReply = await prisma.reply.findFirst({
+      where: {
+        buzzId,
+        createdBy: userId,
+      },
+    });
+
+    const existingReplyAttempt = await prisma.replyAttempt.findFirst({
+      where: {
+        buzzId,
+        userId,
+      },
+    });
+
+    if (existingReply || existingReplyAttempt) {
+      return NextResponse.json(
+        { error: "You have already replied to this buzz" },
+        { status: 400 }
+      );
+    }
+
     // Validate the reply link is reply to the buzz
     const checkCommentResponse = await fetch(
       `https://api.tweetscout.io/v2/check-comment?tweet_link=${buzz.tweetLink}&user_handle=${dbUser.twitterUsername}`,
@@ -78,33 +111,17 @@ export async function POST(request: Request) {
     const checkComment = await checkCommentResponse.json();
     console.log(checkComment);
     if (!checkComment.commented || !checkComment.tweet) {
-      return NextResponse.json({ error: "No reply found" }, { status: 400 });
-    }
-
-    // Check if the buzz is still active
-    const isExpired = !buzz.isActive || new Date() >= buzz.deadline;
-
-    // Check if the buzz is already settled
-    // if (buzz.isSettled) {
-    //   return NextResponse.json(
-    //     { error: "This buzz has already been settled" },
-    //     { status: 400 }
-    //   );
-    // }
-
-    // Check if the user has already replied to this buzz
-    const existingReply = await prisma.reply.findFirst({
-      where: {
-        buzzId,
-        createdBy: userId,
-      },
-    });
-
-    if (existingReply) {
-      return NextResponse.json(
-        { error: "You have already replied to this buzz" },
-        { status: 400 }
-      );
+      const replyAttempt = await prisma.replyAttempt.create({
+        data: {
+          buzzId,
+          userId,
+          updatedAt: dayjs().unix(),
+        },
+      });
+      replyHandler.start();
+      return NextResponse.json({
+        code: 11,
+      });
     }
 
     // Create the reply with PENDING status

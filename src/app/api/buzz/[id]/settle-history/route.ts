@@ -28,6 +28,8 @@ export async function GET(
         user: {
           select: {
             nickname: true,
+            avatar: true,
+            twitterUsername: true,
           },
         },
         kol: {

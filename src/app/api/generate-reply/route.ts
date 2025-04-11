@@ -105,7 +105,7 @@ export async function POST(request: Request) {
       temperature: 0.7,
     });
 
-    console.log("Completion:", completion);
+    // console.log("Completion:", completion);
 
     return NextResponse.json({ text: completion.choices[0].message.content });
   } catch (error) {

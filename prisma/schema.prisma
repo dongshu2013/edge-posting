@@ -28,6 +28,7 @@ model User {
   balance     Float        @default(0)
   buzzes      Buzz[]
   replies     Reply[]
+  replyAttempts ReplyAttempt[]
   withdrawals Withdrawal[]
   userBalances UserBalance[]
   withdrawRequests UserWithdrawRequest[]
@@ -69,6 +70,7 @@ model Buzz {
   isActive     Boolean       @default(true)
   isSettled    Boolean       @default(false)
   replies      Reply[]
+  replyAttempts ReplyAttempt[]
   transactions Transaction[]
   user         User          @relation(fields: [createdBy], references: [uid])
   tweetText    String?
@@ -108,6 +110,20 @@ model Reply {
   @@index([buzzId])
   @@index([createdBy])
   @@index([status])
+}
+
+model ReplyAttempt {
+  id          String       @id @default(cuid())
+  buzzId      String
+  buzz        Buzz         @relation(fields: [buzzId], references: [id])
+
+  userId      String
+  user        User          @relation(fields: [userId], references: [uid])
+  retryCount  Int          @default(0)
+
+  updatedAt   Int         
+
+  @@index([updatedAt])
 }
 
 model SettleHistory {

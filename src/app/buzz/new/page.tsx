@@ -9,7 +9,7 @@ import { getTokenMetadata } from "@/utils/evmUtils";
 import { BoltIcon } from "@heroicons/react/24/outline";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { erc20Abi, parseEther } from "viem";
 import * as math from "mathjs";
 import {
@@ -57,6 +57,15 @@ export default function NewBuzzPage() {
   const [shareOfKols, setShareOfKols] = useState("50");
   const [shareOfHolders, setShareOfHolders] = useState("40");
   const [shareOfOthers, setShareOfOthers] = useState("10");
+
+  useEffect(() => {
+    setShareOfOthers(
+      Math.max(
+        0,
+        Math.min(100, 100 - Number(shareOfKols) - Number(shareOfHolders))
+      ).toString()
+    );
+  }, [shareOfKols, shareOfHolders]);
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -237,8 +246,8 @@ export default function NewBuzzPage() {
     }
 
     const deadline = new Date();
-    // deadline.setHours(deadline.getHours() + Number(formData.deadline));
-    deadline.setMinutes(deadline.getMinutes() + 5);
+    deadline.setHours(deadline.getHours() + Number(formData.deadline));
+    // deadline.setMinutes(deadline.getMinutes() + 5);
 
     try {
       setIsCreatingBuzz(true);
@@ -407,7 +416,7 @@ export default function NewBuzzPage() {
                       type="number"
                       name="totalAmount"
                       id="totalAmount"
-                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="0.00"
                       value={formData.totalAmount}
                       onChange={handleInputChange}
@@ -435,7 +444,7 @@ export default function NewBuzzPage() {
                       type="number"
                       name="deadline"
                       id="deadline"
-                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="1"
                       min="1"
                       value={formData.deadline}
@@ -495,7 +504,7 @@ export default function NewBuzzPage() {
                             type="number"
                             name="maxParticipants"
                             id="maxParticipants"
-                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="Expected Participants"
                             min="1"
                             value={formData.maxParticipants}
@@ -530,7 +539,7 @@ export default function NewBuzzPage() {
                             type="number"
                             name="minimumTokenAmount"
                             id="minimumTokenAmount"
-                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="0"
                             min="0"
                             step="any"
@@ -592,7 +601,7 @@ export default function NewBuzzPage() {
                               </label>
                               <input
                                 type="number"
-                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 value={shareOfKols}
                                 onChange={(e) => {
                                   if (e.target.value === "") {
@@ -615,7 +624,7 @@ export default function NewBuzzPage() {
                               </label>
                               <input
                                 type="number"
-                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 value={shareOfHolders}
                                 onChange={(e) => {
                                   if (e.target.value === "") {
@@ -637,20 +646,21 @@ export default function NewBuzzPage() {
                                 Others Share (%)
                               </label>
                               <input
+                                disabled
                                 type="number"
-                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base bg-gray-200 rounded-xl border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 value={shareOfOthers}
-                                onChange={(e) => {
-                                  if (e.target.value === "") {
-                                    setShareOfOthers("");
-                                    return;
-                                  }
-                                  const value = Math.min(
-                                    100,
-                                    Math.max(0, Number(e.target.value))
-                                  );
-                                  setShareOfOthers(value.toString());
-                                }}
+                                // onChange={(e) => {
+                                //   if (e.target.value === "") {
+                                //     setShareOfOthers("");
+                                //     return;
+                                //   }
+                                //   const value = Math.min(
+                                //     100,
+                                //     Math.max(0, Number(e.target.value))
+                                //   );
+                                //   setShareOfOthers(value.toString());
+                                // }}
                                 min="0"
                                 max="100"
                               />
@@ -684,7 +694,8 @@ export default function NewBuzzPage() {
                             holdings;
                             <br />
                             3. {Number(shareOfOthers)}% for users not holding
-                            tokens, reward will be distributed evenly among them;
+                            tokens, reward will be distributed evenly among
+                            them;
                             <br />
                             <br />
                             If there is no participant in the above parts, the

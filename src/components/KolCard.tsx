@@ -1,6 +1,7 @@
 import { getDisplayArea } from "@/utils/commonUtils";
 import { formatFollowers } from "@/utils/numberUtils";
 import Image from "next/image";
+import Link from "next/link";
 
 interface KolCardProps {
   kol: any;
@@ -20,10 +21,12 @@ export default function KolCard({ kol }: KolCardProps) {
           />
         </div>
 
-        <div className="flex items-center ml-2 gap-2">
+        <div className="flex flex-col ml-2 gap-0">
           <p className="text-sm font-medium text-gray-900">{kol.nickname}</p>
 
-          <p className="text-sm text-blue-600">@{kol.twitterUsername}</p>
+          <Link href={`https://x.com/${kol.twitterUsername}`} target="_blank">
+            <p className="text-sm text-blue-600 underline">@{kol.twitterUsername}</p>
+          </Link>
         </div>
       </div>
 

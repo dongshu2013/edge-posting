@@ -109,6 +109,12 @@ export default function ReplyLinkModal({
                         {tokenAmount ? ` to earn max ${tokenAmount} BNB` : ""}.
                       </p>
 
+                      <div className="mb-4 p-3 bg-yellow-50 rounded-lg">
+                        <p className="text-sm text-yellow-700">
+                          Your reply will only show in the list once it's indexed, it may take 5-10 mins
+                        </p>
+                      </div>
+
                       <form onSubmit={handleSubmit} className="space-y-4 ">
                         {error && (
                           <div className="rounded-md bg-red-50 p-4">

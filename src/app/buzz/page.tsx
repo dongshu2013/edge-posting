@@ -18,6 +18,7 @@ import { useUserStore } from "@/store/userStore";
 import CreatorFilterToggle from "@/components/CreatorFilterToggle";
 import TokenAddressFilterToggle from "@/components/TokenAddressFilterToggle";
 import classNames from "classnames";
+import { toast } from "react-hot-toast";
 
 interface Buzz {
   id: string;
@@ -286,9 +287,13 @@ function BuzzesPageContent() {
   const sortedBuzzes = [...buzzes];
 
   const handleConfirmSearch = () => {
-    const searchText = searchQuery.trim();
+    let searchText = searchQuery.trim();
     setSearchQuery("");
     if (searchType === "tokenAddress") {
+      if (!searchText.startsWith("0x")) {
+        toast.error("Invalid token address");
+        return;
+      }
       const currentTokenAddresses = searchParams.get("tokenAddresses");
       const newTokenAddresses = currentTokenAddresses?.split(",") || [];
       if (newTokenAddresses.includes(searchText)) {
@@ -309,6 +314,9 @@ function BuzzesPageContent() {
       url.searchParams.set("tokenNames", newTokenNames.join(","));
       router.push(url.toString());
     } else if (searchType === "creatorTwitterUsername") {
+      if (searchText.startsWith("@")) {
+        searchText = searchText.slice(1);
+      }
       const currentCreatorTwitterUsernames = searchParams.get(
         "creatorTwitterUsernames"
       );
@@ -467,32 +475,34 @@ function BuzzesPageContent() {
             </div>
           </div>
 
-          <ActiveBuzzesToggle
-            className="w-auto sm:w-auto"
-            isActive={!showAll}
-            onToggle={() => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("showAll", (!showAll).toString());
-              router.push(url.toString());
-            }}
-          />
-        </div>
+          <div className="flex items-center gap-2">
+            <ActiveBuzzesToggle
+              className="w-auto sm:w-auto"
+              isActive={!showAll}
+              onToggle={() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set("showAll", (!showAll).toString());
+                router.push(url.toString());
+              }}
+            />
 
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("sortBy", e.target.value);
-              router.push(url.toString());
-            }}
-            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
-          >
-            <option value="newest">✨ Newest First</option>
-            <option value="deadline">🕒 Deadline</option>
-            <option value="engagement">🔥 Most Engagement</option>
-          </select>
+            <div className="flex-1 md:w-[150px]">
+              <select
+                id="sortBy"
+                value={sortBy}
+                onChange={(e) => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("sortBy", e.target.value);
+                  router.push(url.toString());
+                }}
+                className="w-full text-base sm:text-lg border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-[10px] pl-4 pr-8"
+              >
+                <option value="newest">Created At</option>
+                <option value="deadline">Deadline</option>
+                <option value="engagement">Engagement</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Grid layout for BuzzCards */}

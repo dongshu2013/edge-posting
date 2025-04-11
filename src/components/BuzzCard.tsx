@@ -143,6 +143,11 @@ export default function BuzzCard({
         return;
       }
 
+      if (response.code === 11) {
+        toast.success("Reply submitted successfully, please wait for it to be indexed");
+        return;
+      }
+
       if (response.error) {
         throw new Error(response.error || "Failed to submit reply");
       }
@@ -215,20 +220,7 @@ export default function BuzzCard({
   const renderReplyButton = () => {
     // For expired or inactive buzzes - "Reply (No Reward)" with normal style
     if (!isActive || isExpired) {
-      if (!user) {
-        return (
-          <AuthButton buttonText="Reply (No Reward)" variant="secondary" />
-        );
-      }
-      return (
-        <button
-          onClick={handleDirectReply}
-          disabled={replyLoading}
-          className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-xl shadow-sm text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-400 transition-all duration-200"
-        >
-          {replyLoading ? "Generating..." : "Reply (No Reward)"}
-        </button>
-      );
+      return null;
     }
 
     // For active buzzes - "Reply & Earn X BUZZ" with colorful gradient

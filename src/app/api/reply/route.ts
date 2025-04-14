@@ -1,5 +1,6 @@
 import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
+import { getRateLimiter } from "@/lib/rateLimiter";
 import { replyHandler } from "@/lib/replyHandler";
 import dayjs from "dayjs";
 import { NextResponse } from "next/server";
@@ -26,6 +27,17 @@ export async function POST(request: Request) {
 
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const identifier = `reply-${userId}`;
+    const rateLimiter = getRateLimiter(identifier, {
+      tokensPerInterval: 6,
+      interval: "minute",
+    });
+
+    const isRateLimited = rateLimiter.tryRemoveTokens(1);
+    if (!isRateLimited) {
+      return NextResponse.json({ error: "Rate limited" }, { status: 429 });
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -109,7 +121,12 @@ export async function POST(request: Request) {
       }
     );
     const checkComment = await checkCommentResponse.json();
-    console.log(checkComment);
+    console.log(
+      "checkComment",
+      buzz.tweetLink,
+      dbUser.twitterUsername,
+      checkComment
+    );
     if (!checkComment.commented || !checkComment.tweet) {
       const replyAttempt = await prisma.replyAttempt.create({
         data: {

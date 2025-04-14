@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  Fragment,
+} from "react";
 import BuzzCard from "@/components/BuzzCard";
 import {
   SparklesIcon,
@@ -19,6 +26,8 @@ import CreatorFilterToggle from "@/components/CreatorFilterToggle";
 import TokenAddressFilterToggle from "@/components/TokenAddressFilterToggle";
 import classNames from "classnames";
 import { toast } from "react-hot-toast";
+import { Menu, Transition } from "@headlessui/react";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
 
 interface Buzz {
   id: string;
@@ -135,8 +144,9 @@ function BuzzesPageContent() {
   const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
   const tokenNames = searchParams.get("tokenNames")?.split(",") || [];
 
+  const sortByParam = searchParams.get("sortBy");
+
   const sortBy = useMemo(() => {
-    const sortByParam = searchParams.get("sortBy");
     switch (sortByParam) {
       case "newest":
         return "newest";
@@ -147,7 +157,7 @@ function BuzzesPageContent() {
       default:
         return "newest";
     }
-  }, [searchParams]);
+  }, [sortByParam]);
 
   const creatorTwitterUsernamesParam = creatorTwitterUsernames.join(",");
   const tokenAddressesParam = tokenAddresses.join(",");
@@ -442,23 +452,74 @@ function BuzzesPageContent() {
                     </button>
                   </div>
 
-                  <select
-                    value={searchType}
-                    onChange={(e) => {
-                      const newSearchType = e.target.value as
-                        | "tokenAddress"
-                        | "tokenName"
-                        | "creatorTwitterUsername";
-                      setSearchType(newSearchType);
-                    }}
-                    className="w-[150px] md:w-[180px] px-2 sm:px-4 py-3 text-sm sm:text-base border-l-0 border-gray-300 rounded-r-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
-                  >
-                    <option value="tokenAddress">Token Address</option>
-                    <option value="tokenName">Token Name</option>
-                    <option value="creatorTwitterUsername">
-                      Creator Twitter
-                    </option>
-                  </select>
+                  <Menu as="div" className="relative">
+                    <Menu.Button className="inline-flex items-center gap-2 w-[150px] md:w-[180px] px-2 sm:px-4 py-3 text-sm sm:text-base bg-white border border-l-0 border-gray-300 rounded-r-2xl shadow-sm hover:bg-gray-50 transition-all duration-200">
+                      {searchType === "tokenAddress"
+                        ? "Token Address"
+                        : searchType === "tokenName"
+                        ? "Token Name"
+                        : "Creator Twitter"}
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </Menu.Button>
+                    <Transition
+                      as={Fragment}
+                      enter="transition ease-out duration-100"
+                      enterFrom="transform opacity-0 scale-95"
+                      enterTo="transform opacity-100 scale-100"
+                      leave="transition ease-in duration-75"
+                      leaveFrom="transform opacity-100 scale-100"
+                      leaveTo="transform opacity-0 scale-95"
+                    >
+                      <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                        <div className="py-1">
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => setSearchType("tokenAddress")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Token Address
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => setSearchType("tokenName")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Token Name
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() =>
+                                  setSearchType("creatorTwitterUsername")
+                                }
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Creator Twitter
+                              </button>
+                            )}
+                          </Menu.Item>
+                        </div>
+                      </Menu.Items>
+                    </Transition>
+                  </Menu>
                 </div>
               </div>
             </div>
@@ -486,22 +547,83 @@ function BuzzesPageContent() {
               }}
             />
 
-            <div className="flex-1 md:w-[150px]">
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set("sortBy", e.target.value);
-                  router.push(url.toString());
-                }}
-                className="w-full text-base sm:text-lg border-gray-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-[10px] pl-4 pr-8"
+            <Menu as="div" className="relative">
+              <Menu.Button className="inline-flex items-center gap-2 w-full text-base sm:text-lg bg-white border border-gray-200 rounded-2xl shadow-sm hover:bg-gray-50 transition-all duration-200 py-[10px] pl-4 pr-8">
+                Sort By
+                <ChevronDownIcon className="w-4 h-4" />
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
               >
-                <option value="newest">Created At</option>
-                <option value="deadline">Deadline</option>
-                <option value="engagement">Engagement</option>
-              </select>
-            </div>
+                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                  <div className="py-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "newest");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            !sortByParam || sortByParam === "newest"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Created At
+                        </button>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "deadline");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            sortByParam === "deadline"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Expire At
+                        </button>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "engagement");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            sortByParam === "engagement"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Engagement
+                        </button>
+                      )}
+                    </Menu.Item>
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChatBubbleLeftRightIcon,
@@ -301,7 +301,8 @@ export default function BuzzDetailPage() {
                               </div>
 
                               <div className="text-[12px] text-gray-900">
-                                @{reply.user.twitterUsername ||
+                                @
+                                {reply.user.twitterUsername ||
                                   reply.user.username.substring(0, 6)}
                               </div>
                             </div>
@@ -317,15 +318,17 @@ export default function BuzzDetailPage() {
                           </span>
 
                           <div className="flex items-center gap-2">
-                            {isOwner && reply.status === "PENDING" && (
-                              <button
-                                onClick={() => handleReject(reply.id)}
-                                disabled={isRejecting}
-                                className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {isRejecting ? "Rejecting..." : "Reject"}
-                              </button>
-                            )}
+                            {isOwner &&
+                              reply.status === "PENDING" &&
+                              !buzz.isSettled && (
+                                <button
+                                  onClick={() => handleReject(reply.id)}
+                                  disabled={isRejecting}
+                                  className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isRejecting ? "Rejecting..." : "Reject"}
+                                </button>
+                              )}
                           </div>
                         </div>
                         <div>
@@ -348,16 +351,7 @@ export default function BuzzDetailPage() {
                       </div>
 
                       {/* Tweet Embed */}
-                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
-                        <div className="aspect-[16/9]">
-                          <iframe
-                            src={getEmbedUrl(reply.replyLink)}
-                            className="w-full h-full"
-                            frameBorder="0"
-                            title="Reply Preview"
-                          />
-                        </div>
-                      </div>
+                      <ReplyIFrame replyLink={reply.replyLink} />
 
                       {/* Reply Text - Truncated */}
                       <div
@@ -440,4 +434,19 @@ const getEmbedUrl = (tweetUrl: string) => {
   } catch {
     return tweetUrl;
   }
+};
+
+const ReplyIFrame = ({ replyLink }: { replyLink: string }) => {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+      <div className="aspect-[16/9]">
+        <iframe
+          src={getEmbedUrl(replyLink)}
+          className="w-full h-full"
+          frameBorder="0"
+          title="Reply Preview"
+        />
+      </div>
+    </div>
+  );
 };

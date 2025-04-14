@@ -23,6 +23,9 @@ import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 import toast from "react-hot-toast";
 import { TermsModal } from "@/components/TermsModal";
 import { Slider } from "@mui/material";
+import { Menu, Transition } from "@headlessui/react";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { Fragment } from "react";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -66,6 +69,13 @@ export default function NewBuzzPage() {
       ).toString()
     );
   }, [shareOfKols, shareOfHolders]);
+
+  const handlePaymentTokenChange = (token: string) => {
+    setFormData({
+      ...formData,
+      paymentToken: token,
+    });
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -288,7 +298,15 @@ export default function NewBuzzPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    if (
+      Number(shareOfKols) +
+      Number(shareOfHolders) +
+      Number(shareOfOthers) !==
+      100
+    ) {
+      alert("Share of kols, holders, and others must add up to 100");
+      return;
+    }
     if (formData.paymentMethod === "in-app") {
       await handleInAppPayment();
     } else {
@@ -367,16 +385,58 @@ export default function NewBuzzPage() {
                   Payment Token 💸
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select
-                    name="paymentToken"
-                    id="paymentToken"
-                    className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                    value={formData.paymentToken}
-                    onChange={handleInputChange}
-                  >
-                    <option value="BNB">BNB</option>
-                    <option value="CUSTOM">Custom ERC20 Token</option>
-                  </select>
+                  <Menu as="div" className="relative">
+                    <Menu.Button className="inline-flex items-center justify-between gap-2 w-full text-base bg-white border border-gray-200 rounded-2xl shadow-sm hover:bg-gray-50 transition-all duration-200 py-[10px] pl-4 pr-8">
+                      {formData.paymentToken === "BNB"
+                        ? "BNB"
+                        : "Custom ERC20 Token"}
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </Menu.Button>
+                    <Transition
+                      as={Fragment}
+                      enter="transition ease-out duration-100"
+                      enterFrom="transform opacity-0 scale-95"
+                      enterTo="transform opacity-100 scale-100"
+                      leave="transition ease-in duration-75"
+                      leaveFrom="transform opacity-100 scale-100"
+                      leaveTo="transform opacity-0 scale-95"
+                    >
+                      <Menu.Items className="z-10 absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                        <div className="py-1">
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => handlePaymentTokenChange("BNB")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                BNB
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() =>
+                                  handlePaymentTokenChange("CUSTOM")
+                                }
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Custom ERC20 Token
+                              </button>
+                            )}
+                          </Menu.Item>
+                        </div>
+                      </Menu.Items>
+                    </Transition>
+                  </Menu>
 
                   {formData.paymentToken === "CUSTOM" && (
                     <div className="relative rounded-xl shadow-sm">
@@ -725,19 +785,20 @@ export default function NewBuzzPage() {
                       type="button"
                       className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.paymentMethod === "in-app"
-                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          ? "bg-gray-300 text-gray-800 font-bold"
+                          : "border border-gray-200 text-gray-700 hover:bg-gray-100"
                       }`}
                       onClick={() => handlePaymentMethodChange("in-app")}
                     >
                       Pay In-App
                     </button>
+
                     <button
                       type="button"
                       className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.paymentMethod === "manual"
-                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          ? "bg-gray-300 text-gray-800 font-bold"
+                          : "border border-gray-200 text-gray-700 hover:bg-gray-100"
                       }`}
                       onClick={() => handlePaymentMethodChange("manual")}
                     >
@@ -810,15 +871,6 @@ export default function NewBuzzPage() {
                 </button>
               </div>
 
-              <div className="flex justify-center">
-                <TermsModal
-                  trigger={
-                    <div className="text-sm text-gray-500 hover:text-gray-700 underline cursor-pointer">
-                      User Terms
-                    </div>
-                  }
-                />
-              </div>
             </form>
           </div>
         </div>

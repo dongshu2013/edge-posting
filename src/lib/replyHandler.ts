@@ -43,7 +43,7 @@ class ReplyHandler {
       const replyAttempts = await prisma.replyAttempt.findMany({
         where: {
           retryCount: {
-            lt: 1,
+            lt: 2,
           },
           updatedAt: {
             lt: dayjs().unix() - 60 * 5,

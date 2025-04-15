@@ -113,10 +113,10 @@ export default function BuzzSettleHistory({ buzzId }: BuzzSettleHistoryProps) {
                   )}
                 </span>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    history.type === "KOL"
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize  ${
+                    history.type === "kol"
                       ? "bg-purple-100 text-purple-800"
-                      : history.type === "Normal"
+                      : history.type === "holder" || history.type === "normal"
                       ? "bg-green-100 text-green-800"
                       : "bg-gray-100 text-gray-800"
                   }`}

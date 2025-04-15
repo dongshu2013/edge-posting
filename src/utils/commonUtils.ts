@@ -1,4 +1,8 @@
+import { getPublicClient } from "@/lib/ethereum";
 import { IBadge } from "@/types/common";
+import { erc20Abi } from "viem";
+import { Buzz, Kol, Prisma, User } from "@prisma/client";
+import { formatEther } from "viem";
 
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -98,4 +102,119 @@ export function getBadgeIcon(badge: IBadge) {
     return "/images/badge/badge_task_done.jpg";
   }
   return "/images/badge/badge_default.jpg";
+}
+
+export const getUserFormatBalance = async (buzz: Buzz, dbUser: User) => {
+  const publicClient = getPublicClient(
+    Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
+  );
+  if (!publicClient) {
+    throw new Error("Public client not found");
+  }
+
+  if (buzz.paymentToken === "BNB") {
+    const userBalance = await publicClient.getBalance({
+      address: dbUser.bindedWallet as `0x${string}`,
+    });
+    return Number(formatEther(userBalance));
+  } else {
+    const userBalance = await publicClient.readContract({
+      address: buzz.customTokenAddress as `0x${string}`,
+      abi: erc20Abi,
+      functionName: "balanceOf",
+      args: [dbUser.bindedWallet as `0x${string}`],
+    });
+    return Number(formatEther(userBalance));
+  }
+};
+
+export async function getUserRole(
+  user: Prisma.UserGetPayload<{
+    include: { kolInfo: true };
+  }>,
+  buzz: Buzz
+): Promise<"kol" | "holder" | "normal" | null> {
+  let userRole: "kol" | "holder" | "normal" | null = null;
+  const isKol = user.kolInfo?.status === "confirmed";
+  const userBalance = await getUserFormatBalance(buzz, user);
+  const isHolder = userBalance > 0;
+
+  // Check shares of buzz
+  if (
+    buzz.shareOfKols > 0 &&
+    buzz.shareOfHolders > 0 &&
+    buzz.shareOfOthers > 0
+  ) {
+    if (isKol) {
+      userRole = "kol";
+    } else if (isHolder) {
+      userRole = "holder";
+    } else {
+      userRole = "normal";
+    }
+  } else if (
+    buzz.shareOfKols > 0 &&
+    buzz.shareOfHolders === 0 &&
+    buzz.shareOfOthers > 0
+  ) {
+    if (isKol) {
+      userRole = "kol";
+    } else if (isHolder) {
+      userRole = "normal";
+    } else {
+      userRole = "normal";
+    }
+  } else if (
+    buzz.shareOfKols === 0 &&
+    buzz.shareOfHolders > 0 &&
+    buzz.shareOfOthers > 0
+  ) {
+    if (isHolder) {
+      userRole = "holder";
+    } else {
+      userRole = "normal";
+    }
+  } else if (
+    buzz.shareOfKols > 0 &&
+    buzz.shareOfHolders > 0 &&
+    buzz.shareOfOthers === 0
+  ) {
+    if (isKol) {
+      userRole = "kol";
+    } else if (isHolder) {
+      userRole = "holder";
+    } else {
+      userRole = null;
+    }
+  } else if (
+    buzz.shareOfKols === 0 &&
+    buzz.shareOfHolders === 0 &&
+    buzz.shareOfOthers > 0
+  ) {
+    userRole = "normal";
+  } else if (
+    buzz.shareOfKols === 0 &&
+    buzz.shareOfHolders > 0 &&
+    buzz.shareOfOthers === 0
+  ) {
+    if (isKol) {
+      userRole = null;
+    } else if (isHolder) {
+      userRole = "holder";
+    } else {
+      userRole = null;
+    }
+  } else if (
+    buzz.shareOfKols > 0 &&
+    buzz.shareOfHolders === 0 &&
+    buzz.shareOfOthers === 0
+  ) {
+    if (isKol) {
+      userRole = "kol";
+    } else {
+      userRole = null;
+    }
+  }
+
+  return userRole;
 }

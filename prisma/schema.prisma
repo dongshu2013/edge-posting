@@ -106,6 +106,7 @@ model Reply {
   buzzId      String
   transaction Transaction?
   user        User         @relation(fields: [createdBy], references: [uid])
+  userRole    String       @default("normal")
 
   @@index([buzzId])
   @@index([createdBy])
@@ -118,7 +119,9 @@ model ReplyAttempt {
   buzz        Buzz         @relation(fields: [buzzId], references: [id])
 
   userId      String
-  user        User          @relation(fields: [userId], references: [uid])
+  user        User         @relation(fields: [userId], references: [uid])
+  userRole    String       @default("normal")
+
   retryCount  Int          @default(0)
 
   updatedAt   Int         

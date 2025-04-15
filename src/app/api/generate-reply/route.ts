@@ -5,6 +5,7 @@ import { getRateLimiter } from "@/lib/rateLimiter";
 import { prisma } from "@/lib/prisma";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 import { checkIfUserFollowsTwitter } from "@/utils/xUtils";
+import { getUserRole } from "@/utils/commonUtils";
 
 export async function POST(request: Request) {
   let userId = null;
@@ -37,15 +38,24 @@ export async function POST(request: Request) {
       buzzId: buzzId,
     },
   });
-  if (existingReply) {
-    return NextResponse.json({ error: "Reply already exists", code: 102 });
+  const existingReplyAttempt = await prisma.replyAttempt.findFirst({
+    where: {
+      buzzId,
+      userId,
+    },
+  });
+
+  if (existingReply || existingReplyAttempt) {
+    return NextResponse.json(
+      { error: "You have already replied to this buzz" },
+      { status: 400 }
+    );
   }
 
   const identifier = `generate-reply-${userId}`;
-
   const rateLimiter = getRateLimiter(identifier, {
-    tokensPerInterval: 100,
-    interval: "day",
+    tokensPerInterval: 6,
+    interval: "minute",
   });
 
   const isRateLimited = rateLimiter.tryRemoveTokens(1);
@@ -56,6 +66,9 @@ export async function POST(request: Request) {
   const user = await prisma.user.findUnique({
     where: {
       uid: userId,
+    },
+    include: {
+      kolInfo: true,
     },
   });
   const userBio = user?.bio;
@@ -73,6 +86,24 @@ export async function POST(request: Request) {
   const isFollowed = await checkIfUserFollowsTwitter(userTwitterUsername);
   if (!isFollowed) {
     return NextResponse.json({ error: "User not followed", code: 101 });
+  }
+
+  const buzz = await prisma.buzz.findUnique({
+    where: {
+      id: buzzId,
+    },
+  });
+  if (!buzz) {
+    return NextResponse.json({ error: "Buzz not found" }, { status: 400 });
+  }
+
+  const userRole = await getUserRole(user, buzz);
+
+  if (!userRole) {
+    return NextResponse.json(
+      { error: "You are not allowed to reply to this buzz" },
+      { status: 400 }
+    );
   }
 
   try {

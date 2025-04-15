@@ -2,6 +2,7 @@ import { getAuthUser } from "@/lib/auth-helpers";
 import { prisma } from "@/lib/prisma";
 import { getRateLimiter } from "@/lib/rateLimiter";
 import { replyHandler } from "@/lib/replyHandler";
+import { getUserRole } from "@/utils/commonUtils";
 import dayjs from "dayjs";
 import { NextResponse } from "next/server";
 
@@ -43,6 +44,9 @@ export async function POST(request: Request) {
     const dbUser = await prisma.user.findUnique({
       where: {
         uid: userId,
+      },
+      include: {
+        kolInfo: true,
       },
     });
 
@@ -108,6 +112,14 @@ export async function POST(request: Request) {
       );
     }
 
+    const userRole = await getUserRole(dbUser, buzz);
+    if (!userRole) {
+      return NextResponse.json(
+        { error: "You are not allowed to reply to this buzz" },
+        { status: 400 }
+      );
+    }
+
     // Validate the reply link is reply to the buzz
     const checkCommentResponse = await fetch(
       `https://api.tweetscout.io/v2/check-comment?tweet_link=${buzz.tweetLink}&user_handle=${dbUser.twitterUsername}`,
@@ -133,6 +145,7 @@ export async function POST(request: Request) {
           buzzId,
           userId,
           updatedAt: dayjs().unix(),
+          userRole,
         },
       });
       replyHandler.start();
@@ -149,6 +162,7 @@ export async function POST(request: Request) {
         text: checkComment.tweet.full_text,
         createdBy: userId,
         status: "PENDING",
+        userRole,
       },
     });
 

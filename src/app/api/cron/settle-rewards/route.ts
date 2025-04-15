@@ -1,5 +1,6 @@
 import { getPublicClient } from "@/lib/ethereum";
 import { prisma } from "@/lib/prisma";
+import { getUserFormatBalance } from "@/utils/commonUtils";
 import { Buzz } from "@prisma/client";
 import * as math from "mathjs";
 import { NextResponse } from "next/server";
@@ -11,6 +12,7 @@ export const maxDuration = 300; // 5 minutes
 interface Reply {
   id: string;
   createdBy: string;
+  userRole: string;
 }
 
 type BuzzWithReplies = Buzz & {
@@ -66,63 +68,74 @@ export async function POST(request: Request) {
 
 const settleDefaultTypeRewards = async (buzz: any) => {
   const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);
-  const dbUsers = await prisma.user.findMany({
-    where: {
-      uid: { in: replyUserIds },
-    },
-  });
-  const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
+  // const dbUsers = await prisma.user.findMany({
+  //   where: {
+  //     uid: { in: replyUserIds },
+  //   },
+  // });
+  // const dbUserMap = new Map(dbUsers.map((user: any) => [user.uid, user]));
 
-  // Find reply user ids that are kols
-  const kols = await prisma.kol.findMany({
-    where: {
-      status: "confirmed",
-      userId: { in: replyUserIds },
-    },
-  });
+  // // Find reply user ids that are kols
+  // const kols = await prisma.kol.findMany({
+  //   where: {
+  //     status: "confirmed",
+  //     userId: { in: replyUserIds },
+  //   },
+  // });
 
-  const userWeights = await Promise.all(
-    replyUserIds.map(async (uid: string) => {
-      const user = dbUserMap.get(uid);
-      return await getUserFormatBalance(buzz, user);
-    })
-  );
+  // const userWeights = await Promise.all(
+  //   replyUserIds.map(async (uid: string) => {
+  //     const user = dbUserMap.get(uid);
+  //     return await getUserFormatBalance(buzz, user);
+  //   })
+  // );
 
-  console.log("userWeights", userWeights);
+  // console.log("userWeights", userWeights);
 
-  const totalWeight = userWeights.reduce(
-    (acc: number, weight: number) => acc + weight,
-    0
-  );
+  // const totalWeight = userWeights.reduce(
+  //   (acc: number, weight: number) => acc + weight,
+  //   0
+  // );
 
   const totalTokenAmountOnChain = math
     .bignumber(buzz.tokenAmount)
     .times(math.bignumber(10).pow(buzz.tokenDecimals));
 
-  const hasBalanceWeights = userWeights
-    .filter((weight: number) => weight > 0)
-    // Filter out kols
-    .filter((weight: number) => {
-      const kol = kols.find((kol: any) => kol.userId === weight);
-      return !kol;
-    });
-  const emptyBalanceWeights = userWeights
-    .filter((weight: number) => weight === 0)
-    // Filter out kols
-    .filter((weight: number) => {
-      const kol = kols.find((kol: any) => kol.userId === weight);
-      return !kol;
-    });
+  const kolUserIds = buzz.replies
+    .filter((reply: any) => reply.userRole === "kol")
+    .map((reply: any) => reply.createdBy);
+  const holderUserIds = buzz.replies
+    .filter((reply: any) => reply.userRole === "holder")
+    .map((reply: any) => reply.createdBy);
+  const normalUserIds = buzz.replies
+    .filter((reply: any) => reply.userRole === "normal")
+    .map((reply: any) => reply.createdBy);
+
+  // const hasBalanceWeights = userWeights
+  //   .filter((weight: number) => weight > 0)
+  //   // Filter out kols
+  //   .filter((weight: number) => {
+  //     const kol = kols.find((kol: any) => kol.userId === weight);
+  //     return !kol;
+  //   });
+  // const emptyBalanceWeights = userWeights
+  //   .filter((weight: number) => weight === 0)
+  //   // Filter out kols
+  //   .filter((weight: number) => {
+  //     const kol = kols.find((kol: any) => kol.userId === weight);
+  //     return !kol;
+  //   });
+
   // 40%
   const hasBalanceRewardTokenAmount =
-    hasBalanceWeights.length > 0
+    holderUserIds.length > 0
       ? totalTokenAmountOnChain
           .mul(math.bignumber(buzz.shareOfHolders))
           .div(math.bignumber(100))
       : math.bignumber(0);
   // 10%
   const emptyBalanceRewardTokenAmount =
-    emptyBalanceWeights.length > 0
+    normalUserIds.length > 0
       ? totalTokenAmountOnChain
           .mul(math.bignumber(buzz.shareOfOthers))
           .div(math.bignumber(100))
@@ -130,7 +143,7 @@ const settleDefaultTypeRewards = async (buzz: any) => {
 
   // 50%
   const kolRewardTokenAmount =
-    kols.length > 0
+    kolUserIds.length > 0
       ? totalTokenAmountOnChain
           .mul(math.bignumber(buzz.shareOfKols))
           .div(math.bignumber(100))
@@ -149,74 +162,33 @@ const settleDefaultTypeRewards = async (buzz: any) => {
 
   const settleHistories: any[] = [];
 
-  await prisma.$transaction(async (tx: any) => {
-    kols.forEach(async (kol: any, index: number) => {
-      const kolAverageRewardTokenAmountOnChain = kolRewardTokenAmount
-        .div(math.bignumber(kols.length))
-        .floor()
-        .toString();
-
-      if (kol.userId) {
-        if (math.bignumber(kolAverageRewardTokenAmountOnChain).gt(0)) {
-          settleHistories.push({
-            userId: kol.userId,
-            buzzId: buzz.id,
-            settleAmount: kolAverageRewardTokenAmountOnChain,
-            type: "KOL",
-          });
-        }
-
-        await addUserBalance(
-          buzz,
-          tx,
-          kol.userId,
-          kolAverageRewardTokenAmountOnChain
-        );
-      } else {
-        if (math.bignumber(kolAverageRewardTokenAmountOnChain).gt(0)) {
-          settleHistories.push({
-            kolId: kol.id,
-            buzzId: buzz.id,
-            settleAmount: kolAverageRewardTokenAmountOnChain,
-            type: "KOL",
-          });
-        }
-        // Kol not registered yet, add balance to kol balance first
-        await addKolBalance(
-          buzz,
-          tx,
-          kol.id,
-          kolAverageRewardTokenAmountOnChain
-        );
-      }
-    });
-  });
-
   const addUserBalancesResult = await prisma.$transaction(async (tx: any) => {
-    replyUserIds.forEach(async (userId: string, index: number) => {
-      // const amountOnChain =
-      //   (totalTokenAmountOnChain * userWeights[index]) / totalWeight;
-
+    buzz.replies.forEach(async (reply: Reply, index: number) => {
       let amountOnChain = "0";
-      if (userWeights[index] > 0) {
+      if (reply.userRole === "kol") {
+        amountOnChain = kolRewardTokenAmount
+          .div(math.bignumber(kolUserIds.length))
+          .floor()
+          .toString();
+      } else if (reply.userRole === "holder") {
         amountOnChain = hasBalanceRewardTokenAmount
-          .mul(math.bignumber(userWeights[index]))
-          .div(math.bignumber(totalWeight))
+          .div(math.bignumber(holderUserIds.length))
           .floor()
           .toString();
       } else {
         amountOnChain = emptyBalanceRewardTokenAmount
-          .div(math.bignumber(emptyBalanceWeights.length))
+          .div(math.bignumber(normalUserIds.length))
           .floor()
           .toString();
       }
-      await addUserBalance(buzz, tx, userId, amountOnChain);
+
+      await addUserBalance(buzz, tx, reply.createdBy, amountOnChain);
       if (math.bignumber(amountOnChain).gt(0)) {
         settleHistories.push({
-          userId,
+          userId: reply.createdBy,
           buzzId: buzz.id,
           settleAmount: amountOnChain,
-          type: "Normal",
+          type: reply.userRole,
         });
       }
     });
@@ -233,7 +205,7 @@ const settleDefaultTypeRewards = async (buzz: any) => {
         userId: buzz.createdBy,
         buzzId: buzz.id,
         settleAmount: remainingRewardTokenAmount.toString(),
-        type: "Refund",
+        type: "refund",
       });
     }
 
@@ -271,7 +243,15 @@ const settleFixedTypeRewards = async (buzz: any) => {
         buzz.participantMinimumTokenAmount &&
         Number(buzz.participantMinimumTokenAmount) > 0
       ) {
-        const userBalance = await getUserFormatBalance(buzz, userId);
+        const user = await prisma.user.findUnique({
+          where: {
+            uid: userId,
+          },
+        });
+        if (!user) {
+          return;
+        }
+        const userBalance = await getUserFormatBalance(buzz, user);
         if (userBalance < Number(buzz.participantMinimumTokenAmount)) {
           return;
         }
@@ -360,30 +340,6 @@ const settleFixedTypeRewards = async (buzz: any) => {
   await prisma.settleHistory.createMany({
     data: settleHistories,
   });
-};
-
-const getUserFormatBalance = async (buzz: any, dbUser: any) => {
-  const publicClient = getPublicClient(
-    Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
-  );
-  if (!publicClient) {
-    throw new Error("Public client not found");
-  }
-
-  if (buzz.paymentToken === "BNB") {
-    const userBalance = await publicClient.getBalance({
-      address: dbUser.bindedWallet,
-    });
-    return Number(formatEther(userBalance));
-  } else {
-    const userBalance = await publicClient.readContract({
-      address: buzz.customTokenAddress,
-      abi: erc20Abi,
-      functionName: "balanceOf",
-      args: [dbUser.bindedWallet],
-    });
-    return Number(formatEther(userBalance));
-  }
 };
 
 const addUserBalance = async (

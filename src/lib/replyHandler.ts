@@ -57,7 +57,12 @@ class ReplyHandler {
       });
 
       for (const replyAttempt of replyAttempts) {
-        processUserReplyAttempt(replyAttempt.id, replyAttempt.buzz, replyAttempt.user);
+        processUserReplyAttempt(
+          replyAttempt.id,
+          replyAttempt.buzz,
+          replyAttempt.user,
+          replyAttempt.userRole
+        );
       }
     } catch (error) {
       console.error("Error in background processing:", error);

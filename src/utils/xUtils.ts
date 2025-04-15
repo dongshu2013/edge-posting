@@ -74,7 +74,8 @@ export async function checkIfUserFollowsTwitter(twitterUsername: string) {
 export async function processUserReplyAttempt(
   id: string,
   buzz: Buzz,
-  user: User
+  user: User,
+  userRole: string
 ) {
   console.log(
     "Processing user reply attempt",
@@ -117,6 +118,7 @@ export async function processUserReplyAttempt(
       text: checkComment.tweet.full_text,
       createdBy: user.uid,
       status: "PENDING",
+      userRole: userRole,
     },
   });
 

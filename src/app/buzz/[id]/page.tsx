@@ -462,6 +462,7 @@ export default function BuzzDetailPage() {
       )}
 
       <ManuallyReplyModal
+      
         isOpen={showManuallyReplyModal}
         onClose={() => setShowManuallyReplyModal(false)}
         buzzId={buzz.id}

@@ -62,28 +62,28 @@ export async function POST(request: Request) {
 
       if (updatedKol) {
         // Transfer kol balance to user
-        const kolBalances = await prisma.kolBalance.findMany({
-          where: {
-            kolId: updatedKol.id,
-          },
-        });
+        // const kolBalances = await prisma.kolBalance.findMany({
+        //   where: {
+        //     kolId: updatedKol.id,
+        //   },
+        // });
 
-        await prisma.$transaction(async (tx: any) => {
-          kolBalances.forEach(async (kolBalance: any) => {
-            await addUserBalance(
-              kolBalance,
-              tx,
-              user.uid,
-              kolBalance.tokenAmountOnChain
-            );
+        // await prisma.$transaction(async (tx: any) => {
+        //   kolBalances.forEach(async (kolBalance: any) => {
+        //     await addUserBalance(
+        //       kolBalance,
+        //       tx,
+        //       user.uid,
+        //       kolBalance.tokenAmountOnChain
+        //     );
 
-            await tx.kolBalance.delete({
-              where: {
-                id: kolBalance.id,
-              },
-            });
-          });
-        });
+        //     await tx.kolBalance.delete({
+        //       where: {
+        //         id: kolBalance.id,
+        //       },
+        //     });
+        //   });
+        // });
       }
     }
 

@@ -1,15 +1,34 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  Fragment,
+} from "react";
 import BuzzCard from "@/components/BuzzCard";
-import { SparklesIcon } from "@heroicons/react/24/outline";
+import {
+  SparklesIcon,
+  XMarkIcon,
+  CurrencyDollarIcon,
+  UserIcon,
+  HashtagIcon,
+} from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import FilterTokenBuzzesToggle from "@/components/FilterTokenBuzzesToggle";
-import { useAuth } from "@/hooks/useAuth";
 import { useUserStore } from "@/store/userStore";
+import CreatorFilterToggle from "@/components/CreatorFilterToggle";
+import TokenAddressFilterToggle from "@/components/TokenAddressFilterToggle";
+import classNames from "classnames";
+import { toast } from "react-hot-toast";
+import { Menu, Transition } from "@headlessui/react";
+import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ITokenInfo } from "../api/get-token-info/route";
 
 interface Buzz {
   id: string;
@@ -25,6 +44,9 @@ interface Buzz {
   deadline: string;
   createdAt: Date;
   isActive: boolean;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
   user: {
     username: string;
     avatar: string;
@@ -37,12 +59,59 @@ interface Buzz {
   _count: {
     replies: number;
   };
+  tokenInfo?: ITokenInfo;
 }
 
 interface BuzzResponse {
   items: Buzz[];
   nextCursor?: string;
   hasMore: boolean;
+}
+
+interface SearchItem {
+  type: "tokenAddress" | "tokenName" | "creatorTwitterUsername";
+  value: string;
+}
+
+function SearchTag({
+  item,
+  onDelete,
+  searchType,
+}: {
+  item: SearchItem;
+  onDelete: () => void;
+  searchType: "tokenAddress" | "tokenName" | "creatorTwitterUsername";
+}) {
+  const getIcon = () => {
+    switch (searchType) {
+      case "tokenAddress":
+        return <CurrencyDollarIcon className="w-4 h-4" />;
+      case "tokenName":
+        return <HashtagIcon className="w-4 h-4" />;
+      case "creatorTwitterUsername":
+        return <UserIcon className="w-4 h-4" />;
+    }
+  };
+
+  return (
+    <div
+      className={classNames(
+        "inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm",
+        searchType === "tokenAddress" && "bg-green-100 text-green-700",
+        searchType === "tokenName" && "bg-purple-100 text-purple-700",
+        searchType === "creatorTwitterUsername" && "bg-blue-100 text-blue-700"
+      )}
+    >
+      {getIcon()}
+      <span>{item.value}</span>
+      <button
+        onClick={onDelete}
+        className="text-indigo-500 hover:text-indigo-700"
+      >
+        <XMarkIcon className="w-4 h-4" />
+      </button>
+    </div>
+  );
 }
 
 export default function BuzzesPage() {
@@ -63,25 +132,58 @@ function BuzzesPageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [nextCursor, setNextCursor] = useState<string | undefined>(undefined);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchType, setSearchType] = useState<
+    "tokenAddress" | "tokenName" | "creatorTwitterUsername"
+  >("tokenAddress");
   const observer = useRef<IntersectionObserver | null>(null);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
-  console.log("🍷", userInfo);
+  // console.log("🍷", userInfo);
 
   const showAll = searchParams.get("showAll") === "true";
   const filterToken = searchParams.get("filterToken") === "true";
+
+  const creatorTwitterUsernames =
+    searchParams.get("creatorTwitterUsernames")?.split(",") || [];
+  const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
+  const tokenNames = searchParams.get("tokenNames")?.split(",") || [];
+
+  const sortByParam = searchParams.get("sortBy");
+
   const sortBy = useMemo(() => {
-    const sortByParam = searchParams.get("sortBy");
     switch (sortByParam) {
       case "newest":
         return "newest";
-      case "price":
-        return "price";
+      case "deadline":
+        return "deadline";
       case "engagement":
         return "engagement";
       default:
         return "newest";
     }
-  }, [searchParams]);
+  }, [sortByParam]);
+
+  const creatorTwitterUsernamesParam = creatorTwitterUsernames.join(",");
+  const tokenAddressesParam = tokenAddresses.join(",");
+  const tokenNamesParam = tokenNames.join(",");
+
+  const searchItems: SearchItem[] = useMemo(() => {
+    return [
+      ...tokenAddressesParam.split(",").map((address) => ({
+        type: "tokenAddress",
+        value: address,
+      })),
+      ...tokenNamesParam.split(",").map((name) => ({
+        type: "tokenName",
+        value: name,
+      })),
+      ...creatorTwitterUsernamesParam.split(",").map((username) => ({
+        type: "creatorTwitterUsername",
+        value: username,
+      })),
+    ].filter((item) => !!item.value) as SearchItem[];
+  }, [tokenNamesParam, creatorTwitterUsernamesParam, tokenAddressesParam]);
 
   const fetchBuzzes = useCallback(
     async (cursor?: string): Promise<BuzzResponse> => {
@@ -99,6 +201,18 @@ function BuzzesPageContent() {
         if (filterToken) {
           url.searchParams.append("filterToken", "true");
         }
+        if (creatorTwitterUsernames.length > 0) {
+          url.searchParams.append(
+            "creatorTwitterUsernames",
+            creatorTwitterUsernames.join(",")
+          );
+        }
+        if (tokenAddresses.length > 0) {
+          url.searchParams.append("tokenAddresses", tokenAddressesParam);
+        }
+        if (tokenNames.length > 0) {
+          url.searchParams.append("tokenNames", tokenNamesParam);
+        }
         // Only show buzzes that the user hasn't replied to
         url.searchParams.append("excludeReplied", "true");
 
@@ -107,7 +221,14 @@ function BuzzesPageContent() {
         throw err;
       }
     },
-    [showAll, sortBy, filterToken]
+    [
+      showAll,
+      sortBy,
+      filterToken,
+      creatorTwitterUsernamesParam,
+      tokenAddressesParam,
+      tokenNamesParam,
+    ]
   );
 
   const loadMore = useCallback(async () => {
@@ -178,26 +299,92 @@ function BuzzesPageContent() {
     };
   }, []);
 
-  const sortedBuzzes = [...buzzes]
-    // .filter((buzz) => {
-    //   if (showAll) return true;
-    //   const deadlineTime = new Date(buzz.deadline).getTime();
-    //   const currentTime = Date.now();
-    //   return buzz.isActive && currentTime < deadlineTime;
-    // })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "price":
-          return Number(b.tokenAmount) - Number(a.tokenAmount);
-        case "engagement":
-          return b.replyCount - a.replyCount;
-        case "newest":
-        default:
-          return (
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+  const sortedBuzzes = [...buzzes];
+
+  const handleConfirmSearch = () => {
+    let searchText = searchQuery.trim();
+    setSearchQuery("");
+    if (searchType === "tokenAddress") {
+      if (!searchText.startsWith("0x")) {
+        toast.error("Invalid token address");
+        return;
       }
-    });
+      const currentTokenAddresses = searchParams.get("tokenAddresses");
+      const newTokenAddresses = currentTokenAddresses?.split(",") || [];
+      if (newTokenAddresses.includes(searchText)) {
+        return;
+      }
+      newTokenAddresses.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tokenAddresses", newTokenAddresses.join(","));
+      router.push(url.toString());
+    } else if (searchType === "tokenName") {
+      const currentTokenNames = searchParams.get("tokenNames");
+      const newTokenNames = currentTokenNames?.split(",") || [];
+      if (newTokenNames.includes(searchText)) {
+        return;
+      }
+      newTokenNames.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set("tokenNames", newTokenNames.join(","));
+      router.push(url.toString());
+    } else if (searchType === "creatorTwitterUsername") {
+      if (searchText.startsWith("@")) {
+        searchText = searchText.slice(1);
+      }
+      const currentCreatorTwitterUsernames = searchParams.get(
+        "creatorTwitterUsernames"
+      );
+      const newCreatorTwitterUsernames =
+        currentCreatorTwitterUsernames?.split(",") || [];
+      if (newCreatorTwitterUsernames.includes(searchText)) {
+        return;
+      }
+      newCreatorTwitterUsernames.push(searchText);
+      const url = new URL(window.location.href);
+      url.searchParams.set(
+        "creatorTwitterUsernames",
+        newCreatorTwitterUsernames.join(",")
+      );
+      router.push(url.toString());
+    }
+  };
+
+  const handleDeleteSearchItem = (item: SearchItem) => {
+    const url = new URL(window.location.href);
+    if (item.type === "tokenAddress") {
+      const currentAddresses =
+        searchParams.get("tokenAddresses")?.split(",") || [];
+      const newAddresses = currentAddresses.filter(
+        (addr) => addr !== item.value
+      );
+      if (newAddresses.length > 0) {
+        url.searchParams.set("tokenAddresses", newAddresses.join(","));
+      } else {
+        url.searchParams.delete("tokenAddresses");
+      }
+    } else if (item.type === "tokenName") {
+      const currentNames = searchParams.get("tokenNames")?.split(",") || [];
+      const newNames = currentNames.filter((name) => name !== item.value);
+      if (newNames.length > 0) {
+        url.searchParams.set("tokenNames", newNames.join(","));
+      } else {
+        url.searchParams.delete("tokenNames");
+      }
+    } else if (item.type === "creatorTwitterUsername") {
+      const currentUsernames =
+        searchParams.get("creatorTwitterUsernames")?.split(",") || [];
+      const newUsernames = currentUsernames.filter(
+        (username) => username !== item.value
+      );
+      if (newUsernames.length > 0) {
+        url.searchParams.set("creatorTwitterUsernames", newUsernames.join(","));
+      } else {
+        url.searchParams.delete("creatorTwitterUsernames");
+      }
+    }
+    router.push(url.toString());
+  };
 
   if (isLoading) {
     return (
@@ -221,98 +408,142 @@ function BuzzesPageContent() {
     );
   }
 
-  if (buzzes.length === 0) {
-    return (
-      <div className="py-8">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("sortBy", e.target.value);
-              router.push(url.toString());
-            }}
-            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
-          >
-            <option value="newest">✨ Newest First</option>
-            <option value="price">💰 Highest Price</option>
-            <option value="engagement">🔥 Most Engagement</option>
-          </select>
-
-          <div className="flex gap-4 items-center">
-            {!!userInfo?.uid && (
-              <FilterTokenBuzzesToggle
-                isActive={filterToken}
-                onToggle={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set(
-                    "filterToken",
-                    (!filterToken).toString()
-                  );
-                  router.push(url.toString());
-                }}
-              />
-            )}
-
-            <ActiveBuzzesToggle
-              isActive={!showAll}
-              onToggle={() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set("showAll", (!showAll).toString());
-                router.push(url.toString());
-              }}
-            />
-          </div>
-        </div>
-        <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
-          <SparklesIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900">
-            No buzzes yet
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Connect your wallet and create your first buzz!
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="py-8">
+    <div className="">
       <div className="flex-1">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <select
-            id="sortBy"
-            value={sortBy}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("sortBy", e.target.value);
-              router.push(url.toString());
-            }}
-            className="w-[260px] text-base sm:text-lg border-gray-300 rounded-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300 py-2 pl-4 pr-8"
-          >
-            <option value="newest">✨ Newest First</option>
-            <option value="price">💰 Highest Price</option>
-            <option value="engagement">🔥 Most Engagement</option>
-          </select>
+        <div className="flex flex-col items-start sm:flex-row mb-3 gap-3">
+          <div className="flex-1 self-stretch">
+            <div className="">
+              <div className="relative">
+                <div className="flex">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder={`Search by ${
+                        searchType === "tokenAddress"
+                          ? "token address"
+                          : searchType === "tokenName"
+                          ? "token name"
+                          : "creator Twitter username"
+                      }...`}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-4 pr-10 py-3 text-base border-gray-300 rounded-l-2xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 hover:border-indigo-300"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleConfirmSearch();
+                        }
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        handleConfirmSearch();
+                      }}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                    >
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
+                    </button>
+                  </div>
 
-          <div className="flex gap-4 items-center">
-            {!!userInfo?.uid && (
-              <FilterTokenBuzzesToggle
-                isActive={filterToken}
-                onToggle={() => {
-                  const url = new URL(window.location.href);
-                  url.searchParams.set(
-                    "filterToken",
-                    (!filterToken).toString()
-                  );
-                  router.push(url.toString());
-                }}
-              />
-            )}
+                  <Menu as="div" className="relative">
+                    <Menu.Button className="inline-flex items-center gap-2 w-[150px] md:w-[180px] px-2 sm:px-4 py-3 text-sm sm:text-base bg-white border border-l-0 border-gray-300 rounded-r-2xl shadow-sm hover:bg-gray-50 transition-all duration-200">
+                      {searchType === "tokenAddress"
+                        ? "Token Address"
+                        : searchType === "tokenName"
+                        ? "Token Name"
+                        : "Creator Twitter"}
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </Menu.Button>
+                    <Transition
+                      as={Fragment}
+                      enter="transition ease-out duration-100"
+                      enterFrom="transform opacity-0 scale-95"
+                      enterTo="transform opacity-100 scale-100"
+                      leave="transition ease-in duration-75"
+                      leaveFrom="transform opacity-100 scale-100"
+                      leaveTo="transform opacity-0 scale-95"
+                    >
+                      <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                        <div className="py-1">
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => setSearchType("tokenAddress")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Token Address
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => setSearchType("tokenName")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Token Name
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() =>
+                                  setSearchType("creatorTwitterUsername")
+                                }
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Creator Twitter
+                              </button>
+                            )}
+                          </Menu.Item>
+                        </div>
+                      </Menu.Items>
+                    </Transition>
+                  </Menu>
+                </div>
+              </div>
+            </div>
 
+            <div className="mt-2 flex flex-wrap gap-2">
+              {searchItems.map((item) => (
+                <SearchTag
+                  key={`${item.type}-${item.value}`}
+                  searchType={item.type}
+                  item={item}
+                  onDelete={() => handleDeleteSearchItem(item)}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
             <ActiveBuzzesToggle
+              className="w-auto sm:w-auto"
               isActive={!showAll}
               onToggle={() => {
                 const url = new URL(window.location.href);
@@ -320,6 +551,84 @@ function BuzzesPageContent() {
                 router.push(url.toString());
               }}
             />
+
+            <Menu as="div" className="relative">
+              <Menu.Button className="inline-flex items-center gap-2 w-full text-base sm:text-lg bg-white border border-gray-200 rounded-2xl shadow-sm hover:bg-gray-50 transition-all duration-200 py-[10px] pl-4 pr-8">
+                Sort By
+                <ChevronDownIcon className="w-4 h-4" />
+              </Menu.Button>
+              <Transition
+                as={Fragment}
+                enter="transition ease-out duration-100"
+                enterFrom="transform opacity-0 scale-95"
+                enterTo="transform opacity-100 scale-100"
+                leave="transition ease-in duration-75"
+                leaveFrom="transform opacity-100 scale-100"
+                leaveTo="transform opacity-0 scale-95"
+              >
+                <Menu.Items className="absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                  <div className="py-1">
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "newest");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            !sortByParam || sortByParam === "newest"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Created At
+                        </button>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "deadline");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            sortByParam === "deadline"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Expire At
+                        </button>
+                      )}
+                    </Menu.Item>
+                    <Menu.Item>
+                      {({ active }) => (
+                        <button
+                          onClick={() => {
+                            const url = new URL(window.location.href);
+                            url.searchParams.set("sortBy", "engagement");
+                            router.push(url.toString());
+                          }}
+                          className={classNames(
+                            `block w-full text-left px-4 py-2 text-sm`,
+                            sortByParam === "engagement"
+                              ? "bg-gray-100 text-gray-900"
+                              : "text-gray-700"
+                          )}
+                        >
+                          Engagement
+                        </button>
+                      )}
+                    </Menu.Item>
+                  </div>
+                </Menu.Items>
+              </Transition>
+            </Menu>
           </div>
         </div>
 
@@ -355,6 +664,10 @@ function BuzzesPageContent() {
                     customTokenAddress={buzz.customTokenAddress}
                     rewardSettleType={buzz.rewardSettleType}
                     maxParticipants={buzz.maxParticipants}
+                    tokenInfo={buzz.tokenInfo}
+                    shareOfKols={buzz.shareOfKols || 0}
+                    shareOfHolders={buzz.shareOfHolders||0}
+                    shareOfOthers={buzz.shareOfOthers||0}
                   />
                 </div>
               ))}

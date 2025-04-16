@@ -1,4 +1,7 @@
 import { twitterProjectHandle } from "@/config";
+import { User } from "@prisma/client";
+import { Buzz } from "@prisma/client";
+import dayjs from "dayjs";
 
 let twitterBearerTokenCache: string | null = null;
 let tokenExpirationTime: number | null = null; // Add expiration timestamp
@@ -66,4 +69,70 @@ export async function checkIfUserFollowsTwitter(twitterUsername: string) {
     return !!checkFollow?.follow;
   } catch (err) {}
   return false;
+}
+
+export async function processUserReplyAttempt(
+  id: string,
+  buzz: Buzz,
+  user: User,
+  userRole: string
+) {
+  console.log(
+    "Processing user reply attempt",
+    buzz.id,
+    buzz.tweetLink,
+    user.twitterUsername
+  );
+  const checkCommentResponse = await fetch(
+    `https://api.tweetscout.io/v2/check-comment?tweet_link=${buzz.tweetLink}&user_handle=${user.twitterUsername}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+      },
+      method: "GET",
+    }
+  );
+  const checkComment = await checkCommentResponse.json();
+  if (!checkComment.commented || !checkComment.tweet) {
+    await prisma.replyAttempt.update({
+      where: {
+        id: id,
+      },
+      data: {
+        updatedAt: dayjs().unix(),
+        retryCount: {
+          increment: 1,
+        },
+      },
+    });
+    return;
+  }
+
+  // Create the reply with PENDING status
+  const reply = await prisma.reply.create({
+    data: {
+      buzzId: buzz.id,
+      replyLink: `https://x.com/games_zawa/status/${checkComment.tweet.id_str}`,
+      text: checkComment.tweet.full_text,
+      createdBy: user.uid,
+      status: "PENDING",
+      userRole: userRole,
+    },
+  });
+
+  // Increment the reply count
+  await prisma.buzz.update({
+    where: { id: buzz.id },
+    data: {
+      replyCount: {
+        increment: 1,
+      },
+    },
+  });
+
+  await prisma.replyAttempt.delete({
+    where: { id: id },
+  });
 }

@@ -32,11 +32,24 @@ export async function GET(
                 username: true,
                 avatar: true,
                 twitterUsername: true,
+                nickname: true,
               },
             },
           },
           orderBy: {
             createdAt: "desc",
+          },
+        },
+        tokenInfo: {
+          select: {
+            id: true,
+            chainId: true,
+            tokenAddress: true,
+            symbol: true,
+            decimals: true,
+            price: true,
+            url: true,
+            logo: true,
           },
         },
         user: {

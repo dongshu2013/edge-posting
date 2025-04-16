@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ChatBubbleLeftRightIcon,
@@ -11,6 +11,10 @@ import BuzzSettleHistory from "@/components/BuzzSettleHistory";
 import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
+import Image from "next/image";
+import { ITokenInfo } from "@/app/api/get-token-info/route";
+import { useQuery } from "@tanstack/react-query";
+import ManuallyReplyModal from "@/components/ManuallyReplyModal";
 
 interface Reply {
   id: string;
@@ -21,6 +25,9 @@ interface Reply {
   status: "PENDING" | "APPROVED" | "REJECTED";
   user: {
     username: string;
+    avatar: string;
+    twitterUsername: string;
+    nickname: string;
   };
 }
 
@@ -52,6 +59,10 @@ interface Buzz {
       status: string;
     };
   };
+  tokenInfo?: ITokenInfo;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
 }
 
 interface SettleHistory {
@@ -83,11 +94,27 @@ export default function BuzzDetailPage() {
   const [activeTab, setActiveTab] = useState<"replies" | "settle-history">(
     "replies"
   );
+  const [showManuallyReplyModal, setShowManuallyReplyModal] = useState(false);
 
   const isOwner =
     userInfo &&
     buzz?.createdBy &&
     userInfo.uid.toLowerCase() === buzz?.createdBy.toLowerCase();
+
+  const isExpired = !buzz?.isActive || new Date() >= new Date(buzz.deadline);
+
+  const existingReplyAttemptQuery = useQuery({
+    queryKey: ["existingReplyAttempt", params.id, userInfo?.uid],
+    queryFn: async () => {
+      const data = await fetchApi(
+        `/api/reply/get-reply-attempt?buzzId=${params.id}&userId=${userInfo?.uid}`
+      );
+
+      return data?.replyAttempt || null;
+    },
+  });
+
+  console.log("🍓 Existing reply attempt:", existingReplyAttemptQuery.data);
 
   const fetchBuzzDetails = async () => {
     try {
@@ -224,11 +251,28 @@ export default function BuzzDetailPage() {
             rewardSettleType={buzz.rewardSettleType}
             maxParticipants={buzz.maxParticipants}
             nickname={buzz?.user?.nickname}
+            tokenInfo={buzz.tokenInfo}
+            shareOfKols={buzz.shareOfKols || 0}
+            shareOfHolders={buzz.shareOfHolders || 0}
+            shareOfOthers={buzz.shareOfOthers || 0}
           />
         </div>
 
         {/* Right Side - Scrollable Content */}
         <div className="flex-1">
+          {!buzz.isSettled && !isExpired && existingReplyAttemptQuery.data && (
+            <div className="bg-red-100 rounded-md p-3 mb-3 text-gray-700 inline-block">
+              Already replied?{" "}
+              <span
+                className="underline font-bold cursor-pointer"
+                onClick={() => setShowManuallyReplyModal(true)}
+              >
+                Submit
+              </span>{" "}
+              your reply link manually.
+            </div>
+          )}
+
           {/* Tab Switch */}
           <div className="flex items-center gap-2 mb-6">
             <button
@@ -281,9 +325,28 @@ export default function BuzzDetailPage() {
                       {/* Reply Header */}
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900">
-                            @{reply?.user?.username}
-                          </span>
+                          <div className="flex items-center">
+                            <Image
+                              src={reply.user.avatar}
+                              alt={reply.user.username}
+                              className="w-10 h-10 rounded-full mr-2"
+                              width={40}
+                              height={40}
+                            />
+
+                            <div className="leading-tight">
+                              <div className="text-[16px] font-medium text-gray-900">
+                                {reply.user.nickname ||
+                                  reply.user.username.substring(0, 6)}
+                              </div>
+
+                              <div className="text-[12px] text-gray-900">
+                                @
+                                {reply.user.twitterUsername ||
+                                  reply.user.username.substring(0, 6)}
+                              </div>
+                            </div>
+                          </div>
                           <span className="text-sm text-gray-500">
                             {new Date(reply.createdAt).toLocaleDateString(
                               undefined,
@@ -295,15 +358,17 @@ export default function BuzzDetailPage() {
                           </span>
 
                           <div className="flex items-center gap-2">
-                            {isOwner && reply.status === "PENDING" && (
-                              <button
-                                onClick={() => handleReject(reply.id)}
-                                disabled={isRejecting}
-                                className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {isRejecting ? "Rejecting..." : "Reject"}
-                              </button>
-                            )}
+                            {isOwner &&
+                              reply.status === "PENDING" &&
+                              !buzz.isSettled && (
+                                <button
+                                  onClick={() => handleReject(reply.id)}
+                                  disabled={isRejecting}
+                                  className="inline-flex items-center justify-center w-full sm:w-auto px-3 py-1 border border-red-300 text-sm font-medium rounded-lg text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isRejecting ? "Rejecting..." : "Reject"}
+                                </button>
+                              )}
                           </div>
                         </div>
                         <div>
@@ -326,20 +391,11 @@ export default function BuzzDetailPage() {
                       </div>
 
                       {/* Tweet Embed */}
-                      <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
-                        <div className="aspect-[16/9]">
-                          <iframe
-                            src={getEmbedUrl(reply.replyLink)}
-                            className="w-full h-full"
-                            frameBorder="0"
-                            title="Reply Preview"
-                          />
-                        </div>
-                      </div>
+                      <ReplyIFrame replyLink={reply.replyLink} />
 
                       {/* Reply Text - Truncated */}
                       <div
-                        className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] flex items-center"
+                        className="bg-gray-50 rounded-xl p-3 cursor-pointer h-[60px] hidden items-center"
                         onClick={() => handleReplyClick(reply)}
                       >
                         <p className="text-gray-600 text-sm line-clamp-2 w-full">
@@ -404,6 +460,16 @@ export default function BuzzDetailPage() {
           </div>
         </div>
       )}
+
+      <ManuallyReplyModal
+        isOpen={showManuallyReplyModal}
+        onClose={() => setShowManuallyReplyModal(false)}
+        buzzId={buzz.id}
+        onSuccess={() => {
+          fetchBuzzDetails();
+          existingReplyAttemptQuery.refetch();
+        }}
+      />
     </div>
   );
 }
@@ -418,4 +484,19 @@ const getEmbedUrl = (tweetUrl: string) => {
   } catch {
     return tweetUrl;
   }
+};
+
+const ReplyIFrame = ({ replyLink }: { replyLink: string }) => {
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden mb-3">
+      <div className="aspect-[16/9]">
+        <iframe
+          src={getEmbedUrl(replyLink)}
+          className="w-full h-full"
+          frameBorder="0"
+          title="Reply Preview"
+        />
+      </div>
+    </div>
+  );
 };

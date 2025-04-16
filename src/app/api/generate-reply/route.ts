@@ -5,6 +5,7 @@ import { getRateLimiter } from "@/lib/rateLimiter";
 import { prisma } from "@/lib/prisma";
 import { ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 import { checkIfUserFollowsTwitter } from "@/utils/xUtils";
+import { getUserRole } from "@/utils/commonUtils";
 
 export async function POST(request: Request) {
   let userId = null;
@@ -37,25 +38,36 @@ export async function POST(request: Request) {
       buzzId: buzzId,
     },
   });
-  if (existingReply) {
-    return NextResponse.json({ error: "Reply already exists", code: 102 });
+  const existingReplyAttempt = await prisma.replyAttempt.findFirst({
+    where: {
+      buzzId,
+      userId,
+    },
+  });
+
+  if (existingReply || existingReplyAttempt) {
+    return NextResponse.json({
+      error: "You have already replied to this buzz",
+    });
   }
 
   const identifier = `generate-reply-${userId}`;
-
   const rateLimiter = getRateLimiter(identifier, {
-    tokensPerInterval: 100,
-    interval: "day",
+    tokensPerInterval: 6,
+    interval: "minute",
   });
 
   const isRateLimited = rateLimiter.tryRemoveTokens(1);
   if (!isRateLimited) {
-    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+    return NextResponse.json({ error: "Rate limited" });
   }
 
   const user = await prisma.user.findUnique({
     where: {
       uid: userId,
+    },
+    include: {
+      kolInfo: true,
     },
   });
   const userBio = user?.bio;
@@ -64,10 +76,7 @@ export async function POST(request: Request) {
   // Check if user has followed our twitter
   const userTwitterUsername = user?.twitterUsername;
   if (!userTwitterUsername) {
-    return NextResponse.json(
-      { error: "User twitter username not found" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "User twitter username not found" });
   }
 
   const isFollowed = await checkIfUserFollowsTwitter(userTwitterUsername);
@@ -75,41 +84,44 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "User not followed", code: 101 });
   }
 
-  try {
+  const buzz = await prisma.buzz.findUnique({
+    where: {
+      id: buzzId,
+    },
+  });
+  if (!buzz) {
+    return NextResponse.json({ error: "Buzz not found" });
+  }
 
+  const { userRole, requiredRole } = await getUserRole(user, buzz);
+
+  if (!userRole) {
+    return NextResponse.json({
+      code: 103,
+      error: `Only ${requiredRole} can reply to this buzz`,
+    });
+  }
+
+  try {
     const messages: ChatCompletionMessageParam[] = [
       {
         role: "system",
         content:
-          "You are a professional social media reply assistant. Based on the given instructions, generate a concise, friendly, and professional response. The reply should be brief, insightful, and include appropriate emojis.",
+          "You are a professional social media reply assistant. Based on the given instructions, generate a concise, friendly, and professional response. The reply should be brief, insightful, and include appropriate emojis, total length should be less than 150 characters.",
       },
     ];
 
     if (userBio) {
       messages.push({
         role: "user",
-        content: `My bio is: ${userBio}`,
-      });
-    }
-
-    if (userMood) {
-      messages.push({
-        role: "user",
-        content: `My mood today is: ${userMood}`,
-      });
-    }
-
-    if (tweetText) {
-      messages.push({
-        role: "user",
-        content: `Here is the tweet text I wanna reply to: ${tweetText}`,
+        content: `My bio is: ${userBio}, my mood today is: ${userMood}`,
       });
     }
 
     if (instructions) {
       messages.push({
         role: "user",
-        content: `Here is the reply instruction author gave me: ${instructions}`,
+        content: `Here is the tweet text I wanna reply to: ${tweetText}, and reply instruction author gave me: ${instructions}, focus on the tweet text and instructions and reply to it`,
       });
     }
 
@@ -120,14 +132,14 @@ export async function POST(request: Request) {
       temperature: 0.7,
     });
 
-    console.log("Completion:", completion);
+    // console.log("Completion:", completion);
 
-    return NextResponse.json({ text: completion.choices[0].message.content });
+    return NextResponse.json({
+      success: true,
+      text: completion.choices[0].message.content,
+    });
   } catch (error) {
     console.error("Error generating reply:", error);
-    return NextResponse.json(
-      { error: "Failed to generate reply" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate reply" });
   }
 }

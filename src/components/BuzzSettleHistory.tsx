@@ -4,6 +4,7 @@ import { formatChainAmount } from "@/utils/numberUtils";
 import { SparklesIcon } from "@heroicons/react/24/outline";
 import { Pagination } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
 import { useState } from "react";
 
 interface SettleHistory {
@@ -16,6 +17,8 @@ interface SettleHistory {
   type: string;
   user?: {
     nickname: string;
+    avatar: string;
+    twitterUsername: string;
   };
   kol?: {
     nickname: string;
@@ -75,35 +78,58 @@ export default function BuzzSettleHistory({ buzzId }: BuzzSettleHistoryProps) {
         <div key={history.id} className="border-b border-b-gray-100 p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-gray-900">
-                {history.user?.nickname || history.kol?.nickname || "Unknown"}
-              </span>
+              <div className="flex items-center">
+                <Image
+                  src={history.user?.avatar || ""}
+                  alt={history.user?.nickname || ""}
+                  className="w-10 h-10 rounded-full mr-2"
+                  width={40}
+                  height={40}
+                />
+
+                <div className="leading-tight">
+                  <div className="text-[16px] font-medium text-gray-900">
+                    {history.user?.nickname ||
+                      history.user?.twitterUsername.substring(0, 6)}
+                  </div>
+
+                  <div className="text-[12px] text-gray-900">
+                    @
+                    {history.user?.twitterUsername ||
+                      history.user?.nickname.substring(0, 6)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-amber-500">
+                  {decimalFloat(
+                    formatChainAmount(
+                      history.settleAmount,
+                      history.buzz.tokenDecimals
+                    )
+                  )}
+                </span>
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize  ${
+                    history.type === "kol"
+                      ? "bg-purple-100 text-purple-800"
+                      : history.type === "holder" || history.type === "normal"
+                      ? "bg-green-100 text-green-800"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {history.type}
+                </span>
+              </div>
+
               <span className="text-sm text-gray-500">
                 {new Date(history.createdAt).toLocaleDateString(undefined, {
                   month: "short",
                   day: "numeric",
                 })}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-amber-500">
-                {decimalFloat(
-                  formatChainAmount(
-                    history.settleAmount,
-                    history.buzz.tokenDecimals
-                  )
-                )}
-              </span>
-              <span
-                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  history.type === "KOL"
-                    ? "bg-purple-100 text-purple-800"
-                    : history.type === "Normal"
-                    ? "bg-green-100 text-green-800"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {history.type}
               </span>
             </div>
           </div>

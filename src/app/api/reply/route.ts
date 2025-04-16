@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getAuthUser } from "@/lib/auth-helpers";
-import { authTwitter } from "@/utils/xUtils";
+import { prisma } from "@/lib/prisma";
+import { getRateLimiter } from "@/lib/rateLimiter";
+import { replyHandler } from "@/lib/replyHandler";
+import { getUserRole } from "@/utils/commonUtils";
+import dayjs from "dayjs";
+import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
@@ -27,9 +30,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const identifier = `reply-${userId}`;
+    const rateLimiter = getRateLimiter(identifier, {
+      tokensPerInterval: 6,
+      interval: "minute",
+    });
+
+    const isRateLimited = rateLimiter.tryRemoveTokens(1);
+    if (!isRateLimited) {
+      return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+    }
+
     const dbUser = await prisma.user.findUnique({
       where: {
         uid: userId,
+      },
+      include: {
+        kolInfo: true,
       },
     });
 
@@ -39,47 +56,39 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+    if (!dbUser?.twitterUsername) {
+      return NextResponse.json(
+        { error: "Please bind your twitter account first" },
+        { status: 400 }
+      );
+    }
 
     const body = await request.json();
+    const { buzzId } = body;
 
-    const { buzzId, replyLink, text } = body;
-
-    if (!buzzId || !replyLink || !text) {
+    if (!buzzId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Validate the reply link format (basic check)
-    if (
-      !replyLink.match(/^https?:\/\/(twitter\.com|x\.com)\/.+\/status\/.+$/)
-    ) {
-      return NextResponse.json(
-        { error: "Invalid reply link format" },
-        { status: 400 }
-      );
-    }
-
-    // Get the buzz to check if it exists and is active
     const buzz = await prisma.buzz.findUnique({
       where: { id: buzzId },
     });
-
     if (!buzz) {
       return NextResponse.json({ error: "Buzz not found" }, { status: 404 });
     }
 
     // Check if the buzz is still active
     const isExpired = !buzz.isActive || new Date() >= buzz.deadline;
-
     // Check if the buzz is already settled
-    // if (buzz.isSettled) {
-    //   return NextResponse.json(
-    //     { error: "This buzz has already been settled" },
-    //     { status: 400 }
-    //   );
-    // }
+    if (buzz.isSettled || isExpired) {
+      return NextResponse.json(
+        { error: "This buzz has already been settled" },
+        { status: 400 }
+      );
+    }
 
     // Check if the user has already replied to this buzz
     const existingReply = await prisma.reply.findFirst({
@@ -89,60 +98,71 @@ export async function POST(request: Request) {
       },
     });
 
-    if (existingReply) {
+    const existingReplyAttempt = await prisma.replyAttempt.findFirst({
+      where: {
+        buzzId,
+        userId,
+      },
+    });
+
+    if (existingReply || existingReplyAttempt) {
       return NextResponse.json(
         { error: "You have already replied to this buzz" },
         { status: 400 }
       );
     }
 
-    try {
-      const beaerToken = await authTwitter();
-      const replyTwitterId = replyLink.split("/").pop();
-      const twitterResponse = await fetch(
-        `https://api.twitter.com/2/tweets/${replyTwitterId}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: beaerToken,
-          },
-        }
-      );
-
-      if (!twitterResponse.ok) {
-        return NextResponse.json(
-          { error: "Failed to get reply tweet" },
-          { status: 400 }
-        );
-      }
-
-      const replyTweetData = await twitterResponse.json();
-      console.log(replyTweetData);
-      const replyText = replyTweetData.data.text as string;
-      if (!replyText.trim().includes(text.trim())) {
-        return NextResponse.json(
-          { error: "Reply text does not match" },
-          { status: 400 }
-        );
-      }
-    } catch (err) {
-      console.error("Error in reply API:", err);
+    const { userRole } = await getUserRole(dbUser, buzz);
+    if (!userRole) {
       return NextResponse.json(
-        { error: "Internal server error" },
-        { status: 500 }
+        { error: "You are not allowed to reply to this buzz" },
+        { status: 400 }
       );
+    }
+
+    // Validate the reply link is reply to the buzz
+    const checkCommentResponse = await fetch(
+      `https://api.tweetscout.io/v2/check-comment?tweet_link=${buzz.tweetLink}&user_handle=${dbUser.twitterUsername}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+          ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+        },
+        method: "GET",
+      }
+    );
+    const checkComment = await checkCommentResponse.json();
+    console.log(
+      "checkComment",
+      buzz.tweetLink,
+      dbUser.twitterUsername,
+      checkComment
+    );
+    if (!checkComment.commented || !checkComment.tweet) {
+      const replyAttempt = await prisma.replyAttempt.create({
+        data: {
+          buzzId,
+          userId,
+          updatedAt: dayjs().unix(),
+          userRole,
+        },
+      });
+      replyHandler.start();
+      return NextResponse.json({
+        code: 11,
+      });
     }
 
     // Create the reply with PENDING status
     const reply = await prisma.reply.create({
       data: {
         buzzId,
-        replyLink,
-        text,
+        replyLink: `https://x.com/games_zawa/status/${checkComment.tweet.id_str}`,
+        text: checkComment.tweet.full_text,
         createdBy: userId,
         status: "PENDING",
+        userRole,
       },
     });
 

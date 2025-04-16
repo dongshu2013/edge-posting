@@ -16,15 +16,23 @@ const projectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ||
   "3a8170812b534d0ff9d794f19a901d64";
 
-const config = getDefaultConfig({
-  appName: "Edge Posting App",
-  projectId,
-  chains: [
-    ethereumConfigs[Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)]?.chain ||
-      sepolia,
-  ],
-  ssr: true,
-});
+// Create a singleton instance of the config
+let configInstance: ReturnType<typeof getDefaultConfig> | null = null;
+
+const getConfig = () => {
+  if (!configInstance) {
+    configInstance = getDefaultConfig({
+      appName: "Edge Posting App",
+      projectId,
+      chains: [
+        ethereumConfigs[Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)]?.chain ||
+          sepolia,
+      ],
+      ssr: false, // Disable SSR to prevent double initialization
+    });
+  }
+  return configInstance;
+};
 
 interface WalletProviderProps {
   children: ReactNode;
@@ -35,7 +43,7 @@ export function WalletProvider({ children }: WalletProviderProps) {
   const [queryClient] = useState(() => new QueryClient());
 
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={getConfig()}>
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider>{children}</RainbowKitProvider>
       </QueryClientProvider>

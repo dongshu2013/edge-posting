@@ -1,27 +1,29 @@
 "use client";
 
 import { CreateBuzzRequest } from "@/app/api/buzz/create/route";
+import { ITokenInfo } from "@/app/api/get-token-info/route";
+import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 import { BNB_COMMISSION_FEE } from "@/config/common";
+import { contractAbi } from "@/config/contractAbi";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { useUserStore } from "@/store/userStore";
 import { getTokenMetadata } from "@/utils/evmUtils";
-import { BoltIcon } from "@heroicons/react/24/outline";
+import { Menu, Transition } from "@headlessui/react";
+import { BoltIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { erc20Abi, parseEther } from "viem";
 import * as math from "mathjs";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { erc20Abi, parseEther, zeroAddress } from "viem";
 import {
   useAccount,
   useSendTransaction,
   useWalletClient,
   useWriteContract,
 } from "wagmi";
-import { contractAbi } from "@/config/contractAbi";
-import TransactionLoadingModal from "@/components/TransactionLoadingModal";
-import toast from "react-hot-toast";
-import { TermsModal } from "@/components/TermsModal";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -45,6 +47,7 @@ export default function NewBuzzPage() {
     minimumTokenAmount: 0,
   });
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [isCheckingBuzz, setIsCheckingBuzz] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
     "pending" | "success" | "error"
   >("pending");
@@ -52,6 +55,56 @@ export default function NewBuzzPage() {
   const [transactionDescription, setTransactionDescription] = useState("");
   const [transactionHash, setTransactionHash] = useState("");
   const [isCreatingBuzz, setIsCreatingBuzz] = useState(false);
+
+  const [shareOfKols, setShareOfKols] = useState("50");
+  const [shareOfHolders, setShareOfHolders] = useState("40");
+  const [shareOfOthers, setShareOfOthers] = useState("10");
+
+  const [tokenInfo, setTokenInfo] = useState<ITokenInfo | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const tokenAddress =
+          formData.paymentToken === "BNB"
+            ? zeroAddress
+            : formData.customTokenAddress;
+        console.log("tokenAddress", tokenAddress);
+
+        const addressValid =
+          tokenAddress.startsWith("0x") && tokenAddress.length === 42;
+
+        if (addressValid) {
+          const response = await fetch(
+            `/api/get-token-info?tokenAddress=${tokenAddress}`
+          );
+          const data = await response.json();
+          console.log("data", data);
+          setTokenInfo(data?.data?.tokenInfo || null);
+        } else {
+          setTokenInfo(null);
+        }
+      } catch (err) {
+        setTokenInfo(null);
+      }
+    })();
+  }, [formData.customTokenAddress, formData.paymentToken]);
+
+  useEffect(() => {
+    setShareOfOthers(
+      Math.max(
+        0,
+        Math.min(100, 100 - Number(shareOfKols) - Number(shareOfHolders))
+      ).toString()
+    );
+  }, [shareOfKols, shareOfHolders]);
+
+  const handlePaymentTokenChange = (token: string) => {
+    setFormData({
+      ...formData,
+      paymentToken: token,
+    });
+  };
 
   const handleInputChange = (
     e: React.ChangeEvent<
@@ -248,6 +301,10 @@ export default function NewBuzzPage() {
         rewardSettleType: formData.rewardSettleType,
         maxParticipants: formData.maxParticipants,
         participantMinimumTokenAmount: formData.minimumTokenAmount,
+        shareOfKols: Number(shareOfKols),
+        shareOfHolders: Number(shareOfHolders),
+        shareOfOthers: Number(shareOfOthers),
+        tokenInfoId: tokenInfo?.id,
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -271,6 +328,31 @@ export default function NewBuzzPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (
+      Number(shareOfKols) + Number(shareOfHolders) + Number(shareOfOthers) !==
+      100
+    ) {
+      alert("Share of kols, holders, and others must add up to 100");
+      return;
+    }
+
+    setIsCheckingBuzz(true);
+    const checkBuzz = await fetchApi("/api/buzz/check", {
+      auth: true,
+      method: "POST",
+      body: JSON.stringify({
+        tweetLink: formData.tweetLink,
+        tokenAmount: formData.totalAmount,
+        paymentToken: formData.paymentToken,
+        customTokenAddress: formData.customTokenAddress,
+      }),
+    });
+    setIsCheckingBuzz(false);
+
+    if (!checkBuzz?.success) {
+      alert(checkBuzz?.error || "Failed to check buzz");
+      return;
+    }
 
     if (formData.paymentMethod === "in-app") {
       await handleInAppPayment();
@@ -350,16 +432,58 @@ export default function NewBuzzPage() {
                   Payment Token 💸
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select
-                    name="paymentToken"
-                    id="paymentToken"
-                    className="block w-full px-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
-                    value={formData.paymentToken}
-                    onChange={handleInputChange}
-                  >
-                    <option value="BNB">BNB</option>
-                    <option value="CUSTOM">Custom ERC20 Token</option>
-                  </select>
+                  <Menu as="div" className="relative">
+                    <Menu.Button className="inline-flex items-center justify-between gap-2 w-full text-base bg-white border border-gray-200 rounded-2xl shadow-sm hover:bg-gray-50 transition-all duration-200 py-[10px] pl-4 pr-8">
+                      {formData.paymentToken === "BNB"
+                        ? "BNB"
+                        : "Custom ERC20 Token"}
+                      <ChevronDownIcon className="w-4 h-4" />
+                    </Menu.Button>
+                    <Transition
+                      as={Fragment}
+                      enter="transition ease-out duration-100"
+                      enterFrom="transform opacity-0 scale-95"
+                      enterTo="transform opacity-100 scale-100"
+                      leave="transition ease-in duration-75"
+                      leaveFrom="transform opacity-100 scale-100"
+                      leaveTo="transform opacity-0 scale-95"
+                    >
+                      <Menu.Items className="z-10 absolute right-0 mt-2 w-48 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none divide-y divide-gray-100">
+                        <div className="py-1">
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() => handlePaymentTokenChange("BNB")}
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                BNB
+                              </button>
+                            )}
+                          </Menu.Item>
+                          <Menu.Item>
+                            {({ active }) => (
+                              <button
+                                onClick={() =>
+                                  handlePaymentTokenChange("CUSTOM")
+                                }
+                                className={`${
+                                  active
+                                    ? "bg-gray-50 text-gray-900"
+                                    : "text-gray-700"
+                                } block w-full text-left px-4 py-2 text-sm`}
+                              >
+                                Custom ERC20 Token
+                              </button>
+                            )}
+                          </Menu.Item>
+                        </div>
+                      </Menu.Items>
+                    </Transition>
+                  </Menu>
 
                   {formData.paymentToken === "CUSTOM" && (
                     <div className="relative rounded-xl shadow-sm">
@@ -386,6 +510,28 @@ export default function NewBuzzPage() {
                 </p>
               </div>
 
+              {tokenInfo && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Image
+                      src={tokenInfo.logo || "/icons/token-icon.svg"}
+                      alt="Token Logo"
+                      className="w-8 h-8 rounded-full"
+                      width={32}
+                      height={32}
+                    />
+                  </div>
+
+                  <div className="">
+                    <div>{tokenInfo.symbol}</div>
+
+                    <div className="text-xs text-gray-500">
+                      ${tokenInfo.price}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label
@@ -399,7 +545,7 @@ export default function NewBuzzPage() {
                       type="number"
                       name="totalAmount"
                       id="totalAmount"
-                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="0.00"
                       value={formData.totalAmount}
                       onChange={handleInputChange}
@@ -427,7 +573,7 @@ export default function NewBuzzPage() {
                       type="number"
                       name="deadline"
                       id="deadline"
-                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                      className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       placeholder="1"
                       min="1"
                       value={formData.deadline}
@@ -487,7 +633,7 @@ export default function NewBuzzPage() {
                             type="number"
                             name="maxParticipants"
                             id="maxParticipants"
-                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="Expected Participants"
                             min="1"
                             value={formData.maxParticipants}
@@ -522,7 +668,7 @@ export default function NewBuzzPage() {
                             type="number"
                             name="minimumTokenAmount"
                             id="minimumTokenAmount"
-                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300"
+                            className="block w-full pl-4 pr-20 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 ease-in-out hover:border-indigo-300 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             placeholder="0"
                             min="0"
                             step="any"
@@ -546,24 +692,145 @@ export default function NewBuzzPage() {
                     </div>
                   )}
 
+                  {/* <Slider
+                    getAriaLabel={() => "Temperature range"}
+                    value={sharesValue}
+                    onChange={handleChange}
+                    valueLabelDisplay="auto"
+                    sx={{
+                      color: "transparent",
+                      "& .MuiSlider-track": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        border: "none",
+                      },
+                      "& .MuiSlider-thumb": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        "&:hover, &.Mui-focusVisible": {
+                          boxShadow: "0 0 0 8px rgba(99, 102, 241, 0.16)",
+                        },
+                      },
+                      "& .MuiSlider-rail": {
+                        background:
+                          "linear-gradient(to right, #6366f1, #8b5cf6, #ec4899)",
+                        opacity: 1,
+                      },
+                    }}
+                  /> */}
+
                   <div className="bg-gray-50 rounded-xl p-4">
                     <div className="flex items-start">
                       {formData.rewardSettleType === "default" && (
-                        <span className="text-sm text-gray-700">
-                          Reward will be split into 3 parts: <br />
-                          1. 10% for user not holding tokens, reward will be
-                          distributed evenly among them;
-                          <br />
-                          2. 40% for the holders, reward will be distributed
-                          according to their token holdings;
-                          <br />
-                          3. 50% for the the KOLs, reward will be distributed
-                          according to their KOL influence score.
-                          <br />
-                          <br />
-                          If there is no participant in the above parts, the
-                          reward will be returned to the creator.
-                        </span>
+                        <div className="space-y-4 w-full">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                KOLs Share (%)
+                              </label>
+                              <input
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={shareOfKols}
+                                onChange={(e) => {
+                                  if (e.target.value === "") {
+                                    setShareOfKols("");
+                                    return;
+                                  }
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setShareOfKols(value.toString());
+                                }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Holders Share (%)
+                              </label>
+                              <input
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={shareOfHolders}
+                                onChange={(e) => {
+                                  if (e.target.value === "") {
+                                    setShareOfHolders("");
+                                    return;
+                                  }
+                                  const value = Math.min(
+                                    100,
+                                    Math.max(0, Number(e.target.value))
+                                  );
+                                  setShareOfHolders(value.toString());
+                                }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Others Share (%)
+                              </label>
+                              <input
+                                disabled
+                                type="number"
+                                className="block w-full pl-4 pr-4 py-2.5 text-base bg-gray-200 rounded-xl border-none outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                value={shareOfOthers}
+                                // onChange={(e) => {
+                                //   if (e.target.value === "") {
+                                //     setShareOfOthers("");
+                                //     return;
+                                //   }
+                                //   const value = Math.min(
+                                //     100,
+                                //     Math.max(0, Number(e.target.value))
+                                //   );
+                                //   setShareOfOthers(value.toString());
+                                // }}
+                                min="0"
+                                max="100"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-sm text-gray-700">
+                              Total:{" "}
+                              {Number(shareOfKols) +
+                                Number(shareOfHolders) +
+                                Number(shareOfOthers)}
+                              %
+                            </div>
+                            {Number(shareOfKols) +
+                              Number(shareOfHolders) +
+                              Number(shareOfOthers) !==
+                              100 && (
+                              <div className="text-sm text-red-500">
+                                Total must equal 100%
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-700">
+                            Reward will be split into 3 parts: <br />
+                            1. {Number(shareOfKols)}% for the KOLs, reward will
+                            be distributed according to their KOL influence
+                            score.
+                            <br />
+                            2. {Number(shareOfHolders)}% for the holders, reward
+                            will be distributed according to their token
+                            holdings;
+                            <br />
+                            3. {Number(shareOfOthers)}% for users not holding
+                            tokens, reward will be distributed evenly among
+                            them;
+                            <br />
+                            <br />
+                            If there is no participant in the above parts, the
+                            reward will be returned to the creator.
+                          </div>
+                        </div>
                       )}
 
                       {formData.rewardSettleType === "fixed" && (
@@ -587,19 +854,20 @@ export default function NewBuzzPage() {
                       type="button"
                       className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.paymentMethod === "in-app"
-                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          ? "bg-gray-300 text-gray-800 font-bold"
+                          : "border border-gray-200 text-gray-700 hover:bg-gray-100"
                       }`}
                       onClick={() => handlePaymentMethodChange("in-app")}
                     >
                       Pay In-App
                     </button>
+
                     <button
                       type="button"
                       className={`flex-1 py-3 px-4 text-center text-sm font-medium ${
                         formData.paymentMethod === "manual"
-                          ? "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white"
-                          : "bg-gray-50 text-gray-700 hover:bg-gray-100"
+                          ? "bg-gray-300 text-gray-800 font-bold"
+                          : "border border-gray-200 text-gray-700 hover:bg-gray-100"
                       }`}
                       onClick={() => handlePaymentMethodChange("manual")}
                     >
@@ -660,26 +928,20 @@ export default function NewBuzzPage() {
               {/* Submit Button */}
               <div className="mt-6">
                 <button
-                  disabled={isCreatingBuzz || isTransactionLoading}
+                  disabled={
+                    isCreatingBuzz || isTransactionLoading || isCheckingBuzz
+                  }
                   type="submit"
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
                   {isCreatingBuzz
                     ? "Creating Buzz... 🚀"
+                    : isCheckingBuzz
+                    ? "Checking... "
                     : formData.paymentMethod === "in-app"
                     ? "Pay & Create Buzz Campaign 🚀"
                     : "Create Buzz Campaign 🚀"}
                 </button>
-              </div>
-
-              <div className="flex justify-center">
-                <TermsModal
-                  trigger={
-                    <div className="text-sm text-gray-500 hover:text-gray-700 underline cursor-pointer">
-                      User Terms
-                    </div>
-                  }
-                />
               </div>
             </form>
           </div>

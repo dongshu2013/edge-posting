@@ -19,6 +19,10 @@ export interface CreateBuzzRequest {
   rewardSettleType: string;
   maxParticipants?: number;
   participantMinimumTokenAmount?: number;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
+  tokenInfoId?: string;
 }
 
 export async function POST(request: Request) {
@@ -40,6 +44,10 @@ export async function POST(request: Request) {
       rewardSettleType,
       maxParticipants,
       participantMinimumTokenAmount,
+      shareOfKols,
+      shareOfHolders,
+      shareOfOthers,
+      tokenInfoId,
     }: CreateBuzzRequest = body;
 
     // 验证必填字段
@@ -67,6 +75,18 @@ export async function POST(request: Request) {
     if (rewardSettleType === "fixed" && !Number(maxParticipants)) {
       return NextResponse.json(
         { error: "Max participants is required" },
+        { status: 400 }
+      );
+    }
+
+    const shareOfKolsNumber = shareOfKols ? Number(shareOfKols) : 0;
+    const shareOfHoldersNumber = shareOfHolders ? Number(shareOfHolders) : 0;
+    const shareOfOthersNumber = shareOfOthers ? Number(shareOfOthers) : 0;
+    const totalShare =
+      shareOfKolsNumber + shareOfHoldersNumber + shareOfOthersNumber;
+    if (totalShare !== 100) {
+      return NextResponse.json(
+        { error: "Total share must be 100" },
         { status: 400 }
       );
     }
@@ -251,6 +271,50 @@ export async function POST(request: Request) {
     //   );
     // }
 
+    // Get twitter text
+    let tweetText = "";
+    try {
+      const infoResponse = await fetch(
+        `https://api.tweetscout.io/v2/tweet-info`,
+        {
+          method: "POST",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+            ApiKey: `${process.env.TWEETSCOUT_API_KEY}`,
+          },
+          body: JSON.stringify({
+            tweet_link: tweetLink,
+          }),
+        }
+      );
+      const tweetscoutInfo = await infoResponse.json();
+      console.log("tweetscoutInfo", tweetscoutInfo);
+
+      if (!tweetscoutInfo?.full_text) {
+        return NextResponse.json({ error: "Tweet not found" }, { status: 400 });
+      }
+
+      if (
+        // tweetscoutInfo.retweeted_status ||
+        // tweetscoutInfo.quoted_status ||
+        tweetscoutInfo.in_reply_to_status_id_str
+      ) {
+        return NextResponse.json(
+          { error: "Tweet is a retweet or quote or reply" },
+          { status: 400 }
+        );
+      }
+
+      tweetText = tweetscoutInfo.full_text;
+    } catch (twitterError) {
+      console.error("Failed to get twitter text:", twitterError);
+      return NextResponse.json(
+        { error: "Failed to get twitter text" },
+        { status: 500 }
+      );
+    }
+
     // 创建 buzz、扣除余额并创建交易记录
     const result = await prisma.$transaction(async (tx: any) => {
       // 扣除用户余额
@@ -263,6 +327,7 @@ export async function POST(request: Request) {
       const buzz = await tx.buzz.create({
         data: {
           tweetLink,
+          tweetText,
           instructions,
           createdBy: user.uid,
           deadline: new Date(deadline),
@@ -278,6 +343,10 @@ export async function POST(request: Request) {
             Number(participantMinimumTokenAmount) > 0
               ? participantMinimumTokenAmount.toString()
               : null,
+          shareOfKols: shareOfKolsNumber,
+          shareOfHolders: shareOfHoldersNumber,
+          shareOfOthers: shareOfOthersNumber,
+          tokenInfoId: tokenInfoId || null,
         },
       });
 
@@ -372,39 +441,6 @@ export async function POST(request: Request) {
     } catch (qstashError) {
       console.error("Failed to schedule QStash job:", qstashError);
       // Continue execution even if QStash scheduling fails
-    }
-
-    // Get twitter text
-    try {
-      const beaerToken = await authTwitter();
-      const twitterId = tweetLink.split("/").pop();
-
-      const twitterResponse = await fetch(
-        `https://api.twitter.com/2/tweets/${twitterId}`,
-        {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-            Authorization: beaerToken,
-          },
-        }
-      );
-
-      if (!twitterResponse.ok) {
-        throw new Error(
-          `Twitter API error: ${twitterResponse.status} ${twitterResponse.statusText}`
-        );
-      }
-
-      const twitterData = await twitterResponse.json();
-      const fullText = twitterData?.data?.text || "";
-      await prisma.buzz.update({
-        where: { id: result.buzz.id },
-        data: { tweetText: fullText },
-      });
-    } catch (twitterError) {
-      console.error("Failed to get twitter text:", twitterError);
     }
 
     return NextResponse.json(result.buzz);

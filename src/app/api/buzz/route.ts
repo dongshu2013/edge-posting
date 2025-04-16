@@ -10,10 +10,14 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const createdBy = searchParams.get("createdBy");
+    const creatorTwitterUsernames =
+      searchParams.get("creatorTwitterUsernames")?.split(",") || [];
+    const tokenAddresses = searchParams.get("tokenAddresses")?.split(",") || [];
+    const tokenNames = searchParams.get("tokenNames")?.split(",") || [];
     const cursor = searchParams.get("cursor");
     const limit = 10; // Number of items per page
     const sortBy =
-      (searchParams.get("sortBy") as "newest" | "price" | "engagement") ||
+      (searchParams.get("sortBy") as "newest" | "deadline" | "engagement") ||
       "newest";
     const onlyActive = searchParams.get("onlyActive") === "true";
     const filterToken = searchParams.get("filterToken") === "true";
@@ -57,6 +61,25 @@ export async function GET(request: NextRequest) {
     const query: Prisma.BuzzFindManyArgs = {
       where: {
         ...(createdBy && { createdBy }),
+        ...(creatorTwitterUsernames.length > 0 && {
+          user: {
+            twitterUsername: {
+              in: creatorTwitterUsernames,
+              mode: "insensitive",
+            },
+          },
+        }),
+        ...(tokenAddresses.length > 0 && {
+          customTokenAddress: {
+            in: tokenAddresses,
+          },
+        }),
+        ...(tokenNames.length > 0 && {
+          paymentToken: {
+            in: tokenNames,
+            mode: "insensitive",
+          },
+        }),
         ...(onlyActive && { deadline: { gt: new Date() } }),
         ...(excludeReplied &&
           excludedBuzzIds.length > 0 && { id: { notIn: excludedBuzzIds } }),
@@ -67,7 +90,7 @@ export async function GET(request: NextRequest) {
       take: limit + 1, // Take one extra to know if there are more items
       orderBy: {
         ...(sortBy === "newest" && { createdAt: "desc" }),
-        ...(sortBy === "price" && { price: "desc" }),
+        ...(sortBy === "deadline" && { deadline: "desc" }),
         ...(sortBy === "engagement" && { replyCount: "desc" }),
       },
       select: {
@@ -84,6 +107,21 @@ export async function GET(request: NextRequest) {
         customTokenAddress: true,
         rewardSettleType: true,
         maxParticipants: true,
+        shareOfKols: true,
+        shareOfHolders: true,
+        shareOfOthers: true,
+        tokenInfo: {
+          select: {
+            id: true,
+            chainId: true,
+            tokenAddress: true,
+            symbol: true,
+            decimals: true,
+            price: true,
+            url: true,
+            logo: true,
+          },
+        },
         user: {
           select: {
             username: true,

@@ -28,6 +28,7 @@ model User {
   balance     Float        @default(0)
   buzzes      Buzz[]
   replies     Reply[]
+  replyAttempts ReplyAttempt[]
   withdrawals Withdrawal[]
   userBalances UserBalance[]
   withdrawRequests UserWithdrawRequest[]
@@ -69,6 +70,7 @@ model Buzz {
   isActive     Boolean       @default(true)
   isSettled    Boolean       @default(false)
   replies      Reply[]
+  replyAttempts ReplyAttempt[]
   transactions Transaction[]
   user         User          @relation(fields: [createdBy], references: [uid])
   tweetText    String?
@@ -83,6 +85,12 @@ model Buzz {
   tokenDecimals Int
   transactionHash String @unique
 
+  shareOfKols Int @default(50)
+  shareOfHolders Int @default(40)
+  shareOfOthers Int @default(10)
+
+  tokenInfoId String?
+  tokenInfo TokenInfo? @relation(fields: [tokenInfoId], references: [id])
 
   @@index([createdBy])
   @@index([createdAt])
@@ -91,7 +99,7 @@ model Buzz {
 
 model Reply {
   id          String       @id @default(cuid())
-  replyLink   String
+  replyLink   String       @unique
   text        String       @db.Text
   createdAt   DateTime     @default(now())
   createdBy   String // Firebase UID
@@ -100,10 +108,27 @@ model Reply {
   buzzId      String
   transaction Transaction?
   user        User         @relation(fields: [createdBy], references: [uid])
+  userRole    String       @default("normal")
 
   @@index([buzzId])
   @@index([createdBy])
   @@index([status])
+}
+
+model ReplyAttempt {
+  id          String       @id @default(cuid())
+  buzzId      String
+  buzz        Buzz         @relation(fields: [buzzId], references: [id])
+
+  userId      String
+  user        User         @relation(fields: [userId], references: [uid])
+  userRole    String       @default("normal")
+
+  retryCount  Int          @default(0)
+
+  updatedAt   Int         
+
+  @@index([updatedAt])
 }
 
 model SettleHistory {
@@ -215,6 +240,23 @@ model UserApiKey {
   apiKey String @unique
 }
 
+model TokenInfo {
+  id String @id @default(cuid())
+
+  chainId Int 
+  tokenAddress String
+
+  symbol String
+  decimals Int
+  logo String
+
+  price Float
+  url String
+
+  buzzes Buzz[]
+
+  @@unique([chainId, tokenAddress])
+}
 
 enum ReplyStatus {
   PENDING

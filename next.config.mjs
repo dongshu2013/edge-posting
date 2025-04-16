@@ -18,6 +18,7 @@ const nextConfig = {
       "www.twitter.com",
       "lh3.googleusercontent.com",
       "randomuser.me",
+      "*"
     ],
   },
   // Add a redirect for favicon.ico

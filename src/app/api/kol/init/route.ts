@@ -1,5 +1,5 @@
 import { getAuthUser } from "@/lib/auth-helpers";
-import { kolList } from "@/lib/kol-list";
+import { kolList } from "@/lib/kol-list2";
 import { prisma } from "@/lib/prisma";
 import { sleep } from "@/utils/commonUtils";
 import { NextResponse } from "next/server";

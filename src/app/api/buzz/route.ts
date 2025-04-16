@@ -107,6 +107,21 @@ export async function GET(request: NextRequest) {
         customTokenAddress: true,
         rewardSettleType: true,
         maxParticipants: true,
+        shareOfKols: true,
+        shareOfHolders: true,
+        shareOfOthers: true,
+        tokenInfo: {
+          select: {
+            id: true,
+            chainId: true,
+            tokenAddress: true,
+            symbol: true,
+            decimals: true,
+            price: true,
+            url: true,
+            logo: true,
+          },
+        },
         user: {
           select: {
             username: true,

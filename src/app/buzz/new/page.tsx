@@ -1,31 +1,29 @@
 "use client";
 
 import { CreateBuzzRequest } from "@/app/api/buzz/create/route";
+import { ITokenInfo } from "@/app/api/get-token-info/route";
+import TransactionLoadingModal from "@/components/TransactionLoadingModal";
 import { BNB_COMMISSION_FEE } from "@/config/common";
+import { contractAbi } from "@/config/contractAbi";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { useUserStore } from "@/store/userStore";
 import { getTokenMetadata } from "@/utils/evmUtils";
-import { BoltIcon } from "@heroicons/react/24/outline";
+import { Menu, Transition } from "@headlessui/react";
+import { BoltIcon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { erc20Abi, parseEther } from "viem";
 import * as math from "mathjs";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useState } from "react";
+import toast from "react-hot-toast";
+import { erc20Abi, parseEther, zeroAddress } from "viem";
 import {
   useAccount,
   useSendTransaction,
   useWalletClient,
   useWriteContract,
 } from "wagmi";
-import { contractAbi } from "@/config/contractAbi";
-import TransactionLoadingModal from "@/components/TransactionLoadingModal";
-import toast from "react-hot-toast";
-import { TermsModal } from "@/components/TermsModal";
-import { Slider } from "@mui/material";
-import { Menu, Transition } from "@headlessui/react";
-import { ChevronDownIcon } from "@heroicons/react/24/outline";
-import { Fragment } from "react";
 
 export default function NewBuzzPage() {
   const router = useRouter();
@@ -61,6 +59,36 @@ export default function NewBuzzPage() {
   const [shareOfKols, setShareOfKols] = useState("50");
   const [shareOfHolders, setShareOfHolders] = useState("40");
   const [shareOfOthers, setShareOfOthers] = useState("10");
+
+  const [tokenInfo, setTokenInfo] = useState<ITokenInfo | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const tokenAddress =
+          formData.paymentToken === "BNB"
+            ? zeroAddress
+            : formData.customTokenAddress;
+        console.log("tokenAddress", tokenAddress);
+
+        const addressValid =
+          tokenAddress.startsWith("0x") && tokenAddress.length === 42;
+
+        if (addressValid) {
+          const response = await fetch(
+            `/api/get-token-info?tokenAddress=${tokenAddress}`
+          );
+          const data = await response.json();
+          console.log("data", data);
+          setTokenInfo(data?.data?.tokenInfo || null);
+        } else {
+          setTokenInfo(null);
+        }
+      } catch (err) {
+        setTokenInfo(null);
+      }
+    })();
+  }, [formData.customTokenAddress, formData.paymentToken]);
 
   useEffect(() => {
     setShareOfOthers(
@@ -276,6 +304,7 @@ export default function NewBuzzPage() {
         shareOfKols: Number(shareOfKols),
         shareOfHolders: Number(shareOfHolders),
         shareOfOthers: Number(shareOfOthers),
+        tokenInfoId: tokenInfo?.id,
       };
       const buzz = await fetchApi("/api/buzz/create", {
         method: "POST",
@@ -480,6 +509,28 @@ export default function NewBuzzPage() {
                     : "Enter the contract address of your ERC20 token"}
                 </p>
               </div>
+
+              {tokenInfo && (
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center">
+                    <Image
+                      src={tokenInfo.logo || "/icons/token-icon.svg"}
+                      alt="Token Logo"
+                      className="w-8 h-8 rounded-full"
+                      width={32}
+                      height={32}
+                    />
+                  </div>
+
+                  <div className="">
+                    <div>{tokenInfo.symbol}</div>
+
+                    <div className="text-xs text-gray-500">
+                      ${tokenInfo.price}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">

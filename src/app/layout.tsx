@@ -17,7 +17,9 @@ export const metadata: Metadata = {
   title: "Buzzline",
   description: "Engage with tweets and earn BUZZ tokens using AI",
   icons: {
-    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    icon: "/logo.jpg",
+    apple: "/logo.jpg",
+    shortcut: "/logo.jpg",
   },
 };
 

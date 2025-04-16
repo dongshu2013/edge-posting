@@ -8,6 +8,7 @@ import { SparklesIcon } from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import ActiveBuzzesToggle from "@/components/ActiveBuzzesToggle";
 import { Suspense } from "react";
+import { ITokenInfo } from "@/app/api/get-token-info/route";
 
 interface Buzz {
   id: string;
@@ -33,9 +34,13 @@ interface Buzz {
       status: string;
     };
   };
+  tokenInfo?: ITokenInfo;
   _count: {
     replies: number;
   };
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
 }
 
 export default function MyBuzzesPage() {
@@ -249,6 +254,10 @@ function MyBuzzesPageContent() {
                     maxParticipants={buzz.maxParticipants}
                     nickname={buzz.user.nickname}
                     kolStatus={buzz.user.kolInfo?.status}
+                    tokenInfo={buzz.tokenInfo}
+                    shareOfKols={buzz.shareOfKols || 0}
+                    shareOfHolders={buzz.shareOfHolders || 0}
+                    shareOfOthers={buzz.shareOfOthers || 0}
                   />
                 </div>
               ))}

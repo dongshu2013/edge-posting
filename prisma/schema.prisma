@@ -89,6 +89,8 @@ model Buzz {
   shareOfHolders Int @default(40)
   shareOfOthers Int @default(10)
 
+  tokenInfoId String?
+  tokenInfo TokenInfo? @relation(fields: [tokenInfoId], references: [id])
 
   @@index([createdBy])
   @@index([createdAt])
@@ -238,6 +240,23 @@ model UserApiKey {
   apiKey String @unique
 }
 
+model TokenInfo {
+  id String @id @default(cuid())
+
+  chainId Int 
+  tokenAddress String
+
+  symbol String
+  decimals Int
+  logo String
+
+  price Float
+  url String
+
+  buzzes Buzz[]
+
+  @@unique([chainId, tokenAddress])
+}
 
 enum ReplyStatus {
   PENDING

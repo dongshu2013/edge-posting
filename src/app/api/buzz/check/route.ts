@@ -72,8 +72,8 @@ export async function POST(request: Request) {
       }
 
       if (
-        tweetscoutInfo.retweeted_status ||
-        tweetscoutInfo.quoted_status ||
+        // tweetscoutInfo.retweeted_status ||
+        // tweetscoutInfo.quoted_status ||
         tweetscoutInfo.in_reply_to_status_id_str
       ) {
         return NextResponse.json({

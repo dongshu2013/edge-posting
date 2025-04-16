@@ -7,3 +7,16 @@ export interface ITokenMetadata {
 export interface IBadge {
   type: "kol" | "task_published" | "task_done";
 }
+
+export interface DexScreenerTokenInfo {
+  priceUsd: number;
+  url: string;
+  baseToken: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  info?: {
+    imageUrl: string;
+  };
+}

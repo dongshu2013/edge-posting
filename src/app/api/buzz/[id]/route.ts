@@ -40,6 +40,18 @@ export async function GET(
             createdAt: "desc",
           },
         },
+        tokenInfo: {
+          select: {
+            id: true,
+            chainId: true,
+            tokenAddress: true,
+            symbol: true,
+            decimals: true,
+            price: true,
+            url: true,
+            logo: true,
+          },
+        },
         user: {
           select: {
             username: true,

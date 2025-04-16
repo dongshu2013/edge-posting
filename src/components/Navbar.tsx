@@ -56,13 +56,13 @@ export default function Navbar() {
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="flex items-center space-x-2">
                 <Image
-                  src="/logo.svg"
+                  src="/logo.jpg"
                   alt="BUZZ Logo"
                   width={32}
                   height={32}
-                  className="w-8 h-8"
+                  className="w-8 h-8 rounded-full"
                 />
-                <span className="text-xl font-bold text-gray-900">BUZZ</span>
+                <span className="text-xl font-bold text-gray-900">Buzzline</span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">

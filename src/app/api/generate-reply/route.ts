@@ -46,10 +46,9 @@ export async function POST(request: Request) {
   });
 
   if (existingReply || existingReplyAttempt) {
-    return NextResponse.json(
-      { error: "You have already replied to this buzz" },
-      { status: 400 }
-    );
+    return NextResponse.json({
+      error: "You have already replied to this buzz",
+    });
   }
 
   const identifier = `generate-reply-${userId}`;
@@ -60,7 +59,7 @@ export async function POST(request: Request) {
 
   const isRateLimited = rateLimiter.tryRemoveTokens(1);
   if (!isRateLimited) {
-    return NextResponse.json({ error: "Rate limited" }, { status: 429 });
+    return NextResponse.json({ error: "Rate limited" });
   }
 
   const user = await prisma.user.findUnique({
@@ -77,10 +76,7 @@ export async function POST(request: Request) {
   // Check if user has followed our twitter
   const userTwitterUsername = user?.twitterUsername;
   if (!userTwitterUsername) {
-    return NextResponse.json(
-      { error: "User twitter username not found" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "User twitter username not found" });
   }
 
   const isFollowed = await checkIfUserFollowsTwitter(userTwitterUsername);
@@ -94,16 +90,16 @@ export async function POST(request: Request) {
     },
   });
   if (!buzz) {
-    return NextResponse.json({ error: "Buzz not found" }, { status: 400 });
+    return NextResponse.json({ error: "Buzz not found" });
   }
 
-  const userRole = await getUserRole(user, buzz);
+  const { userRole, requiredRole } = await getUserRole(user, buzz);
 
   if (!userRole) {
-    return NextResponse.json(
-      { error: "You are not allowed to reply to this buzz" },
-      { status: 400 }
-    );
+    return NextResponse.json({
+      code: 103,
+      error: `Only ${requiredRole} can reply to this buzz`,
+    });
   }
 
   try {
@@ -138,12 +134,12 @@ export async function POST(request: Request) {
 
     // console.log("Completion:", completion);
 
-    return NextResponse.json({ text: completion.choices[0].message.content });
+    return NextResponse.json({
+      success: true,
+      text: completion.choices[0].message.content,
+    });
   } catch (error) {
     console.error("Error generating reply:", error);
-    return NextResponse.json(
-      { error: "Failed to generate reply" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate reply" });
   }
 }

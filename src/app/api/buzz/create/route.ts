@@ -22,6 +22,7 @@ export interface CreateBuzzRequest {
   shareOfKols: number;
   shareOfHolders: number;
   shareOfOthers: number;
+  tokenInfoId?: string;
 }
 
 export async function POST(request: Request) {
@@ -46,6 +47,7 @@ export async function POST(request: Request) {
       shareOfKols,
       shareOfHolders,
       shareOfOthers,
+      tokenInfoId,
     }: CreateBuzzRequest = body;
 
     // 验证必填字段
@@ -294,8 +296,8 @@ export async function POST(request: Request) {
       }
 
       if (
-        tweetscoutInfo.retweeted_status ||
-        tweetscoutInfo.quoted_status ||
+        // tweetscoutInfo.retweeted_status ||
+        // tweetscoutInfo.quoted_status ||
         tweetscoutInfo.in_reply_to_status_id_str
       ) {
         return NextResponse.json(
@@ -344,6 +346,7 @@ export async function POST(request: Request) {
           shareOfKols: shareOfKolsNumber,
           shareOfHolders: shareOfHoldersNumber,
           shareOfOthers: shareOfOthersNumber,
+          tokenInfoId: tokenInfoId || null,
         },
       });
 

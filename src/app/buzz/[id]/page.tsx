@@ -12,6 +12,9 @@ import { useParams } from "next/navigation";
 import { fetchApi } from "@/lib/api";
 import { useUserStore } from "@/store/userStore";
 import Image from "next/image";
+import { ITokenInfo } from "@/app/api/get-token-info/route";
+import { useQuery } from "@tanstack/react-query";
+import ManuallyReplyModal from "@/components/ManuallyReplyModal";
 
 interface Reply {
   id: string;
@@ -56,6 +59,10 @@ interface Buzz {
       status: string;
     };
   };
+  tokenInfo?: ITokenInfo;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
 }
 
 interface SettleHistory {
@@ -87,11 +94,27 @@ export default function BuzzDetailPage() {
   const [activeTab, setActiveTab] = useState<"replies" | "settle-history">(
     "replies"
   );
+  const [showManuallyReplyModal, setShowManuallyReplyModal] = useState(false);
 
   const isOwner =
     userInfo &&
     buzz?.createdBy &&
     userInfo.uid.toLowerCase() === buzz?.createdBy.toLowerCase();
+
+  const isExpired = !buzz?.isActive || new Date() >= new Date(buzz.deadline);
+
+  const existingReplyAttemptQuery = useQuery({
+    queryKey: ["existingReplyAttempt", params.id, userInfo?.uid],
+    queryFn: async () => {
+      const data = await fetchApi(
+        `/api/reply/get-reply-attempt?buzzId=${params.id}&userId=${userInfo?.uid}`
+      );
+
+      return data?.replyAttempt || null;
+    },
+  });
+
+  console.log("🍓 Existing reply attempt:", existingReplyAttemptQuery.data);
 
   const fetchBuzzDetails = async () => {
     try {
@@ -228,11 +251,28 @@ export default function BuzzDetailPage() {
             rewardSettleType={buzz.rewardSettleType}
             maxParticipants={buzz.maxParticipants}
             nickname={buzz?.user?.nickname}
+            tokenInfo={buzz.tokenInfo}
+            shareOfKols={buzz.shareOfKols || 0}
+            shareOfHolders={buzz.shareOfHolders || 0}
+            shareOfOthers={buzz.shareOfOthers || 0}
           />
         </div>
 
         {/* Right Side - Scrollable Content */}
         <div className="flex-1">
+          {!buzz.isSettled && !isExpired && existingReplyAttemptQuery.data && (
+            <div className="bg-red-100 rounded-md p-3 mb-3 text-gray-700 inline-block">
+              Already replied?{" "}
+              <span
+                className="underline font-bold cursor-pointer"
+                onClick={() => setShowManuallyReplyModal(true)}
+              >
+                Submit
+              </span>{" "}
+              your reply link manually.
+            </div>
+          )}
+
           {/* Tab Switch */}
           <div className="flex items-center gap-2 mb-6">
             <button
@@ -420,6 +460,16 @@ export default function BuzzDetailPage() {
           </div>
         </div>
       )}
+
+      <ManuallyReplyModal
+        isOpen={showManuallyReplyModal}
+        onClose={() => setShowManuallyReplyModal(false)}
+        buzzId={buzz.id}
+        onSuccess={() => {
+          fetchBuzzDetails();
+          existingReplyAttemptQuery.refetch();
+        }}
+      />
     </div>
   );
 }

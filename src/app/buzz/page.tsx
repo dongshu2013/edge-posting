@@ -28,6 +28,7 @@ import classNames from "classnames";
 import { toast } from "react-hot-toast";
 import { Menu, Transition } from "@headlessui/react";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
+import { ITokenInfo } from "../api/get-token-info/route";
 
 interface Buzz {
   id: string;
@@ -43,6 +44,9 @@ interface Buzz {
   deadline: string;
   createdAt: Date;
   isActive: boolean;
+  shareOfKols: number;
+  shareOfHolders: number;
+  shareOfOthers: number;
   user: {
     username: string;
     avatar: string;
@@ -55,6 +59,7 @@ interface Buzz {
   _count: {
     replies: number;
   };
+  tokenInfo?: ITokenInfo;
 }
 
 interface BuzzResponse {
@@ -659,6 +664,10 @@ function BuzzesPageContent() {
                     customTokenAddress={buzz.customTokenAddress}
                     rewardSettleType={buzz.rewardSettleType}
                     maxParticipants={buzz.maxParticipants}
+                    tokenInfo={buzz.tokenInfo}
+                    shareOfKols={buzz.shareOfKols || 0}
+                    shareOfHolders={buzz.shareOfHolders||0}
+                    shareOfOthers={buzz.shareOfOthers||0}
                   />
                 </div>
               ))}

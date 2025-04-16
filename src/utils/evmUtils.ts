@@ -16,6 +16,7 @@ import { ITokenMetadata } from "@/types/common";
 import { contractAbi } from "@/config/contractAbi";
 import { signMessage, toEthSignedMessageHash } from "@/lib/server/kms";
 import { utils } from "ethers";
+import { bsc, bscTestnet } from "viem/chains";
 
 export function getSiweMessage(address: `0x${string}`, chainId?: number) {
   var current = new Date();
@@ -217,6 +218,7 @@ export const getTokenMetadata = async (
     Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)
   );
   if (!publicClient) {
+    console.log("no public client");
     return undefined;
   }
   try {
@@ -244,7 +246,9 @@ export const getTokenMetadata = async (
       name: String(name),
       symbol: String(symbol),
     };
-  } catch (err) {}
+  } catch (err) {
+    console.log("error", err);
+  }
   return undefined;
 };
 
@@ -258,4 +262,14 @@ export async function getUserNonce(userId: string, publicClient: PublicClient) {
     args: [userIdInt],
   });
   return nonce;
+}
+
+export function getTokenExplorerUrl(address: string) {
+  const chainId = Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID);
+  if (chainId === bscTestnet.id) {
+    return `https://testnet.bscscan.com/token/${address}`;
+  } else if (chainId === bsc.id) {
+    return `https://bscscan.com/token/${address}`;
+  }
+  return `https://bscscan.com/token/${address}`;
 }

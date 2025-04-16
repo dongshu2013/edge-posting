@@ -4,14 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { fetchApi } from "@/lib/api";
 import { getPublicClient } from "@/lib/ethereum";
 import { UserWithdrawRequest, WithdrawSignatureResult } from "@/types/user";
-import { getUserIdInt } from "@/utils/commonUtils";
-import { fetchTransactionReceipt } from "@/utils/evmUtils";
+import { getShortAddress, getUserIdInt } from "@/utils/commonUtils";
+import { fetchTransactionReceipt, getTokenExplorerUrl } from "@/utils/evmUtils";
 import { formatChainAmount } from "@/utils/numberUtils";
 import { UserBalance } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
-import { formatEther } from "viem";
+import { formatEther, zeroAddress } from "viem";
 import { useAccount, useWriteContract } from "wagmi";
 import TransactionLoadingModal from "../TransactionLoadingModal";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
@@ -297,7 +297,17 @@ export const UserBalanceCard = () => {
 
               <div className="ml-3">
                 <p className="font-medium text-gray-800">{token.tokenName}</p>
-                <p className="text-sm text-gray-500">{token.tokenAddress}</p>
+
+                {token.tokenAddress !== zeroAddress && (
+                  <p
+                    className="text-sm text-blue-500 underline cursor-pointer"
+                    onClick={() => {
+                      window.open(getTokenExplorerUrl(token.tokenAddress));
+                    }}
+                  >
+                    {getShortAddress(token.tokenAddress, 6)}
+                  </p>
+                )}
               </div>
             </div>
 

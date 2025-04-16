@@ -49,6 +49,7 @@ export default function NewBuzzPage() {
     minimumTokenAmount: 0,
   });
   const [isTransactionLoading, setIsTransactionLoading] = useState(false);
+  const [isCheckingBuzz, setIsCheckingBuzz] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState<
     "pending" | "success" | "error"
   >("pending");
@@ -299,14 +300,31 @@ export default function NewBuzzPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (
-      Number(shareOfKols) +
-      Number(shareOfHolders) +
-      Number(shareOfOthers) !==
+      Number(shareOfKols) + Number(shareOfHolders) + Number(shareOfOthers) !==
       100
     ) {
       alert("Share of kols, holders, and others must add up to 100");
       return;
     }
+
+    setIsCheckingBuzz(true);
+    const checkBuzz = await fetchApi("/api/buzz/check", {
+      auth: true,
+      method: "POST",
+      body: JSON.stringify({
+        tweetLink: formData.tweetLink,
+        tokenAmount: formData.totalAmount,
+        paymentToken: formData.paymentToken,
+        customTokenAddress: formData.customTokenAddress,
+      }),
+    });
+    setIsCheckingBuzz(false);
+
+    if (!checkBuzz?.success) {
+      alert(checkBuzz?.error || "Failed to check buzz");
+      return;
+    }
+
     if (formData.paymentMethod === "in-app") {
       await handleInAppPayment();
     } else {
@@ -859,18 +877,21 @@ export default function NewBuzzPage() {
               {/* Submit Button */}
               <div className="mt-6">
                 <button
-                  disabled={isCreatingBuzz || isTransactionLoading}
+                  disabled={
+                    isCreatingBuzz || isTransactionLoading || isCheckingBuzz
+                  }
                   type="submit"
                   className="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
                   {isCreatingBuzz
                     ? "Creating Buzz... 🚀"
+                    : isCheckingBuzz
+                    ? "Checking... "
                     : formData.paymentMethod === "in-app"
                     ? "Pay & Create Buzz Campaign 🚀"
                     : "Create Buzz Campaign 🚀"}
                 </button>
               </div>
-
             </form>
           </div>
         </div>

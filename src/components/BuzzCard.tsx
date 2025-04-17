@@ -405,30 +405,36 @@ export default function BuzzCard({
 
           <div className="mt-3 flex justify-between gap-3">
             {shareOfKols > 0 && (
-              <div className="flex-1 flex flex-col items-center gap-1">
+              <div className="flex-1 flex justify-center items-center gap-1">
+                <div>🧠</div>
+
                 <div className="text-sm text-gray-500">{shareOfKols}%</div>
 
-                <div className="text-sm text-gray-700 font-semibold">KOLs</div>
+                {/* <div className="text-sm text-gray-700 font-semibold">KOLs</div> */}
               </div>
             )}
 
             {shareOfHolders > 0 && (
-              <div className="flex-1 flex flex-col items-center gap-1">
+              <div className="flex-1 flex justify-center items-center gap-1">
+                <div>💎</div>
+
                 <div className="text-sm text-gray-500">{shareOfHolders}%</div>
 
-                <div className="text-sm text-gray-700 font-semibold">
+                {/* <div className="text-sm text-gray-700 font-semibold">
                   Holders
-                </div>
+                </div> */}
               </div>
             )}
 
             {shareOfOthers > 0 && (
-              <div className="flex-1 flex flex-col items-center gap-1">
+              <div className="flex-1 flex justify-center items-center gap-1">
+                <div>🐸</div>
+
                 <div className="text-sm text-gray-500">{shareOfOthers}%</div>
 
-                <div className="text-sm text-gray-700 font-semibold">
+                {/* <div className="text-sm text-gray-700 font-semibold">
                   Normal Users
-                </div>
+                </div> */}
               </div>
             )}
           </div>
@@ -514,7 +520,7 @@ export default function BuzzCard({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex justify-center items-center">
+        <div className="mt-3 flex justify-between items-center h-10">
           {/* {showViewReplies && (
             <button
               onClick={() =>
@@ -526,7 +532,10 @@ export default function BuzzCard({
               View {replyCount} {replyCount === 1 ? "Reply" : "Replies"}
             </button>
           )} */}
-          <div className="mt-2">{renderReplyButton()}</div>
+
+          <div className="">{renderReplyButton()}</div>
+
+          <div>{replyCount} Replies</div>
         </div>
       </div>
 

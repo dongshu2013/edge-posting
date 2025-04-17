@@ -7,6 +7,7 @@ import { authTwitter } from "@/utils/xUtils";
 import { NextResponse } from "next/server";
 import { parseEther, zeroAddress } from "viem";
 import * as math from "mathjs";
+import { buzzHandler } from "@/lib/buzzHandler";
 
 export interface CreateBuzzRequest {
   tweetLink: string;
@@ -412,36 +413,38 @@ export async function POST(request: Request) {
     });
 
     // Trigger QStash API to schedule the settle-rewards cron job
-    try {
-      const targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/settle-rewards`;
-      const qstashEndpoint = `https://qstash.upstash.io/v2/publish/${targetUrl}`;
+    // try {
+    //   const targetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/cron/settle-rewards`;
+    //   const qstashEndpoint = `https://qstash.upstash.io/v2/publish/${targetUrl}`;
 
-      const delayInSeconds = Math.floor(
-        (new Date(deadline).getTime() - Date.now()) / 1000
-      );
-      const publishRes = await fetch(qstashEndpoint, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.QSTASH_TOKEN}`,
-          "Content-Type": "application/json",
-          "Upstash-Delay": `${delayInSeconds}s`, // delay in seconds
-        },
-        body: JSON.stringify({
-          cronSecret: process.env.CRON_SECRET,
-          buzzId: result.buzz.id,
-        }),
-      });
+    //   const delayInSeconds = Math.floor(
+    //     (new Date(deadline).getTime() - Date.now()) / 1000
+    //   );
+    //   const publishRes = await fetch(qstashEndpoint, {
+    //     method: "POST",
+    //     headers: {
+    //       Authorization: `Bearer ${process.env.QSTASH_TOKEN}`,
+    //       "Content-Type": "application/json",
+    //       "Upstash-Delay": `${delayInSeconds}s`, // delay in seconds
+    //     },
+    //     body: JSON.stringify({
+    //       cronSecret: process.env.CRON_SECRET,
+    //       buzzId: result.buzz.id,
+    //     }),
+    //   });
 
-      if (!publishRes.ok) {
-        throw new Error(`QStash API error: ${publishRes.statusText}`);
-      }
+    //   if (!publishRes.ok) {
+    //     throw new Error(`QStash API error: ${publishRes.statusText}`);
+    //   }
 
-      const qstashResponse = await publishRes.json();
-      console.log("publishRes", qstashResponse);
-    } catch (qstashError) {
-      console.error("Failed to schedule QStash job:", qstashError);
-      // Continue execution even if QStash scheduling fails
-    }
+    //   const qstashResponse = await publishRes.json();
+    //   console.log("publishRes", qstashResponse);
+    // } catch (qstashError) {
+    //   console.error("Failed to schedule QStash job:", qstashError);
+    //   // Continue execution even if QStash scheduling fails
+    // }
+
+    buzzHandler.start();
 
     return NextResponse.json(result.buzz);
   } catch (error) {

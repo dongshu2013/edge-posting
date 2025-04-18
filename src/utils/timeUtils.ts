@@ -56,3 +56,22 @@ export function formatDuration(seconds: number | bigint) {
   // }
   return "<1m";
 }
+
+
+export const formatRelativeTime = (date: Date) => {
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+  // If it's today, show relative time
+  if (diffInSeconds < 86400) {
+    if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
+    return `${Math.floor(diffInSeconds / 3600)}h ago`;
+  }
+
+  // Otherwise show the date
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+};

@@ -186,13 +186,13 @@ async function solidityKeccak256Encode(
   // const hash = keccak256(encoded);
   // return hash;
 
-  console.log("sign signature params:", {
-    tokens,
-    amounts,
-    recipient,
-    nonce,
-    expirationBlock,
-  });
+  // console.log("sign signature params:", {
+  //   tokens,
+  //   amounts,
+  //   recipient,
+  //   nonce,
+  //   expirationBlock,
+  // });
 
   const hash = utils.keccak256(
     utils.defaultAbiCoder.encode(

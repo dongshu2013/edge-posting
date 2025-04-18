@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             createdBy: true,
+            isSettled: true,
             user: {
               select: {
                 username: true,
@@ -34,6 +35,9 @@ export async function GET(request: NextRequest) {
           select: {
             username: true,
             uid: true,
+            avatar: true,
+            nickname: true,
+            twitterUsername: true,
           },
         },
       },

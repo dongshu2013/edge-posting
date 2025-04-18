@@ -3,9 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
-import { SparklesIcon, ChatBubbleLeftRightIcon, ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
+import {
+  SparklesIcon,
+  ChatBubbleLeftRightIcon,
+  ArrowTopRightOnSquareIcon,
+} from "@heroicons/react/24/outline";
 import { fetchApi } from "@/lib/api";
 import Link from "next/link";
+import Image from "next/image";
+import { formatRelativeTime } from "@/utils/timeUtils";
 
 interface Reply {
   id: string;
@@ -18,12 +24,16 @@ interface Reply {
   buzz: {
     id: string;
     createdBy: string;
+    isSettled: boolean;
     user: {
       username: string;
-    }
+    };
   };
   user: {
     username: string;
+    avatar: string;
+    nickname: string;
+    twitterUsername: string;
   };
 }
 
@@ -84,7 +94,9 @@ export default function MyRepliesPage() {
         }
       } catch (err) {
         console.error("Error fetching replies:", err);
-        setError(err instanceof Error ? err.message : "Failed to fetch replies");
+        setError(
+          err instanceof Error ? err.message : "Failed to fetch replies"
+        );
       } finally {
         setIsLoading(false);
       }
@@ -120,7 +132,9 @@ export default function MyRepliesPage() {
         return statusOrder[a.status] - statusOrder[b.status];
       case "newest":
       default:
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
     }
   });
 
@@ -156,22 +170,55 @@ export default function MyRepliesPage() {
         <div className="space-y-2">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {sortedReplies.map((reply) => (
-              <div key={reply.id} className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 overflow-hidden w-full">
+              <div
+                key={reply.id}
+                className="bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.2)] border border-gray-200/80 transition-all duration-300 overflow-hidden w-full"
+              >
                 <div className="p-3">
                   {/* Reply Header */}
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center">
-                      <span className="text-[13px] text-gray-900">
-                        @{reply.buzz.user.username}
-                      </span>
-                      <span className="text-[13px] text-gray-500 ml-1">· Mar 12</span>
+                      <Image
+                        src={reply.user.avatar}
+                        alt={reply.user.nickname}
+                        className="w-10 h-10 rounded-full mr-2"
+                        width={40}
+                        height={40}
+                      />
+
+                      <div className="leading-tight">
+                        <div className="text-[16px] font-medium text-gray-900">
+                          {reply.user.nickname ||
+                            reply.user.username.substring(0, 6)}
+                        </div>
+
+                        <div className="text-[12px] text-gray-900">
+                          @
+                          {reply.user.twitterUsername ||
+                            reply.user.username.substring(0, 6)}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center">
+                        <span className="mx-1 text-gray-500">·</span>
+                        {reply.createdAt && (
+                          <span className="text-sm text-gray-500">
+                            {formatRelativeTime(new Date(reply.createdAt))}
+                          </span>
+                        )}
+                      </div>
                     </div>
+
                     <div>
-                      {reply.status === "PENDING" && (
+                      {reply.buzz.isSettled ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-800">
+                          SETTLED
+                        </span>
+                      ) : reply.status === "PENDING" ? (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-50 text-yellow-800">
                           Pending
                         </span>
-                      )}
+                      ) : null}
                     </div>
                   </div>
 
@@ -188,7 +235,7 @@ export default function MyRepliesPage() {
                   </div>
 
                   {/* Reply Text */}
-                  <div 
+                  <div
                     className="bg-gray-50 rounded-2xl p-3 cursor-pointer mb-4"
                     onClick={() => setSelectedReply(reply)}
                   >
@@ -199,7 +246,9 @@ export default function MyRepliesPage() {
 
                   {/* View Original Buzz Button */}
                   <button
-                    onClick={() => window.open(`/buzz/${reply.buzzId}`, '_blank')}
+                    onClick={() =>
+                      window.open(`/buzz/${reply.buzzId}`, "_blank")
+                    }
                     className="inline-flex items-center px-3 py-2 border border-gray-200 text-[13px] font-medium rounded-xl text-gray-700 bg-white hover:bg-gray-50 w-full justify-center gap-1.5"
                   >
                     <ChatBubbleLeftRightIcon className="h-4 w-4" />
@@ -213,7 +262,9 @@ export default function MyRepliesPage() {
       ) : (
         <div className="bg-white rounded-2xl shadow-xl p-9 text-center">
           <ChatBubbleLeftRightIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No replies yet</h3>
+          <h3 className="mt-2 text-lg font-medium text-gray-900">
+            No replies yet
+          </h3>
           <p className="mt-1 text-sm text-gray-500">
             Start replying to buzzes to earn rewards! 🚀
           </p>
@@ -241,16 +292,28 @@ export default function MyRepliesPage() {
                   <ChatBubbleLeftRightIcon className="h-5 w-5 mr-2 text-blue-500" />
                   Reply to @{selectedReply.buzz.user.username}
                 </h3>
-                <button 
+                <button
                   onClick={() => setSelectedReply(null)}
                   className="text-gray-400 hover:text-gray-500"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
-              <p className="text-gray-700 whitespace-pre-wrap">{selectedReply.text}</p>
+              <p className="text-gray-700 whitespace-pre-wrap">
+                {selectedReply.text}
+              </p>
             </div>
             <div className="px-4 py-3 bg-gray-50 flex justify-end rounded-b-xl">
               <button

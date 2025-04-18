@@ -19,6 +19,8 @@ import kolBadge from "../../public/images/badge/badge_kol.jpg";
 import FollowTwitterModal from "./FollowTwitterModal";
 import ReplyLinkModal from "./ReplyLinkModal";
 import { useInterval } from "@/hooks/useInterval";
+import { formatRelativeTime } from "@/utils/timeUtils";
+import { Tooltip } from "@mui/material";
 
 export interface BuzzCardProps {
   id: string;
@@ -126,25 +128,6 @@ export default function BuzzCard({
 
     return timeString;
   }, [currentTime, deadlineTime]);
-
-  // Format creation time as relative time (e.g., "1h ago")
-  const formatRelativeTime = (date: Date) => {
-    const now = new Date();
-    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-
-    // If it's today, show relative time
-    if (diffInSeconds < 86400) {
-      if (diffInSeconds < 60) return `${diffInSeconds}s ago`;
-      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m ago`;
-      return `${Math.floor(diffInSeconds / 3600)}h ago`;
-    }
-
-    // Otherwise show the date
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
-  };
 
   // const handleCopyAddress = async () => {
   //   try {
@@ -403,41 +386,54 @@ export default function BuzzCard({
             </div>
           </div>
 
-          <div className="mt-3 flex justify-between gap-3">
-            {shareOfKols > 0 && (
-              <div className="flex-1 flex justify-center items-center gap-1">
-                <div>🧠</div>
-
-                <div className="text-sm text-gray-500">{shareOfKols}%</div>
-
-                {/* <div className="text-sm text-gray-700 font-semibold">KOLs</div> */}
+          <Tooltip
+            title={
+              <div>
+                <div>🧠 KOL: I don't watch the market, I create the market.</div>
+                <div>💎 Holder: Buy the dip? No, I just HODL.</div>
+                <div>
+                  🐸 Normal user: I'm still watching, not sure if it's the right
+                  time yet.
+                </div>
               </div>
-            )}
+            }
+          >
+            <div className="mt-3 flex justify-between gap-3">
+              {shareOfKols > 0 && (
+                <div className="flex-1 flex justify-center items-center gap-1">
+                  <div>🧠</div>
 
-            {shareOfHolders > 0 && (
-              <div className="flex-1 flex justify-center items-center gap-1">
-                <div>💎</div>
+                  <div className="text-sm text-gray-500">{shareOfKols}%</div>
 
-                <div className="text-sm text-gray-500">{shareOfHolders}%</div>
+                  {/* <div className="text-sm text-gray-700 font-semibold">KOLs</div> */}
+                </div>
+              )}
 
-                {/* <div className="text-sm text-gray-700 font-semibold">
+              {shareOfHolders > 0 && (
+                <div className="flex-1 flex justify-center items-center gap-1">
+                  <div>💎</div>
+
+                  <div className="text-sm text-gray-500">{shareOfHolders}%</div>
+
+                  {/* <div className="text-sm text-gray-700 font-semibold">
                   Holders
                 </div> */}
-              </div>
-            )}
+                </div>
+              )}
 
-            {shareOfOthers > 0 && (
-              <div className="flex-1 flex justify-center items-center gap-1">
-                <div>🐸</div>
+              {shareOfOthers > 0 && (
+                <div className="flex-1 flex justify-center items-center gap-1">
+                  <div>🐸</div>
 
-                <div className="text-sm text-gray-500">{shareOfOthers}%</div>
+                  <div className="text-sm text-gray-500">{shareOfOthers}%</div>
 
-                {/* <div className="text-sm text-gray-700 font-semibold">
+                  {/* <div className="text-sm text-gray-700 font-semibold">
                   Normal Users
                 </div> */}
-              </div>
-            )}
-          </div>
+                </div>
+              )}
+            </div>
+          </Tooltip>
 
           <div className="hidden items-center justify-between">
             <div className="text-sm flex items-center">

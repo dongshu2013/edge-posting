@@ -97,7 +97,7 @@ export default function BuzzCard({
   shareOfHolders,
   shareOfOthers,
 }: BuzzCardProps) {
-  const { user } = useAuth();
+  const { user, userInfo } = useAuth();
   const router = useRouter();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
@@ -186,6 +186,10 @@ export default function BuzzCard({
 
   const handleDirectReply = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    // if (!userInfo?.bindedWallet) {
+    //   return;
+    // }
+
     setReplyLoading(true);
     // Get reply text from OpenAI
     const generateReplyResponse = await fetchApi("/api/generate-reply", {

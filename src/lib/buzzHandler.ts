@@ -71,6 +71,7 @@ class BuzzHandler {
 }
 
 export const buzzHandler = new BuzzHandler();
+buzzHandler.start();
 
 const settleDefaultTypeRewards = async (buzz: any) => {
   const replyUserIds = buzz.replies.map((reply: any) => reply.createdBy);

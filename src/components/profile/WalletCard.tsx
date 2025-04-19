@@ -7,7 +7,7 @@ import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { Copy, PencilIcon } from "lucide-react";
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { useAccount, useSignMessage } from "wagmi";
+import { useAccount, useSignMessage, useSwitchChain } from "wagmi";
 import {
   Dialog,
   DialogContent,
@@ -19,8 +19,9 @@ import { ConfirmDialog } from "../dialog/ConfirmDialog";
 
 export const WalletCard = () => {
   const { userInfo, updateUserInfo } = useUserStore();
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const { openConnectModal } = useConnectModal();
+  const { switchChainAsync } = useSwitchChain();
   const { signMessageAsync } = useSignMessage();
   const [isBindingWallet, setIsBindingWallet] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -44,6 +45,14 @@ export const WalletCard = () => {
   const handleBindWallet = async () => {
     if (!address) {
       openConnectModal?.();
+      return;
+    }
+
+    if (chainId !== Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID)) {
+      toast.error("Please switch to right chain in wallet");
+      switchChainAsync({
+        chainId: Number(process.env.NEXT_PUBLIC_ETHEREUM_CHAIN_ID),
+      });
       return;
     }
 

@@ -1,5 +1,6 @@
 import { Buzz, Reply } from "@prisma/client";
 import * as math from "mathjs";
+import { prisma } from "./prisma";
 
 type BuzzWithReplies = Buzz & {
   replies: Reply[];

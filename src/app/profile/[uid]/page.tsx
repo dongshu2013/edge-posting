@@ -93,6 +93,15 @@ export default function ProfilePage() {
     },
   });
 
+  const referralCodeQuery = useQuery({
+    queryKey: ["referral-code", userInfo?.uid],
+    enabled: !!userInfo?.uid,
+    queryFn: async () => {
+      const resJson = await fetchApi(`/api/referral/get-code`, { auth: true });
+      return resJson?.referralCode || "";
+    },
+  });
+
   const fetchData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -392,18 +401,23 @@ export default function ProfilePage() {
 
           <div>
             <p className="text-sm text-gray-500">My Referral Code</p>
-            <div className="flex items-center gap-2">
-              <p className="text-lg font-medium text-gray-900">
-                {userInfo?.uid}
+
+            {referralCodeQuery.data && (
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-medium text-gray-900">
+                  {referralCodeQuery.data || "Not set"}
               </p>
               <Copy
                 className="w-4 h-4 cursor-pointer text-gray-500"
-                onClick={() => {
-                  navigator.clipboard.writeText(userInfo?.uid || "");
-                  toast.success("Copied");
-                }}
-              />
-            </div>
+                  onClick={() => {
+                    navigator.clipboard.writeText(
+                      referralCodeQuery.data || ""
+                    );
+                    toast.success("Copied");
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           <ApiKeyPanel />

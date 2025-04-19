@@ -9,18 +9,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const dbUser = await prisma.user.findUnique({
+      where: {
+        uid: user.uid,
+      },
+    });
+    if (!dbUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    
+    
+
     const body = await request.json();
     // referralCode is empty means user skip referral code
     const { referralCode } = body;
 
     if (!!referralCode) {
-      if (referralCode === user.uid) {
+      if (referralCode === dbUser.referralCode) {
         return NextResponse.json({ error: "Can not refer to yourself" });
       }
 
       const invitorUser = await prisma.user.findUnique({
         where: {
-          uid: referralCode,
+          referralCode: referralCode,
         },
       });
       if (!invitorUser) {
@@ -31,7 +42,7 @@ export async function POST(request: Request) {
     const referral = await prisma.referral.create({
       data: {
         invitedUserId: user.uid,
-        invitorUserId: referralCode || null,
+        referralCode: referralCode || null,
       },
     });
 

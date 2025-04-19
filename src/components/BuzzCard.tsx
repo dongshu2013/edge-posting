@@ -216,6 +216,11 @@ export default function BuzzCard({
       setReplyLoading(false);
       return;
     }
+    if (generateReplyResponse.code === 201) {
+      toast.error(generateReplyResponse.error);
+      setReplyLoading(false);
+      return;
+    }
 
     if (generateReplyResponse.error) {
       toast.error(generateReplyResponse.error);
@@ -389,7 +394,9 @@ export default function BuzzCard({
           <Tooltip
             title={
               <div>
-                <div>🧠 KOL: I don't watch the market, I create the market.</div>
+                <div>
+                  🧠 KOL: I don't watch the market, I create the market.
+                </div>
                 <div>💎 Holder: Buy the dip? No, I just HODL.</div>
                 <div>
                   🐸 Normal user: I'm still watching, not sure if it's the right

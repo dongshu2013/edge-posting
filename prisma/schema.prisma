@@ -37,9 +37,13 @@ model User {
   kolInfo     Kol?
   settleHistories SettleHistory[]
 
+  referralCode String?    @unique
+  referrals  Referral[]
+
   @@index([uid])
   @@index([email])
   @@index([username])
+  @@index([referralCode])
 }
 
 model Kol {
@@ -185,10 +189,11 @@ model Referral {
   updatedAt DateTime @updatedAt
 
   invitedUserId String  @unique
-  invitorUserId String?
+  referralCode  String?
+
+  invitor      User?       @relation(fields: [referralCode], references: [referralCode])
 
   @@index([invitedUserId])
-  @@index([invitorUserId])
 }
 
 model UserBalance {

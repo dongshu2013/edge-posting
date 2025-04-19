@@ -97,7 +97,7 @@ export default function BuzzCard({
   shareOfHolders,
   shareOfOthers,
 }: BuzzCardProps) {
-  const { user } = useAuth();
+  const { user, userInfo } = useAuth();
   const router = useRouter();
   const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
   const [isFollowModalOpen, setIsFollowModalOpen] = useState(false);
@@ -186,6 +186,10 @@ export default function BuzzCard({
 
   const handleDirectReply = async (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
+    // if (!userInfo?.bindedWallet) {
+    //   return;
+    // }
+
     setReplyLoading(true);
     // Get reply text from OpenAI
     const generateReplyResponse = await fetchApi("/api/generate-reply", {
@@ -212,6 +216,11 @@ export default function BuzzCard({
       return;
     }
     if (generateReplyResponse.code === 103) {
+      toast.error(generateReplyResponse.error);
+      setReplyLoading(false);
+      return;
+    }
+    if (generateReplyResponse.code === 201) {
       toast.error(generateReplyResponse.error);
       setReplyLoading(false);
       return;
@@ -389,7 +398,9 @@ export default function BuzzCard({
           <Tooltip
             title={
               <div>
-                <div>🧠 KOL: I don't watch the market, I create the market.</div>
+                <div>
+                  🧠 KOL: I don't watch the market, I create the market.
+                </div>
                 <div>💎 Holder: Buy the dip? No, I just HODL.</div>
                 <div>
                   🐸 Normal user: I'm still watching, not sure if it's the right

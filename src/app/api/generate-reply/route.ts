@@ -30,8 +30,20 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { instructions, tweetText, buzzId } = await request.json();
+  const dbUser = await prisma.user.findUnique({
+    where: {
+      uid: userId,
+    },
+  });
 
+  if (!dbUser?.bindedWallet) {
+    return NextResponse.json({
+      code: 201,
+      error: "Please bind your wallet first",
+    });
+  }
+
+  const { instructions, tweetText, buzzId } = await request.json();
   const existingReply = await prisma.reply.findFirst({
     where: {
       createdBy: userId,
